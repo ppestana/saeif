@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAEIF — Alertas de Incendio · TerraDigital</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+    :root {
+      --bg:#0d1117;--panel:#161b22;--card:#1c2128;--border:#30363d;
+      --text:#c9d1d9;--dim:#8b949e;--bright:#f0f6fc;
+      --fire:#f85149;--amber:#e3b341;--green:#3fb950;--blue:#58a6ff;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);}
+    .layout{display:flex;flex-direction:column;height:100vh;}
+    .header{background:var(--panel);border-bottom:1px solid var(--border);padding:.6rem 1.25rem;
+      display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-shrink:0;}
+    .header-left{display:flex;align-items:center;gap:.75rem;}
+    .header-logo{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--fire);}
+    .header-sub{font-size:11px;color:var(--dim);}
+    .header-right{display:flex;align-items:center;gap:.75rem;}
+    .ws-indicator{display:flex;align-items:center;gap:.35rem;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);}
+    .ws-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:background .3s;}
+    .ws-dot.live{background:var(--green);animation:pulse 2s infinite;}
+    .ws-dot.error{background:var(--fire);}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .btn-refresh{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--card);
+      border:1px solid var(--border);color:var(--text);padding:.3rem .75rem;border-radius:2px;
+      cursor:pointer;transition:border-color .15s,color .15s;}
+    .btn-refresh:hover{border-color:var(--fire);color:var(--fire);}
+    .body{display:flex;flex:1;overflow:hidden;}
+    .sidebar{width:320px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);
+      display:flex;flex-direction:column;overflow:hidden;}
+    .sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+    .tab{flex:1;padding:.6rem;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;
+      color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+    .tab.active{color:var(--fire);border-bottom-color:var(--fire);}
+    .sidebar-content{flex:1;overflow-y:auto;padding:.75rem;}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem;}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:.5rem .75rem;}
+    .stat-num{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--bright);}
+    .stat-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
+    .alerta-card{background:var(--card);border:1px solid var(--border);border-radius:3px;
+      padding:.65rem .85rem;margin-bottom:.5rem;cursor:pointer;transition:border-color .15s;
+      border-left:3px solid var(--border);}
+    .alerta-card:hover{border-color:var(--blue);}
+    .alerta-card.CRITICO{border-left-color:var(--fire);}
+    .alerta-card.ALTO{border-left-color:#f0a060;}
+    .alerta-card.MEDIO{border-left-color:var(--amber);}
+    .alerta-card.BAIXO{border-left-color:var(--green);}
+    .alerta-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;}
+    .alerta-score{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;}
+    .CRITICO .alerta-score{color:var(--fire);}
+    .ALTO .alerta-score{color:#f0a060;}
+    .MEDIO .alerta-score{color:var(--amber);}
+    .BAIXO .alerta-score{color:var(--green);}
+    .alerta-cat{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;
+      padding:.15rem .45rem;border-radius:2px;text-transform:uppercase;}
+    .CRITICO .alerta-cat{background:#3d1f1e;color:var(--fire);}
+    .ALTO .alerta-cat{background:#2a1a08;color:#f0a060;}
+    .MEDIO .alerta-cat{background:#2d2316;color:var(--amber);}
+    .BAIXO .alerta-cat{background:#192c1e;color:var(--green);}
+    .alerta-meta{font-size:11px;color:var(--dim);display:flex;gap:.5rem;flex-wrap:wrap;}
+    .status-item{background:var(--card);border:1px solid var(--border);border-radius:3px;
+      padding:.65rem .85rem;margin-bottom:.5rem;}
+    .status-source{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+      color:var(--bright);margin-bottom:.3rem;}
+    .status-row{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:.15rem;}
+    .status-ok{color:var(--green);} .status-err{color:var(--fire);}
+    #map{flex:1;}
+    .leaflet-popup-content-wrapper{background:var(--panel);color:var(--text);
+      border:1px solid var(--border);border-radius:4px;box-shadow:none;}
+    .leaflet-popup-tip{background:var(--panel);}
+    .popup-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;margin-bottom:.5rem;}
+    .popup-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:.25rem;}
+    .popup-label{color:var(--dim);} .popup-val{color:var(--bright);font-family:'IBM Plex Mono',monospace;}
+    #toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:var(--panel);
+      border:1px solid var(--border);border-radius:4px;padding:.75rem 1.25rem;
+      font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--bright);
+      opacity:0;transition:opacity .3s;pointer-events:none;max-width:300px;}
+    #toast.show{opacity:1;} #toast.fire{border-left:3px solid var(--fire);}
+    .demo-banner{background:#2d2316;border-bottom:1px solid #4a3a10;padding:.4rem 1.25rem;
+      font-size:11px;color:var(--amber);text-align:center;flex-shrink:0;display:none;}
+    .demo-banner.visible{display:block;}
+    .empty{text-align:center;padding:2rem 1rem;color:var(--dim);font-size:13px;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">SAEIF</div>
+      <div class="header-sub">Sistema de Alerta de Incendios Florestais · TerraDigital</div>
+    </div>
+    <div class="header-right">
+      <div class="ws-indicator">
+        <div class="ws-dot" id="wsDot"></div>
+        <span id="wsLabel">A ligar...</span>
+      </div>
+      <button class="btn-refresh" onclick="triggerIngest()">&#8635; Actualizar</button>
+    </div>
+  </div>
+  <div class="demo-banner" id="demoBanner">
+    SISTEMA DE DEMONSTRACAO — Os alertas apresentados nao tem validade operacional
+  </div>
+  <div class="body">
+    <div class="sidebar">
+      <div class="sidebar-tabs">
+        <div class="tab active" id="tabAlertas" onclick="switchTab('alertas')">Alertas</div>
+        <div class="tab" id="tabStatus" onclick="switchTab('status')">Estado</div>
+      </div>
+      <div class="sidebar-content" id="sidebarContent"></div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const state = {alertas:[],hotspots:[],status:null,activeTab:'alertas',ws:null,wsRetries:0,demo:false};
+
+const map = L.map('map',{center:[39.5,-8.0],zoom:7});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(map);
+const alertaLayer = L.layerGroup().addTo(map);
+const hotspotLayer = L.layerGroup().addTo(map);
+
+function alertIcon(cat){
+  const c={CRITICO:'#f85149',ALTO:'#f0a060',MEDIO:'#e3b341',BAIXO:'#3fb950'}[cat]||'#8b949e';
+  return L.divIcon({
+    html:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+      <circle cx="12" cy="12" r="10" fill="${c}" opacity=".9"/>
+      <text x="12" y="16" text-anchor="middle" font-size="13" fill="white">&#x1F525;</text></svg>`,
+    className:'',iconSize:[28,28],iconAnchor:[14,14]});
+}
+function hotspotIcon(){
+  return L.divIcon({
+    html:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12">
+      <circle cx="6" cy="6" r="5" fill="#f85149" opacity=".6" stroke="#ff6b6b" stroke-width="1"/></svg>`,
+    className:'',iconSize:[12,12],iconAnchor:[6,6]});
+}
+
+function connectWS(){
+  const proto=location.protocol==='https:'?'wss':'ws';
+  const ws=new WebSocket(`${proto}://${location.host}/ws`);
+  state.ws=ws;
+  ws.onopen=()=>{setWS('live','Ligado');state.wsRetries=0;};
+  ws.onmessage=(evt)=>{
+    const msg=JSON.parse(evt.data);
+    if(msg.type==='initial_state'){
+      state.alertas=msg.alertas||[];renderAlertas();renderMapAlertas();
+    } else if(msg.type==='alertas_update'){
+      const novos=msg.alertas||[];
+      state.alertas=[...novos,...state.alertas].slice(0,100);
+      renderAlertas();renderMapAlertas();
+      if(novos.length>0){
+        const t=novos[0];
+        toast(`Novo alerta ${t.categoria} - score ${t.score}`,t.categoria==='CRITICO'||t.categoria==='ALTO');
+      }
+    }
+  };
+  ws.onclose=()=>{
+    setWS('','Desligado');
+    setTimeout(connectWS,Math.min(30000,2000*Math.pow(2,state.wsRetries++)));
+  };
+  ws.onerror=()=>setWS('error','Erro');
+}
+function setWS(cls,label){
+  document.getElementById('wsDot').className='ws-dot'+(cls?' '+cls:'');
+  document.getElementById('wsLabel').textContent=label;
+}
+
+async function loadHealth(){
+  try{
+    const r=await fetch('/api/health');const d=await r.json();
+    if(!d.firms_configured){state.demo=true;document.getElementById('demoBanner').classList.add('visible');}
+  }catch(e){console.warn('health falhou',e);}
+}
+async function loadHotspots(){
+  try{
+    const r=await fetch('/api/hotspots?limit=200');const d=await r.json();
+    state.hotspots=d.features||[];renderMapHotspots();
+  }catch(e){console.warn('hotspots falhou',e);}
+}
+async function loadStatus(){
+  try{
+    const r=await fetch('/api/status');state.status=await r.json();
+    if(state.activeTab==='status')renderStatus();
+  }catch(e){console.warn('status falhou',e);}
+}
+async function triggerIngest(){
+  try{
+    await fetch('/api/ingest/trigger',{method:'POST'});
+    toast('Ingest iniciado...',false);
+    setTimeout(()=>{loadHotspots();loadStatus();},5000);
+  }catch(e){toast('Erro ao iniciar ingest',true);}
+}
+
+function renderAlertas(){
+  if(state.activeTab!=='alertas')return;
+  const cont=document.getElementById('sidebarContent');
+  const criticos=state.alertas.filter(a=>a.categoria==='CRITICO').length;
+  cont.innerHTML=`<div class="stats">
+    <div class="stat"><div class="stat-num" style="color:var(--fire)">${criticos}</div><div class="stat-label">Criticos</div></div>
+    <div class="stat"><div class="stat-num">${state.alertas.length}</div><div class="stat-label">Total 24h</div></div>
+  </div>`;
+  if(state.alertas.length===0){cont.innerHTML+='<div class="empty">Sem alertas nas ultimas 24 horas</div>';return;}
+  state.alertas.forEach(a=>{
+    const ts=a.criado_em?new Date(a.criado_em).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}):'';
+    const div=document.createElement('div');
+    div.className=`alerta-card ${a.categoria}`;
+    div.innerHTML=`<div class="alerta-top">
+      <div class="alerta-score">${a.score?.toFixed(1)||'--'}</div>
+      <div class="alerta-cat">${a.categoria}</div></div>
+      <div class="alerta-meta">
+        ${a.lat?`<span>&#x1F4CD; ${a.lat?.toFixed(3)}, ${a.lon?.toFixed(3)}</span>`:''}
+        ${ts?`<span>&#x23F1; ${ts}</span>`:''}
+        ${a.prociv_confirmado?`<span style="color:var(--amber)">&#x2713; PROCIV</span>`:''}
+      </div>`;
+    div.onclick=()=>map.flyTo([a.lat,a.lon],12,{duration:1});
+    cont.appendChild(div);
+  });
+}
+
+function renderStatus(){
+  const cont=document.getElementById('sidebarContent');
+  if(!state.status){cont.innerHTML='<div class="empty">A carregar...</div>';return;}
+  const s=state.status;
+  cont.innerHTML=`<div class="stats">
+    <div class="stat"><div class="stat-num">${s.hotspots_24h||0}</div><div class="stat-label">Hotspots 24h</div></div>
+    <div class="stat"><div class="stat-num">${s.ws_connections||0}</div><div class="stat-label">Ligacoes WS</div></div>
+  </div>`;
+  (s.last_ingest_by_source||[]).forEach(src=>{
+    const ts=src.started_at?new Date(src.started_at).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}):'--';
+    cont.innerHTML+=`<div class="status-item">
+      <div class="status-source">${src.source}</div>
+      <div class="status-row"><span>Estado</span><span class="${src.status==='ok'?'status-ok':'status-err'}">${src.status}</span></div>
+      <div class="status-row"><span>Ultima execucao</span><span>${ts}</span></div>
+      <div class="status-row"><span>Novos registos</span><span>${src.records_new??'--'}</span></div>
+      ${src.error_msg?`<div class="status-row"><span style="color:var(--fire)">${src.error_msg}</span></div>`:''}
+    </div>`;
+  });
+}
+
+function renderMapAlertas(){
+  alertaLayer.clearLayers();
+  state.alertas.forEach(a=>{
+    if(!a.lat||!a.lon)return;
+    const m=L.marker([a.lat,a.lon],{icon:alertIcon(a.categoria)});
+    const fwi=a.meteo?.fwi?a.meteo.fwi.toFixed(1):'--';
+    const vento=a.meteo?.vento_vel?a.meteo.vento_vel.toFixed(0)+' km/h':'--';
+    const temp=a.meteo?.temp?a.meteo.temp.toFixed(1)+'C':'--';
+    m.bindPopup(`<div class="popup-title">Alerta #${a.id} - ${a.categoria}</div>
+      <div class="popup-row"><span class="popup-label">Score</span><span class="popup-val">${a.score?.toFixed(1)}</span></div>
+      <div class="popup-row"><span class="popup-label">FWI</span><span class="popup-val">${fwi}</span></div>
+      <div class="popup-row"><span class="popup-label">Vento</span><span class="popup-val">${vento}</span></div>
+      <div class="popup-row"><span class="popup-label">Temperatura</span><span class="popup-val">${temp}</span></div>
+      <div class="popup-row"><span class="popup-label">PROCIV</span><span class="popup-val">${a.prociv_confirmado?'Confirmado':'Nao confirmado'}</span></div>
+      ${a.prociv_localidade?`<div class="popup-row"><span class="popup-label">Local</span><span class="popup-val">${a.prociv_localidade}</span></div>`:''}`);
+    alertaLayer.addLayer(m);
+  });
+}
+
+function renderMapHotspots(){
+  hotspotLayer.clearLayers();
+  state.hotspots.forEach(f=>{
+    const [lon,lat]=f.geometry.coordinates;const p=f.properties;
+    const m=L.marker([lat,lon],{icon:hotspotIcon()});
+    m.bindPopup(`<div class="popup-title">Hotspot ${p.source}</div>
+      <div class="popup-row"><span class="popup-label">FRP</span><span class="popup-val">${p.frp?p.frp.toFixed(1)+' MW':'--'}</span></div>
+      <div class="popup-row"><span class="popup-label">Confianca</span><span class="popup-val">${p.confidence||'--'}</span></div>
+      <div class="popup-row"><span class="popup-label">Data</span><span class="popup-val">${p.acq_date}</span></div>`);
+    hotspotLayer.addLayer(m);
+  });
+}
+
+function switchTab(tab){
+  state.activeTab=tab;
+  document.getElementById('tabAlertas').className='tab'+(tab==='alertas'?' active':'');
+  document.getElementById('tabStatus').className='tab'+(tab==='status'?' active':'');
+  if(tab==='alertas')renderAlertas();else{loadStatus();renderStatus();}
+}
+
+let toastTimer;
+function toast(msg,isFire=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='show'+(isFire?' fire':'');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='',4000);
+}
+
+(async()=>{
+  await loadHealth();await loadHotspots();await loadStatus();connectWS();
+  setInterval(loadHotspots,5*60*1000);setInterval(loadStatus,5*60*1000);
+})();
+</script>
+</body>
+</html>
