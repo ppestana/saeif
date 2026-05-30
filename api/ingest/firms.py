@@ -62,12 +62,12 @@ async def _insert_hotspots(conn, records, source):
                 SELECT $1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4, $5, $6, $7, $8::time
                 WHERE NOT EXISTS (
                     SELECT 1 FROM hotspots
-                    WHERE source = $1 AND acq_date = $7 AND acq_time = $8::time
+                    WHERE source = $1::varchar AND acq_date = $7 AND acq_time = $8::time
                       AND ST_DWithin(geom::geography,
                                      ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, 500)
                 )
                 RETURNING id
-            """, source, lon, lat, brightness, frp, confidence, acq_date, acq_time)
+            """, str(source), lon, lat, brightness, frp, confidence, acq_date, acq_time)
             if result:
                 new_count += 1
         except Exception as e:

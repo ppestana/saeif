@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timezone
 import httpx
-import asyncpg
 
 log = logging.getLogger("saeif.fogos")
 FOGOS_URL = "https://api.fogos.pt/v2/incidents/active"
@@ -19,50 +18,55 @@ async def fetch_fogos(conn):
             return 0
         new_count = 0
         for inc in incidents:
+            if not isinstance(inc, dict):
+                continue
             try:
-                external_id = str(inc.get("id") or inc.get("code") or "")
+                external_id = str(inc.get("id") or (inc.get("_id") or {}).get("$id") or "")
                 if not external_id:
                     continue
-                lat = float(inc.get("lat") or inc.get("latitude") or
-                            (inc.get("location") or {}).get("lat") or 0)
-                lon = float(inc.get("lng") or inc.get("longitude") or
-                            (inc.get("location") or {}).get("lng") or 0)
-                localidade = (inc.get("location") or {}).get("name") or inc.get("local") or ""
-                distrito   = inc.get("district") or inc.get("distrito") or ""
-                concelho   = inc.get("county") or inc.get("concelho") or ""
-                estado     = inc.get("status") or inc.get("estado") or ""
+                try:
+                    lat = float(inc.get("lat") or 0)
+                    lon = float(inc.get("lng") or 0)
+                except (TypeError, ValueError):
+                    lat = lon = 0
+                localidade = str(inc.get("location") or inc.get("freguesia") or "")
+                distrito   = str(inc.get("district") or "")
+                concelho   = str(inc.get("concelho") or "")
+                estado     = str(inc.get("natureza") or inc.get("status") or "")
                 data_hora  = None
-                dh_str = inc.get("date") or inc.get("data") or ""
-                if dh_str:
+                sec = (inc.get("dateTime") or {}).get("sec")
+                if sec:
                     try:
-                        data_hora = datetime.fromisoformat(dh_str.replace("Z", "+00:00"))
+                        data_hora = datetime.fromtimestamp(int(sec), tz=timezone.utc)
                     except Exception:
                         pass
+                exists = await conn.fetchval(
+                    "SELECT id FROM ocorrencias_prociv WHERE external_id = $1::varchar",
+                    external_id
+                )
+                if exists:
+                    continue
                 if lat and lon:
                     result = await conn.fetchval("""
                         INSERT INTO ocorrencias_prociv
                             (external_id, geom, localidade, distrito, concelho, estado, data_hora, source_tag)
-                        SELECT $1, ST_SetSRID(ST_MakePoint($7, $8), 4326), $2, $3, $4, $5, $6, 'SYS'
-                        WHERE NOT EXISTS (
-                            SELECT 1 FROM ocorrencias_prociv WHERE external_id = $1
-                        )
+                        VALUES ($1::varchar, ST_SetSRID(ST_MakePoint($2, $3), 4326),
+                                $4::varchar, $5::varchar, $6::varchar, $7::varchar, $8, 'SYS')
                         RETURNING id
-                    """, external_id, localidade, distrito, concelho, estado, data_hora, lon, lat)
+                    """, external_id, lon, lat, localidade, distrito, concelho, estado, data_hora)
                 else:
                     result = await conn.fetchval("""
                         INSERT INTO ocorrencias_prociv
                             (external_id, localidade, distrito, concelho, estado, data_hora, source_tag)
-                        SELECT $1, $2, $3, $4, $5, $6, 'SYS'
-                        WHERE NOT EXISTS (
-                            SELECT 1 FROM ocorrencias_prociv WHERE external_id = $1
-                        )
+                        VALUES ($1::varchar, $2::varchar, $3::varchar, $4::varchar, $5::varchar, $6, 'SYS')
                         RETURNING id
                     """, external_id, localidade, distrito, concelho, estado, data_hora)
                 if result:
                     new_count += 1
             except Exception as e:
-                log.warning(f"Erro PROCIV: {e}")
+                log.warning(f"Erro PROCIV inc: {e}")
         await _log(conn, started, "ok", len(incidents), new_count)
+        log.info(f"fogos.pt: {new_count} novas de {len(incidents)} ocorrencias")
         return new_count
     except Exception as e:
         log.error(f"Erro fogos.pt: {e}")
@@ -72,7 +76,8 @@ async def fetch_fogos(conn):
 async def _log(conn, started, status, fetched, new, error=None):
     try:
         await conn.execute("""
-            INSERT INTO ingest_log (source, started_at, ended_at, status, records_fetched, records_new, error_msg)
+            INSERT INTO ingest_log
+                (source, started_at, ended_at, status, records_fetched, records_new, error_msg)
             VALUES ('PROCIV', $1, $2, $3, $4, $5, $6)
         """, started, datetime.now(timezone.utc), status, fetched, new, error)
     except Exception as e:
