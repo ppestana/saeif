@@ -514,11 +514,11 @@ function renderMapAlertas(){
     const m=L.marker([a.lat,a.lon],{icon:alertIcon(a.categoria),zIndexOffset:1000});
     m.bindPopup(buildPopup(a),{maxWidth:300,className:''});
     alertaLayer.addLayer(m);
-    // Propagacao para alertas ALTO e CRITICO com dados de vento validos
-    if((a.categoria==='ALTO'||a.categoria==='CRITICO') &&
-       a.meteo?.vento_vel>0 && a.meteo?.vento_dir!=null){
-      drawPropagation(propagLayer,a.lat,a.lon,
-        a.meteo.vento_vel,a.meteo.vento_dir,a.risco_estrutural);
+    // Propagacao para alertas ALTO e CRITICO
+    if(a.categoria==='ALTO'||a.categoria==='CRITICO'){
+      const vel=a.meteo?.vento_vel>0?a.meteo.vento_vel:5;
+      const dir=a.meteo?.vento_dir!=null?a.meteo.vento_dir:0;
+      drawPropagation(propagLayer,a.lat,a.lon,vel,dir,a.risco_estrutural);
     }
   });
 }
