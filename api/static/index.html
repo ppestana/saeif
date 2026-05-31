@@ -107,6 +107,9 @@
     .empty{text-align:center;padding:2rem 1rem;color:var(--dim);font-size:13px;}
     ::-webkit-scrollbar{width:3px;}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    .risk-tooltip{background:var(--panel);border:1px solid var(--border);
+      color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;
+      padding:.2rem .5rem;border-radius:2px;}
     .drawer-handle{display:none;width:36px;height:4px;background:var(--border);border-radius:2px;margin:.5rem auto;cursor:pointer;}
 
     @media (max-width:768px){
@@ -160,6 +163,31 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&
 map.zoomControl.setPosition('bottomright');
 const hotspotLayer=L.layerGroup().addTo(map);
 const alertaLayer=L.layerGroup().addTo(map);
+const riskLayer=L.layerGroup().addTo(map);
+
+// Cores das 5 classes de risco
+const riskColors={0:'#3fb950',1:'#85e89d',2:'#e3b341',3:'#f0a060',4:'#f85149'};
+const riskLabels={0:'Risco nulo',1:'Risco baixo',2:'Risco médio',3:'Risco alto',4:'Risco crítico'};
+
+async function loadRiskMap(){
+  try{
+    const r=await fetch('/api/risk/map');
+    const geojson=await r.json();
+    L.geoJSON(geojson,{
+      style: f=>({
+        fillColor: riskColors[f.properties.DN]||'transparent',
+        fillOpacity: 0.35,
+        color: 'none',
+        weight: 0
+      }),
+      filter: f => f.properties.DN > 0,
+      onEachFeature:(f,layer)=>{
+        layer.bindTooltip(riskLabels[f.properties.DN]||'',{sticky:true,className:'risk-tooltip'});
+      }
+    }).addTo(riskLayer);
+    log.info && console.log('Mapa de risco carregado');
+  }catch(e){console.warn('risk/map falhou',e);}
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function categoriaColor(cat){return{CRITICO:'#f85149',ALTO:'#f0a060',MEDIO:'#e3b341',BAIXO:'#3fb950'}[cat]||'#8b949e';}
@@ -445,6 +473,7 @@ function toast(msg,isFire=false){
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async()=>{
   await loadHealth();
+  await loadRiskMap();
   await loadAlertas();
   await loadHotspots();
   await loadStatus();

@@ -331,6 +331,17 @@ async def get_status():
     finally:
         await conn.close()
 
+@app.get("/api/risk/map")
+async def get_risk_map():
+    """GeoJSON de risco estrutural para overlay no Leaflet."""
+    import json
+    risk_path = "/data/fire_risk.geojson"
+    if not os.path.exists(risk_path):
+        raise HTTPException(status_code=404, detail="Mapa de risco nao disponivel")
+    with open(risk_path) as f:
+        data = json.load(f)
+    return data
+
 @app.post("/api/ingest/trigger")
 async def trigger_ingest():
     asyncio.create_task(run_ingest_cycle())

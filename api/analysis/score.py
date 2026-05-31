@@ -24,13 +24,13 @@ def _get_transformer():
 def get_structural_risk(lat, lon):
     if RASTER_OK and os.path.exists(RISK_RASTER_PATH):
         try:
-            t = _get_transformer()
-            x, y = t.transform(lon, lat)
             with rasterio.open(RISK_RASTER_PATH) as src:
-                row, col = rasterio.transform.rowcol(src.transform, x, y)
-                data = src.read(1)
-                if 0 <= row < data.shape[0] and 0 <= col < data.shape[1]:
-                    val = float(data[row, col])
+                # Converter coordenadas WGS84 para row/col do raster
+                row, col = src.index(lon, lat)
+                if 0 <= row < src.height and 0 <= col < src.width:
+                    from rasterio.windows import Window
+                    window = Window(col, row, 1, 1)
+                    val = float(src.read(1, window=window)[0, 0])
                     if val > -999:
                         return float(np.clip(val, 0.0, 1.0))
         except Exception as e:
