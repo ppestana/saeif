@@ -56,7 +56,7 @@ async def _insert_hotspots(conn, records, source):
             confidence = str(r.get("confidence", "")).lower() or None
             acq_date   = date.fromisoformat(r.get("acq_date", today))
             t          = r.get("acq_time", "0000").zfill(4)
-            acq_time   = f"{t[:2]}:{t[2:]}:00"
+            from datetime import time as dtime; acq_time = dtime(int(t[:2]), int(t[2:4]))
             result = await conn.fetchval("""
                 INSERT INTO hotspots (source, geom, brightness, frp, confidence, acq_date, acq_time)
                 SELECT $1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4, $5, $6, $7, $8::time
