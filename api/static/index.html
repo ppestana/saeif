@@ -367,7 +367,10 @@ function renderAlertas(){
     div.className=`alerta-card ${a.categoria}`;
     div.innerHTML=`<div class="alerta-top">
       <div class="alerta-score">${a.score?.toFixed(1)||'--'}</div>
-      <div class="alerta-cat">${a.categoria}</div></div>
+      <div style="display:flex;align-items:center;gap:.4rem;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim)">#${a.id}</span>
+        <div class="alerta-cat">${a.categoria}</div>
+      </div></div>
       <div class="alerta-meta">
         ${a.lat?`<span>&#x1F4CD; ${a.lat?.toFixed(3)}, ${a.lon?.toFixed(3)}</span>`:''}
         ${ts?`<span>&#x23F1; ${ts}</span>`:''}
