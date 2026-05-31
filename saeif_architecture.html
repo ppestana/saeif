@@ -1442,7 +1442,14 @@ fire_risk = (
           <tr><td><code>5d4e708</code></td><td>fix: sidebar left on desktop, drawer bottom on mobile</td><td>31 Mai 2026</td></tr>
           <tr><td><code>6e2d4dc</code></td><td>fix: desktop sidebar 300px left, mobile drawer bottom</td><td>31 Mai 2026</td></tr>
           <tr><td><code>f9a777e</code></td><td>feat: NOAA-20+21 ingest, dedup inter-satelite, popup detalhado</td><td>31 Mai 2026</td></tr>
-          <tr><td><code>bf37fb8</code></td><td>fix: convert acq_time string to datetime.time object for asyncpg</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>bf37fb8</code></td><td>fix: acq_time string → datetime.time para asyncpg</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>6799b6d</code></td><td>fix: localidade sempre via Nominatim, remove prociv_localidade</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>3e03435</code></td><td>feat: geocodificacao inversa Nominatim para alertas sem PROCIV</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>7ae0a70</code></td><td>feat: mapa de risco estrutural ESA WorldCover overlay Leaflet</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>876a753</code></td><td>fix: legenda visivel canto direito, vento -99 mostra --</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>007321c</code></td><td>feat: propagacao eliptica 6h/12h para alertas ALTO e CRITICO</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>108d75b</code></td><td>fix: propagacao sempre visivel para ALTO/CRITICO, default 5km/h</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>3fc9592</code></td><td>feat: mostrar ID do alerta no card da sidebar</td><td>31 Mai 2026</td></tr>
         </tbody>
       </table>
 
@@ -1490,26 +1497,26 @@ fire_risk = (
         <tbody>
           <tr>
             <td><strong>Mapa de risco estrutural</strong></td>
-            <td>Overlay GeoJSON do <code>fire_risk.tif</code> no Leaflet (5 classes). Requer download CORINE + EU-DEM + NDVI Sentinel-2 e geração do raster.</td>
-            <td><span class="badge badge-fire">Alta</span></td>
-            <td>Sessão dedicada</td>
+            <td>Overlay GeoJSON do <code>fire_risk.tif</code> no Leaflet (5 classes). ESA WorldCover 2021 (18 tiles), reclassificação por distrito, GeoJSON 95KB. Legenda no canto inferior direito. Implementado em 31 Mai 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>31 Mai 2026</td>
           </tr>
           <tr>
             <td><strong>Geocodificação inversa</strong></td>
-            <td>Para alertas sem PROCIV, obter nome de lugar via OSM Nominatim a partir das coordenadas do hotspot FIRMS. Exibir no popup como "Localidade estimada".</td>
-            <td><span class="badge badge-amber">Média</span></td>
-            <td>2–3 horas</td>
+            <td>Nominatim sempre para todos os alertas. Campo <code>localidade_estimada</code> na BD. Remove <code>prociv_localidade</code> enganosa (associação por proximidade 40km). Implementado em 31 Mai 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>31 Mai 2026</td>
           </tr>
           <tr>
             <td><strong>Propagação estimada no mapa</strong></td>
-            <td>Elipse de propagação a 6h/12h no Leaflet, calculada a partir do vento IPMA e risco estrutural.</td>
-            <td><span class="badge badge-amber">Média</span></td>
-            <td>3–4 horas</td>
+            <td>Elipse de propagação a 6h (amarelo) e 12h (vermelho) no Leaflet para alertas ALTO/CRÍTICO. Direcção via <code>idDireccVento</code> IPMA (código 0-8 → graus). Velocidade proporcional ao vento × risco estrutural. Implementado em 31 Mai 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>31 Mai 2026</td>
           </tr>
           <tr>
             <td><strong>Filtro por categoria</strong></td>
             <td>Botões na sidebar para filtrar alertas por CRÍTICO / ALTO / MÉDIO / BAIXO.</td>
-            <td><span class="badge badge-gray">Baixa</span></td>
+            <td><span class="badge badge-amber">Média</span></td>
             <td>1 hora</td>
           </tr>
           <tr>
@@ -1517,6 +1524,12 @@ fire_risk = (
             <td>Favicon SVG com ícone de chama TerraDigital. Página 404 personalizada.</td>
             <td><span class="badge badge-gray">Baixa</span></td>
             <td>1 hora</td>
+          </tr>
+          <tr>
+            <td><strong>Actualização automática risco</strong></td>
+            <td>Script que combina WorldCover + NDVI Sentinel-2 e recalcula o GeoJSON por distrito. Cron job mensal (ou a cada 10 dias no verão).</td>
+            <td><span class="badge badge-amber">Média</span></td>
+            <td>Sessão dedicada</td>
           </tr>
           <tr>
             <td><strong>Artigo técnico</strong></td>
