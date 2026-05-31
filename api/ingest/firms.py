@@ -1,15 +1,14 @@
 import os
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, time as dtime
 import httpx
-import asyncpg
 
 log = logging.getLogger("saeif.firms")
 FIRMS_KEY = os.getenv("FIRMS_MAP_KEY", "")
 FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 BBOX      = "-9.50,36.96,-6.19,42.15"
-PRODUCT   = "VIIRS_SNPP_NRT"
 DAYS      = 1
+PRODUCTS  = ["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT"]
 
 DEMO_HOTSPOTS = [
     {"lat": 39.60, "lon": -8.20, "brightness": 340.5, "frp": 12.3, "confidence": "nominal", "acq_time": "1300"},
@@ -25,24 +24,29 @@ async def fetch_firms(conn):
     if not FIRMS_KEY or FIRMS_KEY in ("PLACEHOLDER", "your_firms_map_key_here"):
         log.warning("FIRMS_MAP_KEY nao configurada -- a usar focos de demonstracao.")
         return await _insert_demo(conn, started)
-    url = f"{FIRMS_URL}/{FIRMS_KEY}/{PRODUCT}/{BBOX}/{DAYS}/"
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            lines = resp.text.strip().splitlines()
-        if len(lines) < 2:
-            await _log_ingest(conn, "FIRMS", started, "ok", 0, 0)
-            return 0
-        header = [h.strip() for h in lines[0].split(",")]
-        records = [dict(zip(header, l.split(","))) for l in lines[1:]]
-        new_count = await _insert_hotspots(conn, records, "VIIRS")
-        await _log_ingest(conn, "FIRMS", started, "ok", len(records), new_count)
-        return new_count
-    except Exception as e:
-        log.error(f"Erro FIRMS: {e}")
-        await _log_ingest(conn, "FIRMS", started, "error", 0, 0, str(e))
-        return 0
+    total_fetched = 0
+    total_new = 0
+    for product in PRODUCTS:
+        url = f"{FIRMS_URL}/{FIRMS_KEY}/{product}/{BBOX}/{DAYS}/"
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                lines = resp.text.strip().splitlines()
+            if len(lines) < 2:
+                log.info(f"FIRMS {product}: sem hotspots")
+                continue
+            header = [h.strip() for h in lines[0].split(",")]
+            records = [dict(zip(header, l.split(","))) for l in lines[1:]]
+            satellite = product.replace("_NRT", "").replace("VIIRS_", "")
+            new_count = await _insert_hotspots(conn, records, satellite)
+            total_fetched += len(records)
+            total_new += new_count
+            log.info(f"FIRMS {product}: {len(records)} registos, {new_count} novos")
+        except Exception as e:
+            log.error(f"Erro FIRMS {product}: {e}")
+    await _log_ingest(conn, "FIRMS", started, "ok", total_fetched, total_new)
+    return total_new
 
 async def _insert_hotspots(conn, records, source):
     new_count = 0
@@ -56,13 +60,13 @@ async def _insert_hotspots(conn, records, source):
             confidence = str(r.get("confidence", "")).lower() or None
             acq_date   = date.fromisoformat(r.get("acq_date", today))
             t          = r.get("acq_time", "0000").zfill(4)
-            from datetime import time as dtime; acq_time = dtime(int(t[:2]), int(t[2:4]))
+            acq_time   = dtime(int(t[:2]), int(t[2:4]))
             result = await conn.fetchval("""
                 INSERT INTO hotspots (source, geom, brightness, frp, confidence, acq_date, acq_time)
-                SELECT $1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4, $5, $6, $7, $8::time
+                SELECT $1::varchar, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4, $5, $6, $7, $8
                 WHERE NOT EXISTS (
                     SELECT 1 FROM hotspots
-                    WHERE source = $1::varchar AND acq_date = $7 AND acq_time = $8::time
+                    WHERE source = $1::varchar AND acq_date = $7 AND acq_time = $8
                       AND ST_DWithin(geom::geography,
                                      ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, 500)
                 )

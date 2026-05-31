@@ -16,6 +16,17 @@ async def gerar_alertas(conn, pares, meteo_data):
         )
         if existing:
             continue
+        # Deduplicacao entre satélites: nao gerar alerta se ja existe um
+        # para o mesmo foco (raio 2km) nas ultimas 2 horas
+        nearby = await conn.fetchval("""
+            SELECT id FROM alertas
+            WHERE criado_em > NOW() - INTERVAL '2 hours'
+              AND ST_DWithin(geom::geography,
+                             ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 2000)
+        """, lon, lat)
+        if nearby:
+            log.info(f"Alerta duplicado ignorado (raio 2km): lat={lat:.3f} lon={lon:.3f}")
+            continue
         meteo = get_nearest_meteo(lat, lon, meteo_data) if meteo_data else {}
         score, categoria = calcular_score(par, meteo)
         risco_estrutural = get_structural_risk(lat, lon)

@@ -7,242 +7,123 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
-
     :root {
-      --bg:       #0d1117;
-      --panel:    #161b22;
-      --card:     #1c2128;
-      --border:   #30363d;
-      --text:     #c9d1d9;
-      --dim:      #8b949e;
-      --bright:   #f0f6fc;
-      --fire:     #f85149;
-      --amber:    #e3b341;
-      --green:    #3fb950;
-      --blue:     #58a6ff;
+      --bg:#0d1117;--panel:#161b22;--card:#1c2128;--border:#30363d;
+      --text:#c9d1d9;--dim:#8b949e;--bright:#f0f6fc;
+      --fire:#f85149;--amber:#e3b341;--green:#3fb950;--blue:#58a6ff;
     }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+    .layout{display:flex;flex-direction:column;height:100dvh;}
+    .header{background:var(--panel);border-bottom:1px solid var(--border);padding:.5rem 1rem;
+      display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-shrink:0;}
+    .header-left{display:flex;align-items:center;gap:.6rem;min-width:0;}
+    .header-logo{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--fire);flex-shrink:0;}
+    .header-sub{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .header-right{display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
+    .ws-indicator{display:flex;align-items:center;gap:.3rem;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);}
+    .ws-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:background .3s;flex-shrink:0;}
+    .ws-dot.live{background:var(--green);animation:pulse 2s infinite;}
+    .ws-dot.error{background:var(--fire);}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .btn-refresh{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--card);
+      border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:2px;
+      cursor:pointer;-webkit-tap-highlight-color:transparent;}
+    .demo-banner{background:#2d2316;border-bottom:1px solid #4a3a10;padding:.35rem 1rem;
+      font-size:10px;color:var(--amber);text-align:center;flex-shrink:0;display:none;}
+    .demo-banner.visible{display:block;}
+    .body{display:flex;flex-direction:row;flex:1;overflow:hidden;}
+    .sidebar{width:300px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);
+      display:flex;flex-direction:column;overflow:hidden;order:1;}
+    #map{flex:1;min-width:0;order:2;}
+    .sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+    .tab{flex:1;padding:.6rem;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;
+      color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;}
+    .tab.active{color:var(--fire);border-bottom-color:var(--fire);}
+    .sidebar-content{flex:1;overflow-y:auto;padding:.75rem;-webkit-overflow-scrolling:touch;}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem;}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:.5rem .75rem;}
+    .stat-num{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--bright);}
+    .stat-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;}
+    .alerta-card{background:var(--card);border:1px solid var(--border);border-radius:3px;
+      padding:.65rem .85rem;margin-bottom:.5rem;cursor:pointer;border-left:3px solid var(--border);
+      -webkit-tap-highlight-color:transparent;transition:border-color .15s;}
+    .alerta-card:hover{border-color:var(--blue);}
+    .alerta-card.CRITICO{border-left-color:var(--fire);}
+    .alerta-card.ALTO{border-left-color:#f0a060;}
+    .alerta-card.MEDIO{border-left-color:var(--amber);}
+    .alerta-card.BAIXO{border-left-color:var(--green);}
+    .alerta-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;}
+    .alerta-score{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;}
+    .CRITICO .alerta-score{color:var(--fire);}
+    .ALTO .alerta-score{color:#f0a060;}
+    .MEDIO .alerta-score{color:var(--amber);}
+    .BAIXO .alerta-score{color:var(--green);}
+    .alerta-cat{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;
+      padding:.15rem .45rem;border-radius:2px;text-transform:uppercase;}
+    .CRITICO .alerta-cat{background:#3d1f1e;color:var(--fire);}
+    .ALTO .alerta-cat{background:#2a1a08;color:#f0a060;}
+    .MEDIO .alerta-cat{background:#2d2316;color:var(--amber);}
+    .BAIXO .alerta-cat{background:#192c1e;color:var(--green);}
+    .alerta-meta{font-size:11px;color:var(--dim);display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.2rem;}
+    .status-item{background:var(--card);border:1px solid var(--border);border-radius:3px;
+      padding:.65rem .85rem;margin-bottom:.5rem;}
+    .status-source{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--bright);margin-bottom:.3rem;}
+    .status-row{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:.15rem;}
+    .status-ok{color:var(--green);} .status-err{color:var(--fire);}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+    /* ── POPUP DETALHADO ── */
+    .leaflet-popup-content-wrapper{background:var(--panel);color:var(--text);
+      border:1px solid var(--border);border-radius:4px;box-shadow:none;}
+    .leaflet-popup-tip{background:var(--panel);}
+    .leaflet-popup-content{margin:.85rem !important;min-width:220px;}
+    .popup-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;
+      padding-bottom:.5rem;border-bottom:1px solid var(--border);}
+    .popup-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--bright);}
+    .popup-cat{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;
+      padding:.15rem .45rem;border-radius:2px;text-transform:uppercase;}
+    .cat-CRITICO{background:#3d1f1e;color:var(--fire);}
+    .cat-ALTO{background:#2a1a08;color:#f0a060;}
+    .cat-MEDIO{background:#2d2316;color:var(--amber);}
+    .cat-BAIXO{background:#192c1e;color:var(--green);}
+    .popup-section{margin-bottom:.5rem;}
+    .popup-section-title{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;
+      margin-bottom:.3rem;font-family:'IBM Plex Mono',monospace;}
+    .popup-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:.2rem;gap:.5rem;}
+    .popup-label{color:var(--dim);}
+    .popup-val{color:var(--bright);font-family:'IBM Plex Mono',monospace;text-align:right;}
+    .popup-mobilizacao{margin-top:.6rem;padding:.5rem .7rem;border-radius:3px;font-size:11px;
+      border-left:3px solid;line-height:1.4;}
+    .mob-CRITICO{background:#3d1f1e;border-color:var(--fire);color:#f8b4b1;}
+    .mob-ALTO{background:#2a1a08;border-color:#f0a060;color:#f0c090;}
+    .mob-MEDIO{background:#2d2316;border-color:var(--amber);color:#e8cf8a;}
+    .mob-BAIXO{background:#192c1e;border-color:var(--green);color:#85e89d;}
 
-    /* ── LAYOUT ── */
-    .layout { display: flex; flex-direction: column; height: 100dvh; }
+    #toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);z-index:9999;
+      background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:.65rem 1rem;
+      font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--bright);
+      opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;}
+    #toast.show{opacity:1;} #toast.fire{border-left:3px solid var(--fire);}
+    .empty{text-align:center;padding:2rem 1rem;color:var(--dim);font-size:13px;}
+    ::-webkit-scrollbar{width:3px;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    .drawer-handle{display:none;width:36px;height:4px;background:var(--border);border-radius:2px;margin:.5rem auto;cursor:pointer;}
 
-    /* ── HEADER ── */
-    .header {
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      padding: .5rem 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: .75rem;
-      flex-shrink: 0;
-    }
-    .header-left { display: flex; align-items: center; gap: .6rem; min-width: 0; }
-    .header-logo {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 16px; font-weight: 600; color: var(--fire);
-      letter-spacing: .02em; flex-shrink: 0;
-    }
-    .header-sub { font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .header-right { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; }
-    .ws-indicator { display: flex; align-items: center; gap: .3rem; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--dim); }
-    .ws-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); transition: background .3s; flex-shrink: 0; }
-    .ws-dot.live { background: var(--green); animation: pulse 2s infinite; }
-    .ws-dot.error { background: var(--fire); }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-    .btn-refresh {
-      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
-      background: var(--card); border: 1px solid var(--border);
-      color: var(--text); padding: .3rem .6rem; border-radius: 2px;
-      cursor: pointer; -webkit-tap-highlight-color: transparent;
-    }
-
-    /* ── DEMO BANNER ── */
-    .demo-banner {
-      background: #2d2316; border-bottom: 1px solid #4a3a10;
-      padding: .35rem 1rem; font-size: 10px; color: var(--amber);
-      text-align: center; flex-shrink: 0; display: none;
-    }
-    .demo-banner.visible { display: block; }
-
-    /* ── BODY: desktop = row ── */
-    .body { display: flex; flex-direction: row; flex: 1; overflow: hidden; }
-
-    /* ── SIDEBAR — desktop ── */
-    .sidebar {
-      width: 300px; flex-shrink: 0;
-      background: var(--panel);
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      overflow: hidden;
-      order: 1;
-    }
-
-    /* ── MAP ── */
-    #map { flex: 1; min-width: 0; order: 2; }
-
-    /* ── TABS ── */
-    .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .tab {
-      flex: 1; padding: .6rem; text-align: center;
-      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
-      color: var(--dim); cursor: pointer;
-      border-bottom: 2px solid transparent;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .tab.active { color: var(--fire); border-bottom-color: var(--fire); }
-    .sidebar-content { flex: 1; overflow-y: auto; padding: .75rem; -webkit-overflow-scrolling: touch; }
-
-    /* ── STATS ── */
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .75rem; }
-    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 3px; padding: .5rem .75rem; }
-    .stat-num { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; color: var(--bright); }
-    .stat-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
-
-    /* ── ALERTA CARDS ── */
-    .alerta-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 3px; padding: .65rem .85rem;
-      margin-bottom: .5rem; cursor: pointer;
-      border-left: 3px solid var(--border);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .alerta-card.CRITICO { border-left-color: var(--fire); }
-    .alerta-card.ALTO    { border-left-color: #f0a060; }
-    .alerta-card.MEDIO   { border-left-color: var(--amber); }
-    .alerta-card.BAIXO   { border-left-color: var(--green); }
-
-    .alerta-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .3rem; }
-    .alerta-score { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; }
-    .CRITICO .alerta-score { color: var(--fire); }
-    .ALTO    .alerta-score { color: #f0a060; }
-    .MEDIO   .alerta-score { color: var(--amber); }
-    .BAIXO   .alerta-score { color: var(--green); }
-
-    .alerta-cat {
-      font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
-      padding: .15rem .45rem; border-radius: 2px; text-transform: uppercase;
-    }
-    .CRITICO .alerta-cat { background: #3d1f1e; color: var(--fire); }
-    .ALTO    .alerta-cat { background: #2a1a08; color: #f0a060; }
-    .MEDIO   .alerta-cat { background: #2d2316; color: var(--amber); }
-    .BAIXO   .alerta-cat { background: #192c1e; color: var(--green); }
-
-    .alerta-meta { font-size: 11px; color: var(--dim); display: flex; gap: .5rem; flex-wrap: wrap; }
-
-    /* ── STATUS PANEL ── */
-    .status-item { background: var(--card); border: 1px solid var(--border); border-radius: 3px; padding: .65rem .85rem; margin-bottom: .5rem; }
-    .status-source { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: var(--bright); margin-bottom: .3rem; }
-    .status-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-bottom: .15rem; }
-    .status-ok { color: var(--green); }
-    .status-err { color: var(--fire); }
-
-    /* ── POPUP ── */
-    .leaflet-popup-content-wrapper {
-      background: var(--panel); color: var(--text);
-      border: 1px solid var(--border); border-radius: 4px; box-shadow: none;
-    }
-    .leaflet-popup-tip { background: var(--panel); }
-    .leaflet-popup-content { margin: .75rem !important; }
-    .popup-title { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; margin-bottom: .5rem; }
-    .popup-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: .25rem; gap: .5rem; }
-    .popup-label { color: var(--dim); }
-    .popup-val { color: var(--bright); font-family: 'IBM Plex Mono', monospace; }
-
-    /* ── TOAST ── */
-    #toast {
-      position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
-      z-index: 9999; background: var(--panel); border: 1px solid var(--border);
-      border-radius: 4px; padding: .65rem 1rem;
-      font-family: 'IBM Plex Mono', monospace; font-size: 12px;
-      color: var(--bright); opacity: 0; transition: opacity .3s;
-      pointer-events: none; white-space: nowrap; max-width: 90vw;
-    }
-    #toast.show { opacity: 1; }
-    #toast.fire { border-left: 3px solid var(--fire); }
-
-    /* ── EMPTY ── */
-    .empty { text-align: center; padding: 2rem 1rem; color: var(--dim); font-size: 13px; }
-
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    /* ── MOBILE BOTTOM DRAWER ── */
-    .drawer-handle {
-      display: none;
-      width: 36px; height: 4px;
-      background: var(--border); border-radius: 2px;
-      margin: .5rem auto;
-      cursor: pointer;
-    }
-
-    /* ════════════════════════════════════════
-       MOBILE LAYOUT — max-width 768px
-       ════════════════════════════════════════ */
-    @media (max-width: 768px) {
-      .header-sub { display: none; }
-      .ws-label-text { display: none; }
-
-      .body { flex-direction: column; }
-
-      /* Em mobile: mapa em cima, sidebar em baixo */
-      #map {
-        order: 1;
-        flex: none;
-        height: 55dvh;
-        width: 100%;
-        min-width: unset;
-      }
-
-      .sidebar {
-        order: 2;
-        width: 100%;
-        flex: 1;
-        border-right: none;
-        border-top: 1px solid var(--border);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .drawer-handle { display: block; }
-
-      .sidebar-tabs { border-top: none; }
-
-      .tab { padding: .5rem; font-size: 11px; }
-
-      .sidebar-content {
-        flex: 1;
-        overflow-y: auto;
-        padding: .5rem;
-      }
-
-      .stats { gap: .35rem; margin-bottom: .5rem; }
-      .stat { padding: .4rem .6rem; }
-      .stat-num { font-size: 18px; }
-
-      .alerta-card { padding: .5rem .7rem; margin-bottom: .4rem; }
-      .alerta-score { font-size: 16px; }
-
-      /* Popup mais estreito em mobile */
-      .leaflet-popup-content-wrapper { max-width: 85vw !important; }
-
-      /* Toast centrado em baixo */
-      #toast { bottom: calc(45dvh + .5rem); }
-
-      /* Botão actualizar mais compacto */
-      .btn-refresh { padding: .3rem .5rem; font-size: 10px; }
+    @media (max-width:768px){
+      .header-sub{display:none;} .ws-label-text{display:none;}
+      .body{flex-direction:column;}
+      #map{order:1;flex:none;height:55dvh;width:100%;min-width:unset;}
+      .sidebar{order:2;width:100%;flex:1;border-right:none;border-top:1px solid var(--border);}
+      .drawer-handle{display:block;}
+      .sidebar-content{padding:.5rem;}
+      .leaflet-popup-content-wrapper{max-width:85vw !important;}
+      #toast{bottom:calc(45dvh + .5rem);}
+      .btn-refresh{padding:.3rem .5rem;font-size:10px;}
     }
   </style>
 </head>
 <body>
 <div class="layout">
-
-  <!-- HEADER -->
   <div class="header">
     <div class="header-left">
       <div class="header-logo">SAEIF</div>
@@ -256,16 +137,8 @@
       <button class="btn-refresh" onclick="triggerIngest()">&#8635;</button>
     </div>
   </div>
-
-  <!-- DEMO BANNER -->
-  <div class="demo-banner" id="demoBanner">
-    SISTEMA DE DEMONSTRAÇÃO — alertas sem validade operacional
-  </div>
-
-  <!-- BODY -->
+  <div class="demo-banner" id="demoBanner">SISTEMA DE DEMONSTRAÇÃO — alertas sem validade operacional</div>
   <div class="body">
-
-    <!-- SIDEBAR / DRAWER -->
     <div class="sidebar">
       <div class="drawer-handle" onclick="toggleDrawer()"></div>
       <div class="sidebar-tabs">
@@ -274,268 +147,275 @@
       </div>
       <div class="sidebar-content" id="sidebarContent"></div>
     </div>
-
-    <!-- MAP -->
     <div id="map"></div>
-
   </div>
 </div>
-
-<!-- TOAST -->
 <div id="toast"></div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const state = {
-  alertas: [], hotspots: [], status: null,
-  activeTab: 'alertas', ws: null, wsRetries: 0, demo: false
-};
+const state={alertas:[],hotspots:[],status:null,activeTab:'alertas',ws:null,wsRetries:0,demo:false};
 
-// ── Mapa ─────────────────────────────────────────────────────────────────────
-const map = L.map('map', { center: [39.5, -8.0], zoom: 7, zoomControl: true });
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap', maxZoom: 18
-}).addTo(map);
-
-// Mover controles de zoom para canto direito em mobile
+const map=L.map('map',{center:[39.5,-8.0],zoom:7});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(map);
 map.zoomControl.setPosition('bottomright');
+const alertaLayer=L.layerGroup().addTo(map);
+const hotspotLayer=L.layerGroup().addTo(map);
 
-const alertaLayer  = L.layerGroup().addTo(map);
-const hotspotLayer = L.layerGroup().addTo(map);
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function categoriaColor(cat){return{CRITICO:'#f85149',ALTO:'#f0a060',MEDIO:'#e3b341',BAIXO:'#3fb950'}[cat]||'#8b949e';}
 
-// ── Ícones ────────────────────────────────────────────────────────────────────
-function alertIcon(cat) {
-  const c = {CRITICO:'#f85149',ALTO:'#f0a060',MEDIO:'#e3b341',BAIXO:'#3fb950'}[cat] || '#8b949e';
-  return L.divIcon({
-    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
-      <circle cx="14" cy="14" r="12" fill="${c}" opacity=".9"/>
-      <text x="14" y="19" text-anchor="middle" font-size="14" fill="white">&#x1F525;</text></svg>`,
-    className: '', iconSize: [28, 28], iconAnchor: [14, 14]
-  });
+function vegetacaoLabel(risco){
+  if(!risco) return '--';
+  if(risco>=0.85) return 'Floresta densa (resinosas)';
+  if(risco>=0.70) return 'Arbustivo / mato';
+  if(risco>=0.45) return 'Mosaico agro-florestal';
+  if(risco>=0.20) return 'Pastagem / cultura';
+  return 'Urbano / artificial';
 }
 
-function hotspotIcon() {
+function mobilizacaoLabel(cat){
+  return{
+    CRITICO:'Protocolo mega-incêndio — activação nível nacional + AGIF',
+    ALTO:'Mobilização imediata meios aéreos + AGIF',
+    MEDIO:'Pré-alerta meios aéreos + reforço terrestre',
+    BAIXO:'Mobilização standard local'
+  }[cat]||'--';
+}
+
+function sateliteLabel(src){
+  if(!src) return '--';
+  if(src.includes('SNPP')) return 'VIIRS / Suomi-NPP';
+  if(src.includes('NOAA20')) return 'VIIRS / NOAA-20';
+  if(src.includes('NOAA21')) return 'VIIRS / NOAA-21';
+  if(src.includes('DEMO')) return 'Demo';
+  return src;
+}
+
+function ventoDir(graus){
+  if(graus==null) return '--';
+  const dirs=['N','NE','E','SE','S','SO','O','NO'];
+  return dirs[Math.round(graus/45)%8];
+}
+
+function horaFormatada(iso){
+  if(!iso) return '--';
+  const d=new Date(iso);
+  const hoje=new Date();
+  const prefix=d.toDateString()===hoje.toDateString()?'hoje':'ontem';
+  return prefix+' às '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+}
+
+function alertIcon(cat){
+  const c=categoriaColor(cat);
   return L.divIcon({
-    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12">
+    html:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
+      <circle cx="14" cy="14" r="12" fill="${c}" opacity=".9"/>
+      <text x="14" y="19" text-anchor="middle" font-size="14" fill="white">&#x1F525;</text></svg>`,
+    className:'',iconSize:[28,28],iconAnchor:[14,14]});
+}
+
+function hotspotIcon(){
+  return L.divIcon({
+    html:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" width="12" height="12">
       <circle cx="6" cy="6" r="5" fill="#f85149" opacity=".6" stroke="#ff6b6b" stroke-width="1"/></svg>`,
-    className: '', iconSize: [12, 12], iconAnchor: [6, 6]
-  });
+    className:'',iconSize:[12,12],iconAnchor:[6,6]});
+}
+
+function buildPopup(a){
+  const cat=a.categoria||'MEDIO';
+  const c=categoriaColor(cat);
+  const fwi=a.meteo?.fwi!=null?a.meteo.fwi.toFixed(1):'--';
+  const temp=a.meteo?.temp!=null?a.meteo.temp.toFixed(1)+'°C':'--';
+  const hum=a.meteo?.humidade!=null?a.meteo.humidade.toFixed(0)+'%':'--';
+  const vvel=a.meteo?.vento_vel!=null?a.meteo.vento_vel.toFixed(0)+' km/h':'--';
+  const vdir=a.meteo?.vento_dir!=null?ventoDir(a.meteo.vento_dir):'--';
+  const risco=a.risco_estrutural;
+  const veg=vegetacaoLabel(risco);
+  const riscoStr=risco!=null?(risco*100).toFixed(0)+'%':'--';
+  const sat=sateliteLabel(a.source||a.hotspot_source||'');
+  const hora=horaFormatada(a.criado_em);
+  const mob=mobilizacaoLabel(cat);
+  const procivStr=a.prociv_confirmado
+    ?'<span style="color:var(--amber)">&#x2713; Confirmado</span>'
+    :'<span style="color:var(--dim)">Não confirmado</span>';
+  const local=a.prociv_localidade?`<div class="popup-row"><span class="popup-label">Localidade</span><span class="popup-val">${a.prociv_localidade}</span></div>`:'';
+
+  return `
+    <div class="popup-header">
+      <div class="popup-title">Alerta #${a.id}</div>
+      <div class="popup-cat cat-${cat}">${cat}</div>
+    </div>
+
+    <div class="popup-section">
+      <div class="popup-section-title">Detecção</div>
+      <div class="popup-row"><span class="popup-label">Score</span><span class="popup-val" style="color:${c};font-size:14px;font-weight:600">${a.score?.toFixed(1)||'--'}</span></div>
+      <div class="popup-row"><span class="popup-label">Hora</span><span class="popup-val">${hora}</span></div>
+      <div class="popup-row"><span class="popup-label">Satélite</span><span class="popup-val">${sat}</span></div>
+      <div class="popup-row"><span class="popup-label">PROCIV</span><span class="popup-val">${procivStr}</span></div>
+      ${local}
+    </div>
+
+    <div class="popup-section">
+      <div class="popup-section-title">Meteorologia</div>
+      <div class="popup-row"><span class="popup-label">FWI</span><span class="popup-val">${fwi}</span></div>
+      <div class="popup-row"><span class="popup-label">Temperatura</span><span class="popup-val">${temp}</span></div>
+      <div class="popup-row"><span class="popup-label">Humidade</span><span class="popup-val">${hum}</span></div>
+      <div class="popup-row"><span class="popup-label">Vento</span><span class="popup-val">${vvel} ${vdir}</span></div>
+    </div>
+
+    <div class="popup-section">
+      <div class="popup-section-title">Risco Estrutural</div>
+      <div class="popup-row"><span class="popup-label">Índice</span><span class="popup-val">${riscoStr}</span></div>
+      <div class="popup-row"><span class="popup-label">Vegetação</span><span class="popup-val" style="max-width:130px;text-align:right">${veg}</span></div>
+    </div>
+
+    <div class="popup-mobilizacao mob-${cat}">&#x1F6A8; ${mob}</div>
+  `;
 }
 
 // ── Drawer mobile ─────────────────────────────────────────────────────────────
-let drawerOpen = true;
-function toggleDrawer() {
-  // Em mobile, alterna entre mapa grande (drawer minimizado) e drawer aberto
-  if (window.innerWidth > 768) return;
-  const mapEl = document.getElementById('map');
-  if (drawerOpen) {
-    mapEl.style.height = '80dvh';
-    drawerOpen = false;
-  } else {
-    mapEl.style.height = '55dvh';
-    drawerOpen = true;
-  }
+let drawerOpen=true;
+function toggleDrawer(){
+  if(window.innerWidth>768)return;
+  const m=document.getElementById('map');
+  m.style.height=drawerOpen?'80dvh':'55dvh';
+  drawerOpen=!drawerOpen;
   map.invalidateSize();
 }
-
-// Invalidar tamanho do mapa quando janela muda (rotação de ecrã)
-window.addEventListener('resize', () => {
-  setTimeout(() => map.invalidateSize(), 100);
-});
+window.addEventListener('resize',()=>setTimeout(()=>map.invalidateSize(),100));
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
-function connectWS() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws`);
-  state.ws = ws;
-
-  ws.onopen = () => { setWS('live', 'Ligado'); state.wsRetries = 0; };
-  ws.onmessage = (evt) => {
-    const msg = JSON.parse(evt.data);
-    if (msg.type === 'initial_state') {
-      state.alertas = msg.alertas || [];
-      renderAlertas(); renderMapAlertas();
-    } else if (msg.type === 'alertas_update') {
-      const novos = msg.alertas || [];
-      state.alertas = [...novos, ...state.alertas].slice(0, 100);
-      renderAlertas(); renderMapAlertas();
-      if (novos.length > 0) {
-        const t = novos[0];
-        toast(`Novo alerta ${t.categoria} — score ${t.score}`, t.categoria === 'CRITICO' || t.categoria === 'ALTO');
-      }
+function connectWS(){
+  const proto=location.protocol==='https:'?'wss':'ws';
+  const ws=new WebSocket(`${proto}://${location.host}/ws`);
+  state.ws=ws;
+  ws.onopen=()=>{setWS('live','Ligado');state.wsRetries=0;};
+  ws.onmessage=(evt)=>{
+    const msg=JSON.parse(evt.data);
+    if(msg.type==='initial_state'){state.alertas=msg.alertas||[];renderAlertas();renderMapAlertas();}
+    else if(msg.type==='alertas_update'){
+      const novos=msg.alertas||[];
+      state.alertas=[...novos,...state.alertas].slice(0,100);
+      renderAlertas();renderMapAlertas();
+      if(novos.length>0){const t=novos[0];toast(`Novo alerta ${t.categoria} — score ${t.score}`,t.categoria==='CRITICO'||t.categoria==='ALTO');}
     }
   };
-  ws.onclose = () => {
-    setWS('', 'Desligado');
-    setTimeout(connectWS, Math.min(30000, 2000 * Math.pow(2, state.wsRetries++)));
-  };
-  ws.onerror = () => setWS('error', 'Erro');
+  ws.onclose=()=>{setWS('','Desligado');setTimeout(connectWS,Math.min(30000,2000*Math.pow(2,state.wsRetries++)));};
+  ws.onerror=()=>setWS('error','Erro');
 }
-
-function setWS(cls, label) {
-  document.getElementById('wsDot').className = 'ws-dot' + (cls ? ' ' + cls : '');
-  document.getElementById('wsLabel').textContent = label;
+function setWS(cls,label){
+  document.getElementById('wsDot').className='ws-dot'+(cls?' '+cls:'');
+  document.getElementById('wsLabel').textContent=label;
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
-async function loadHealth() {
-  try {
-    const r = await fetch('/api/health');
-    const d = await r.json();
-    if (!d.firms_configured) {
-      state.demo = true;
-      document.getElementById('demoBanner').classList.add('visible');
-    }
-  } catch(e) {}
+async function loadHealth(){
+  try{const r=await fetch('/api/health');const d=await r.json();
+    if(!d.firms_configured){state.demo=true;document.getElementById('demoBanner').classList.add('visible');}
+  }catch(e){}
+}
+async function loadHotspots(){
+  try{const r=await fetch('/api/hotspots?limit=200');const d=await r.json();state.hotspots=d.features||[];renderMapHotspots();}catch(e){}
+}
+async function loadStatus(){
+  try{const r=await fetch('/api/status');state.status=await r.json();if(state.activeTab==='status')renderStatus();}catch(e){}
+}
+async function triggerIngest(){
+  try{await fetch('/api/ingest/trigger',{method:'POST'});toast('Ingest iniciado...',false);setTimeout(()=>{loadHotspots();loadStatus();},5000);}catch(e){toast('Erro',true);}
 }
 
-async function loadHotspots() {
-  try {
-    const r = await fetch('/api/hotspots?limit=200');
-    const d = await r.json();
-    state.hotspots = d.features || [];
-    renderMapHotspots();
-  } catch(e) {}
-}
-
-async function loadStatus() {
-  try {
-    const r = await fetch('/api/status');
-    state.status = await r.json();
-    if (state.activeTab === 'status') renderStatus();
-  } catch(e) {}
-}
-
-async function triggerIngest() {
-  try {
-    await fetch('/api/ingest/trigger', { method: 'POST' });
-    toast('Ingest iniciado...', false);
-    setTimeout(() => { loadHotspots(); loadStatus(); }, 5000);
-  } catch(e) { toast('Erro', true); }
-}
-
-// ── Render alertas ────────────────────────────────────────────────────────────
-function renderAlertas() {
-  if (state.activeTab !== 'alertas') return;
-  const cont = document.getElementById('sidebarContent');
-  const criticos = state.alertas.filter(a => a.categoria === 'CRITICO').length;
-  cont.innerHTML = `<div class="stats">
+// ── Render sidebar alertas ────────────────────────────────────────────────────
+function renderAlertas(){
+  if(state.activeTab!=='alertas')return;
+  const cont=document.getElementById('sidebarContent');
+  const criticos=state.alertas.filter(a=>a.categoria==='CRITICO').length;
+  cont.innerHTML=`<div class="stats">
     <div class="stat"><div class="stat-num" style="color:var(--fire)">${criticos}</div><div class="stat-label">Criticos</div></div>
     <div class="stat"><div class="stat-num">${state.alertas.length}</div><div class="stat-label">Total 24h</div></div>
   </div>`;
-  if (state.alertas.length === 0) {
-    cont.innerHTML += '<div class="empty">Sem alertas nas ultimas 24 horas</div>';
-    return;
-  }
-  state.alertas.forEach(a => {
-    const ts = a.criado_em ? new Date(a.criado_em).toLocaleTimeString('pt-PT', {hour:'2-digit',minute:'2-digit'}) : '';
-    const div = document.createElement('div');
-    div.className = `alerta-card ${a.categoria}`;
-    div.innerHTML = `
-      <div class="alerta-top">
-        <div class="alerta-score">${a.score?.toFixed(1) || '--'}</div>
-        <div class="alerta-cat">${a.categoria}</div>
-      </div>
+  if(state.alertas.length===0){cont.innerHTML+='<div class="empty">Sem alertas nas ultimas 24 horas</div>';return;}
+  state.alertas.forEach(a=>{
+    const ts=a.criado_em?new Date(a.criado_em).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}):'';
+    const div=document.createElement('div');
+    div.className=`alerta-card ${a.categoria}`;
+    div.innerHTML=`<div class="alerta-top">
+      <div class="alerta-score">${a.score?.toFixed(1)||'--'}</div>
+      <div class="alerta-cat">${a.categoria}</div></div>
       <div class="alerta-meta">
-        ${a.lat ? `<span>&#x1F4CD; ${a.lat?.toFixed(3)}, ${a.lon?.toFixed(3)}</span>` : ''}
-        ${ts ? `<span>&#x23F1; ${ts}</span>` : ''}
-        ${a.prociv_confirmado ? `<span style="color:var(--amber)">&#x2713; PROCIV</span>` : ''}
+        ${a.lat?`<span>&#x1F4CD; ${a.lat?.toFixed(3)}, ${a.lon?.toFixed(3)}</span>`:''}
+        ${ts?`<span>&#x23F1; ${ts}</span>`:''}
+        ${a.prociv_confirmado?`<span style="color:var(--amber)">&#x2713; PROCIV</span>`:''}
       </div>`;
-    div.onclick = () => {
-      map.flyTo([a.lat, a.lon], 12, {duration: 1});
-      // Em mobile, minimizar drawer para ver o mapa
-      if (window.innerWidth <= 768 && drawerOpen) toggleDrawer();
-    };
+    div.onclick=()=>{map.flyTo([a.lat,a.lon],12,{duration:1});if(window.innerWidth<=768&&drawerOpen)toggleDrawer();};
     cont.appendChild(div);
   });
 }
 
 // ── Render status ─────────────────────────────────────────────────────────────
-function renderStatus() {
-  const cont = document.getElementById('sidebarContent');
-  if (!state.status) { cont.innerHTML = '<div class="empty">A carregar...</div>'; return; }
-  const s = state.status;
-  cont.innerHTML = `<div class="stats">
-    <div class="stat"><div class="stat-num">${s.hotspots_24h || 0}</div><div class="stat-label">Hotspots 24h</div></div>
-    <div class="stat"><div class="stat-num">${s.ws_connections || 0}</div><div class="stat-label">Ligacoes WS</div></div>
+function renderStatus(){
+  const cont=document.getElementById('sidebarContent');
+  if(!state.status){cont.innerHTML='<div class="empty">A carregar...</div>';return;}
+  const s=state.status;
+  cont.innerHTML=`<div class="stats">
+    <div class="stat"><div class="stat-num">${s.hotspots_24h||0}</div><div class="stat-label">Hotspots 24h</div></div>
+    <div class="stat"><div class="stat-num">${s.ws_connections||0}</div><div class="stat-label">Ligacoes WS</div></div>
   </div>`;
-  (s.last_ingest_by_source || []).forEach(src => {
-    const ts = src.started_at ? new Date(src.started_at).toLocaleTimeString('pt-PT', {hour:'2-digit',minute:'2-digit'}) : '--';
-    cont.innerHTML += `<div class="status-item">
+  (s.last_ingest_by_source||[]).forEach(src=>{
+    const ts=src.started_at?new Date(src.started_at).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}):'--';
+    cont.innerHTML+=`<div class="status-item">
       <div class="status-source">${src.source}</div>
-      <div class="status-row"><span>Estado</span><span class="${src.status === 'ok' ? 'status-ok' : 'status-err'}">${src.status}</span></div>
+      <div class="status-row"><span>Estado</span><span class="${src.status==='ok'?'status-ok':'status-err'}">${src.status}</span></div>
       <div class="status-row"><span>Ultima execucao</span><span>${ts}</span></div>
-      <div class="status-row"><span>Novos registos</span><span>${src.records_new ?? '--'}</span></div>
-      ${src.error_msg ? `<div class="status-row" style="color:var(--fire)">${src.error_msg}</div>` : ''}
+      <div class="status-row"><span>Novos registos</span><span>${src.records_new??'--'}</span></div>
+      ${src.error_msg?`<div class="status-row" style="color:var(--fire)">${src.error_msg}</div>`:''}
     </div>`;
   });
 }
 
-// ── Render mapa ───────────────────────────────────────────────────────────────
-function renderMapAlertas() {
+// ── Render mapa alertas ───────────────────────────────────────────────────────
+function renderMapAlertas(){
   alertaLayer.clearLayers();
-  state.alertas.forEach(a => {
-    if (!a.lat || !a.lon) return;
-    const m = L.marker([a.lat, a.lon], { icon: alertIcon(a.categoria) });
-    const fwi   = a.meteo?.fwi ? a.meteo.fwi.toFixed(1) : '--';
-    const vento = a.meteo?.vento_vel ? a.meteo.vento_vel.toFixed(0) + ' km/h' : '--';
-    const temp  = a.meteo?.temp ? a.meteo.temp.toFixed(1) + 'C' : '--';
-    m.bindPopup(`
-      <div class="popup-title">Alerta #${a.id} &mdash; ${a.categoria}</div>
-      <div class="popup-row"><span class="popup-label">Score</span><span class="popup-val">${a.score?.toFixed(1)}</span></div>
-      <div class="popup-row"><span class="popup-label">FWI</span><span class="popup-val">${fwi}</span></div>
-      <div class="popup-row"><span class="popup-label">Vento</span><span class="popup-val">${vento}</span></div>
-      <div class="popup-row"><span class="popup-label">Temp</span><span class="popup-val">${temp}</span></div>
-      <div class="popup-row"><span class="popup-label">PROCIV</span><span class="popup-val">${a.prociv_confirmado ? 'Confirmado' : 'Nao confirmado'}</span></div>
-      ${a.prociv_localidade ? `<div class="popup-row"><span class="popup-label">Local</span><span class="popup-val">${a.prociv_localidade}</span></div>` : ''}
-    `);
+  state.alertas.forEach(a=>{
+    if(!a.lat||!a.lon)return;
+    const m=L.marker([a.lat,a.lon],{icon:alertIcon(a.categoria)});
+    m.bindPopup(buildPopup(a),{maxWidth:300,className:''});
     alertaLayer.addLayer(m);
   });
 }
 
-function renderMapHotspots() {
+function renderMapHotspots(){
   hotspotLayer.clearLayers();
-  state.hotspots.forEach(f => {
-    const [lon, lat] = f.geometry.coordinates;
-    const p = f.properties;
-    const m = L.marker([lat, lon], { icon: hotspotIcon() });
-    m.bindPopup(`
-      <div class="popup-title">Hotspot ${p.source}</div>
-      <div class="popup-row"><span class="popup-label">FRP</span><span class="popup-val">${p.frp ? p.frp.toFixed(1) + ' MW' : '--'}</span></div>
-      <div class="popup-row"><span class="popup-label">Confianca</span><span class="popup-val">${p.confidence || '--'}</span></div>
-      <div class="popup-row"><span class="popup-label">Data</span><span class="popup-val">${p.acq_date}</span></div>
-    `);
+  state.hotspots.forEach(f=>{
+    const [lon,lat]=f.geometry.coordinates;const p=f.properties;
+    const m=L.marker([lat,lon],{icon:hotspotIcon()});
+    m.bindPopup(`<div class="popup-title" style="margin-bottom:.4rem">Hotspot ${sateliteLabel(p.source)}</div>
+      <div class="popup-row"><span class="popup-label">FRP</span><span class="popup-val">${p.frp?p.frp.toFixed(1)+' MW':'--'}</span></div>
+      <div class="popup-row"><span class="popup-label">Confianca</span><span class="popup-val">${p.confidence||'--'}</span></div>
+      <div class="popup-row"><span class="popup-label">Data</span><span class="popup-val">${p.acq_date}</span></div>`);
     hotspotLayer.addLayer(m);
   });
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  state.activeTab = tab;
-  document.getElementById('tabAlertas').className = 'tab' + (tab === 'alertas' ? ' active' : '');
-  document.getElementById('tabStatus').className  = 'tab' + (tab === 'status'  ? ' active' : '');
-  if (tab === 'alertas') renderAlertas();
-  else { loadStatus(); renderStatus(); }
+function switchTab(tab){
+  state.activeTab=tab;
+  document.getElementById('tabAlertas').className='tab'+(tab==='alertas'?' active':'');
+  document.getElementById('tabStatus').className='tab'+(tab==='status'?' active':'');
+  if(tab==='alertas')renderAlertas();else{loadStatus();renderStatus();}
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 let toastTimer;
-function toast(msg, isFire = false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show' + (isFire ? ' fire' : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.className = '', 4000);
+function toast(msg,isFire=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='show'+(isFire?' fire':'');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='',4000);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-(async () => {
-  await loadHealth();
-  await loadHotspots();
-  await loadStatus();
-  connectWS();
-  setInterval(loadHotspots, 5 * 60 * 1000);
-  setInterval(loadStatus,   5 * 60 * 1000);
+(async()=>{
+  await loadHealth();await loadHotspots();await loadStatus();connectWS();
+  setInterval(loadHotspots,5*60*1000);setInterval(loadStatus,5*60*1000);
 })();
 </script>
 </body>
