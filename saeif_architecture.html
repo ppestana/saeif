@@ -492,6 +492,7 @@
   <a href="#slas">SLAs</a>
   <a href="#roadmap">Roadmap</a>
   <a href="#mobile">Interface Mobile</a>
+  <a href="#melhorias">Melhorias Futuras</a>
 </nav>
 
 <!-- ─── MAIN ─── -->
@@ -619,9 +620,23 @@
         </thead>
         <tbody>
           <tr>
-            <td><strong>NASA FIRMS</strong><br><span class="dimtext">VIIRS / MODIS</span></td>
+            <td><strong>NASA FIRMS</strong><br><span class="dimtext">VIIRS / Suomi-NPP</span></td>
             <td>Hotspots de calor satelitares (lat/lon, confiança, FRP)</td>
             <td><code>API REST / GeoJSON / CSV</code></td>
+            <td>5–15 min (Near Real-Time)</td>
+            <td><span class="badge badge-fire">Primária</span></td>
+          </tr>
+          <tr>
+            <td><strong>NASA FIRMS</strong><br><span class="dimtext">VIIRS / NOAA-20</span></td>
+            <td>Hotspots de calor satelitares — segundo satélite da constelação JPSS</td>
+            <td><code>VIIRS_NOAA20_NRT</code></td>
+            <td>5–15 min (Near Real-Time)</td>
+            <td><span class="badge badge-fire">Primária</span></td>
+          </tr>
+          <tr>
+            <td><strong>NASA FIRMS</strong><br><span class="dimtext">VIIRS / NOAA-21</span></td>
+            <td>Hotspots de calor satelitares — terceiro satélite da constelação JPSS</td>
+            <td><code>VIIRS_NOAA21_NRT</code></td>
             <td>5–15 min (Near Real-Time)</td>
             <td><span class="badge badge-fire">Primária</span></td>
           </tr>
@@ -902,6 +917,9 @@ CREATE INDEX ON alertas (criado_em, categoria);
     <span class="s">"score"</span>: 73.4,
     <span class="s">"categoria"</span>: <span class="s">"ALTO"</span>,
     <span class="s">"source_tag"</span>: <span class="s">"SYS"</span>,
+    <span class="s">"hotspot_source"</span>: <span class="s">"NOAA20"</span>,
+    <span class="s">"prociv_confirmado"</span>: <span class="k">true</span>,
+    <span class="s">"prociv_localidade"</span>: <span class="s">"Lisboa, Sintra, Terrugem"</span>,
     <span class="s">"criado_em"</span>: <span class="s">"2026-07-15T14:32:00Z"</span>,
     <span class="s">"meteo"</span>: {
       <span class="s">"temp"</span>: 38.2, <span class="s">"humidade"</span>: 18, <span class="s">"vento_vel"</span>: 45.0, <span class="s">"vento_dir"</span>: 220, <span class="s">"fwi"</span>: 68.4
@@ -1423,6 +1441,95 @@ fire_risk = (
           <tr><td><code>2ca4c27</code></td><td>feat: mobile-responsive layout (drawer + map split)</td><td>31 Mai 2026</td></tr>
           <tr><td><code>5d4e708</code></td><td>fix: sidebar left on desktop, drawer bottom on mobile</td><td>31 Mai 2026</td></tr>
           <tr><td><code>6e2d4dc</code></td><td>fix: desktop sidebar 300px left, mobile drawer bottom</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>f9a777e</code></td><td>feat: NOAA-20+21 ingest, dedup inter-satelite, popup detalhado</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>bf37fb8</code></td><td>fix: convert acq_time string to datetime.time object for asyncpg</td><td>31 Mai 2026</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Popup de alerta — campos exibidos</h3>
+      <p>Ao clicar num ícone de alerta no mapa, é exibido um popup estruturado em três secções:</p>
+      <table>
+        <thead><tr><th>Secção</th><th>Campo</th><th>Fonte</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="5"><strong>Detecção</strong></td><td>Score (0–100)</td><td>Calculado pelo pipeline</td></tr>
+          <tr><td>Hora ("hoje às HH:MM")</td><td><code>alertas.criado_em</code></td></tr>
+          <tr><td>Satélite (VIIRS/SNPP, NOAA-20, NOAA-21)</td><td><code>hotspots.source</code></td></tr>
+          <tr><td>PROCIV confirmado/não confirmado</td><td><code>ocorrencias_prociv.id IS NOT NULL</code></td></tr>
+          <tr><td>Localidade (quando PROCIV confirmado)</td><td><code>ocorrencias_prociv.localidade</code></td></tr>
+          <tr><td rowspan="4"><strong>Meteorologia</strong></td><td>FWI (Fire Weather Index)</td><td>IPMA via <code>alertas.fwi</code></td></tr>
+          <tr><td>Temperatura (°C)</td><td>IPMA via <code>alertas.temp</code></td></tr>
+          <tr><td>Humidade relativa (%)</td><td>IPMA via <code>alertas.humidade</code></td></tr>
+          <tr><td>Vento (km/h + direcção cardeal)</td><td>IPMA via <code>alertas.vento_vel/dir</code></td></tr>
+          <tr><td rowspan="2"><strong>Risco Estrutural</strong></td><td>Índice (%)</td><td>Estimativa por zona (raster futuro)</td></tr>
+          <tr><td>Tipo de vegetação estimado</td><td>Reclassificação do índice (5 classes)</td></tr>
+          <tr><td><strong>Mobilização</strong></td><td>Recomendação operacional</td><td>Baseada na categoria do alerta</td></tr>
+        </tbody>
+      </table>
+
+      <div class="alert alert-amber" style="margin-top:.75rem;">
+        <strong>Limitação actual:</strong> A localidade só é exibida quando existe confirmação PROCIV. Alertas detectados exclusivamente por FIRMS não mostram localidade textual. A geocodificação inversa via OSM Nominatim está identificada como melhoria futura — ver Secção 14.
+      </div>
+
+      <h3>Deduplicação inter-satélite</h3>
+      <p>Com três satélites activos (SNPP, NOAA-20, NOAA-21), o mesmo foco pode ser detectado por múltiplos satélites. O módulo <code>analysis/alerts.py</code> verifica antes de inserir um alerta se já existe um numa janela de 2 horas e raio de 2 km. Se existir, o duplicado é descartado.</p>
+    </div>
+  </div>
+
+  <!-- 14. MELHORIAS FUTURAS -->
+  <div class="section" id="melhorias">
+    <div class="section-header">
+      <span class="section-num">14</span>
+      <span class="section-title">Melhorias Futuras Identificadas</span>
+    </div>
+    <div class="section-body">
+      <p>Lista de melhorias identificadas durante o desenvolvimento do PoC, por ordem de prioridade e esforço estimado.</p>
+      <table>
+        <thead>
+          <tr><th>Melhoria</th><th>Descrição</th><th>Prioridade</th><th>Esforço</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Mapa de risco estrutural</strong></td>
+            <td>Overlay GeoJSON do <code>fire_risk.tif</code> no Leaflet (5 classes). Requer download CORINE + EU-DEM + NDVI Sentinel-2 e geração do raster.</td>
+            <td><span class="badge badge-fire">Alta</span></td>
+            <td>Sessão dedicada</td>
+          </tr>
+          <tr>
+            <td><strong>Geocodificação inversa</strong></td>
+            <td>Para alertas sem PROCIV, obter nome de lugar via OSM Nominatim a partir das coordenadas do hotspot FIRMS. Exibir no popup como "Localidade estimada".</td>
+            <td><span class="badge badge-amber">Média</span></td>
+            <td>2–3 horas</td>
+          </tr>
+          <tr>
+            <td><strong>Propagação estimada no mapa</strong></td>
+            <td>Elipse de propagação a 6h/12h no Leaflet, calculada a partir do vento IPMA e risco estrutural.</td>
+            <td><span class="badge badge-amber">Média</span></td>
+            <td>3–4 horas</td>
+          </tr>
+          <tr>
+            <td><strong>Filtro por categoria</strong></td>
+            <td>Botões na sidebar para filtrar alertas por CRÍTICO / ALTO / MÉDIO / BAIXO.</td>
+            <td><span class="badge badge-gray">Baixa</span></td>
+            <td>1 hora</td>
+          </tr>
+          <tr>
+            <td><strong>Favicon e página 404</strong></td>
+            <td>Favicon SVG com ícone de chama TerraDigital. Página 404 personalizada.</td>
+            <td><span class="badge badge-gray">Baixa</span></td>
+            <td>1 hora</td>
+          </tr>
+          <tr>
+            <td><strong>Artigo técnico</strong></td>
+            <td>Paper EN+PT para pedropestana.com documentando arquitectura e resultados do PoC.</td>
+            <td><span class="badge badge-blue">Futura</span></td>
+            <td>Sessão dedicada</td>
+          </tr>
+          <tr>
+            <td><strong>Integração SMRIP</strong></td>
+            <td>Substituição do raster CORINE local pelo risco estrutural do SMRIP quando disponível.</td>
+            <td><span class="badge badge-blue">Futura</span></td>
+            <td>Depende de SMRIP</td>
+          </tr>
         </tbody>
       </table>
     </div>
