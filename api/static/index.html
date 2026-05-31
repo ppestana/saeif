@@ -68,8 +68,8 @@
     }
     .demo-banner.visible { display: block; }
 
-    /* ── BODY: desktop = row, mobile = column ── */
-    .body { display: flex; flex: 1; overflow: hidden; }
+    /* ── BODY: desktop = row ── */
+    .body { display: flex; flex-direction: row; flex: 1; overflow: hidden; }
 
     /* ── SIDEBAR — desktop ── */
     .sidebar {
@@ -78,10 +78,11 @@
       border-right: 1px solid var(--border);
       display: flex; flex-direction: column;
       overflow: hidden;
+      order: 1;
     }
 
     /* ── MAP ── */
-    #map { flex: 1; min-width: 0; }
+    #map { flex: 1; min-width: 0; order: 2; }
 
     /* ── TABS ── */
     .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -189,16 +190,16 @@
       .body { flex-direction: column; }
 
       /* Em mobile: mapa em cima, sidebar em baixo */
-      /* Mapa ocupa parte superior */
-      #map { order: 1; }
-      .sidebar { order: 2; }
+      #map {
+        order: 1;
         flex: none;
         height: 55dvh;
         width: 100%;
+        min-width: unset;
       }
 
-      /* Sidebar transforma-se em drawer inferior */
       .sidebar {
+        order: 2;
         width: 100%;
         flex: 1;
         border-right: none;
