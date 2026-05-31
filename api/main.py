@@ -220,12 +220,18 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
             where += " AND categoria = $1"
             params.append(categoria.upper())
         rows = await conn.fetch(f"""
-            SELECT id, ST_X(geom) AS lon, ST_Y(geom) AS lat,
-                   score, categoria, source_tag,
-                   temp, humidade, vento_vel, vento_dir, fwi,
-                   risco_estrutural, criado_em
-            FROM alertas {where}
-            ORDER BY score DESC, criado_em DESC LIMIT {limit}
+            SELECT a.id, ST_X(a.geom) AS lon, ST_Y(a.geom) AS lat,
+                   a.score, a.categoria, a.source_tag,
+                   a.temp, a.humidade, a.vento_vel, a.vento_dir, a.fwi,
+                   a.risco_estrutural, a.criado_em,
+                   h.source AS hotspot_source,
+                   p.id IS NOT NULL AS prociv_confirmado,
+                   p.localidade AS prociv_localidade
+            FROM alertas a
+            LEFT JOIN hotspots h ON h.id = a.hotspot_id
+            LEFT JOIN ocorrencias_prociv p ON p.id = a.prociv_id
+            {where}
+            ORDER BY a.score DESC, a.criado_em DESC LIMIT {limit}
         """, *params)
         features = []
         for r in rows:
@@ -235,6 +241,9 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                 "properties": {
                     "id": r["id"], "score": float(r["score"]),
                     "categoria": r["categoria"], "source_tag": r["source_tag"],
+                    "hotspot_source": r["hotspot_source"],
+                    "prociv_confirmado": bool(r["prociv_confirmado"]),
+                    "prociv_localidade": r["prociv_localidade"],
                     "meteo": {
                         "temp": float(r["temp"]) if r["temp"] else None,
                         "humidade": float(r["humidade"]) if r["humidade"] else None,

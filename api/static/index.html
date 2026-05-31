@@ -292,7 +292,9 @@ function connectWS(){
   ws.onopen=()=>{setWS('live','Ligado');state.wsRetries=0;};
   ws.onmessage=(evt)=>{
     const msg=JSON.parse(evt.data);
-    if(msg.type==='initial_state'){state.alertas=msg.alertas||[];renderAlertas();renderMapAlertas();}
+    if(msg.type==='initial_state'){
+      // initial_state só tem campos básicos — já carregámos via REST
+    }
     else if(msg.type==='alertas_update'){
       const novos=msg.alertas||[];
       state.alertas=[...novos,...state.alertas].slice(0,100);
@@ -309,7 +311,29 @@ function setWS(cls,label){
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
-async function loadHealth(){
+async function loadAlertas(){
+  try{
+    const r=await fetch('/api/alertas?limit=100');
+    const d=await r.json();
+    // GeoJSON FeatureCollection → array simples
+    state.alertas=(d.features||[]).map(f=>({
+      id:f.properties.id,
+      lat:f.geometry.coordinates[1],
+      lon:f.geometry.coordinates[0],
+      score:f.properties.score,
+      categoria:f.properties.categoria,
+      source_tag:f.properties.source_tag,
+      criado_em:f.properties.criado_em,
+      meteo:f.properties.meteo,
+      risco_estrutural:f.properties.risco_estrutural,
+      prociv_confirmado:f.properties.prociv_confirmado,
+      prociv_localidade:f.properties.prociv_localidade,
+      hotspot_source:f.properties.hotspot_source,
+    }));
+    renderAlertas();
+    renderMapAlertas();
+  }catch(e){console.warn('alertas falhou',e);}
+}
   try{const r=await fetch('/api/health');const d=await r.json();
     if(!d.firms_configured){state.demo=true;document.getElementById('demoBanner').classList.add('visible');}
   }catch(e){}
@@ -414,8 +438,14 @@ function toast(msg,isFire=false){
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async()=>{
-  await loadHealth();await loadHotspots();await loadStatus();connectWS();
-  setInterval(loadHotspots,5*60*1000);setInterval(loadStatus,5*60*1000);
+  await loadHealth();
+  await loadAlertas();
+  await loadHotspots();
+  await loadStatus();
+  connectWS();
+  setInterval(loadAlertas,5*60*1000);
+  setInterval(loadHotspots,5*60*1000);
+  setInterval(loadStatus,5*60*1000);
 })();
 </script>
 </body>
