@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAEIF — Arquitectura do Sistema · TerraDigital</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap');
+
+    :root {
+      --bg:          #0d1117;
+      --bg-panel:    #161b22;
+      --bg-card:     #1c2128;
+      --bg-code:     #0d1117;
+      --border:      #30363d;
+      --border-hi:   #444c56;
+      --text:        #c9d1d9;
+      --text-dim:    #8b949e;
+      --text-bright: #f0f6fc;
+      --fire:        #f85149;
+      --fire-dim:    #3d1f1e;
+      --amber:       #e3b341;
+      --amber-dim:   #2d2316;
+      --green:       #3fb950;
+      --green-dim:   #192c1e;
+      --blue:        #58a6ff;
+      --blue-dim:    #1a2742;
+      --purple:      #bc8cff;
+      --purple-dim:  #211d38;
+      --teal:        #39d353;
+      --accent:      #f85149;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 3rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .header-left { flex: 1; }
+    .project-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--fire);
+      border: 1px solid var(--fire-dim);
+      background: var(--fire-dim);
+      padding: .2rem .7rem;
+      border-radius: 2px;
+      margin-bottom: .75rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .project-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--fire);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+    .header h1 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: -.02em;
+      line-height: 1.2;
+    }
+    .header h1 span { color: var(--fire); }
+    .header-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: .5rem;
+      font-style: italic;
+    }
+    .header-meta {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      align-items: flex-end;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .header-meta span { white-space: nowrap; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .3rem .8rem;
+      border-radius: 2px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .status-dev  { background: var(--amber-dim); color: var(--amber); border: 1px solid #4a3a10; }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0 3rem;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+    }
+    nav a {
+      display: block;
+      padding: .75rem 1.25rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    nav a:hover { color: var(--text-bright); border-color: var(--border-hi); }
+
+    /* ── MAIN ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 3rem; }
+
+    /* ── SECTIONS ── */
+    .section {
+      margin-bottom: 3rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .section-header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--fire);
+      border: 1px solid var(--fire-dim);
+      padding: .1rem .5rem;
+      border-radius: 2px;
+      background: var(--fire-dim);
+    }
+    .section-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: .02em;
+    }
+    .section-body { padding: 1.5rem; }
+
+    /* ── TABLES ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr { background: var(--bg-panel); }
+    thead th {
+      text-align: left;
+      padding: .6rem 1rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    tbody td {
+      padding: .6rem 1rem;
+      color: var(--text);
+      vertical-align: top;
+    }
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      background: var(--bg-code);
+      color: var(--blue);
+      padding: .1rem .4rem;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── CODE BLOCKS ── */
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+      margin: .75rem 0;
+    }
+    pre .c { color: var(--text-dim); font-style: italic; }
+    pre .k { color: var(--purple); }
+    pre .s { color: var(--green); }
+    pre .n { color: var(--blue); }
+    pre .f { color: var(--amber); }
+
+    /* ── ARCH BOX ── */
+    .arch-box {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── CARDS GRID ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+      margin: .75rem 0;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.25rem;
+    }
+    .card-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .4rem;
+    }
+    .card-value {
+      font-size: 13px;
+      color: var(--text-bright);
+      font-weight: 600;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: .25rem;
+    }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      padding: .15rem .55rem;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    .badge-fire    { background: var(--fire-dim);   color: var(--fire);   border: 1px solid #5a2020; }
+    .badge-amber   { background: var(--amber-dim);  color: var(--amber);  border: 1px solid #4a3a10; }
+    .badge-green   { background: var(--green-dim);  color: var(--green);  border: 1px solid #1e4a28; }
+    .badge-blue    { background: var(--blue-dim);   color: var(--blue);   border: 1px solid #1a3a6a; }
+    .badge-purple  { background: var(--purple-dim); color: var(--purple); border: 1px solid #3a2860; }
+    .badge-gray    { background: #1c2128;            color: var(--text-dim); border: 1px solid var(--border); }
+
+    /* ── FLOW STEPS ── */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      margin: .75rem 0;
+    }
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .85rem 1.25rem;
+    }
+    .flow-step-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--fire);
+      border: 1px solid var(--fire-dim);
+      background: var(--fire-dim);
+      padding: .1rem .45rem;
+      border-radius: 2px;
+      flex-shrink: 0;
+      margin-top: .15rem;
+    }
+    .flow-step-content h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+      margin-bottom: .25rem;
+    }
+    .flow-step-content p {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── ALERT/INFO BOXES ── */
+    .alert {
+      border-radius: 4px;
+      padding: .85rem 1.25rem;
+      font-size: 13px;
+      margin: .75rem 0;
+      border-left: 3px solid;
+    }
+    .alert-fire   { background: var(--fire-dim);   border-color: var(--fire);   color: #f8b4b1; }
+    .alert-amber  { background: var(--amber-dim);  border-color: var(--amber);  color: #e8cf8a; }
+    .alert-blue   { background: var(--blue-dim);   border-color: var(--blue);   color: #9ecbff; }
+    .alert-green  { background: var(--green-dim);  border-color: var(--green);  color: #85e89d; }
+
+    /* ── SCORE TABLE ── */
+    .score-row { display: flex; gap: 0; margin: .75rem 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .score-cell {
+      flex: 1;
+      padding: 1rem;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .score-cell:last-child { border-right: none; }
+    .score-cell .score-num { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; margin-bottom: .3rem; }
+    .score-cell .score-label { font-size: 12px; color: var(--text-dim); }
+    .score-cell .score-rec { font-size: 11px; color: var(--text-dim); margin-top: .4rem; font-style: italic; }
+    .score-baixo  { background: var(--green-dim);  }  .score-baixo  .score-num { color: var(--green); }
+    .score-medio  { background: var(--amber-dim);  }  .score-medio  .score-num { color: var(--amber); }
+    .score-alto   { background: #2a2210; }             .score-alto   .score-num { color: #f0a060; }
+    .score-critico{ background: var(--fire-dim);   }  .score-critico .score-num { color: var(--fire); }
+
+    /* ── SLA TABLE ── */
+    .sla-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: .75rem 0; }
+    .sla-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .85rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .sla-desc { font-size: 13px; color: var(--text); }
+    .sla-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green);
+      white-space: nowrap;
+    }
+
+    /* ── PHASE TIMELINE ── */
+    .phases { display: flex; flex-direction: column; gap: .75rem; margin: .75rem 0; }
+    .phase {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.25rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .phase-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--fire);
+      min-width: 2rem;
+      line-height: 1;
+      margin-top: .2rem;
+    }
+    .phase-content { flex: 1; }
+    .phase-title { font-size: 14px; font-weight: 600; color: var(--text-bright); margin-bottom: .35rem; }
+    .phase-desc  { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: .25rem .75rem;
+      border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+    .badge-pending { background: var(--amber-dim); color: var(--amber); border: 1px solid #4a3a10; }
+    .badge-done    { background: var(--green-dim);  color: var(--green);  border: 1px solid #1e4a28; }
+    .badge-live    { background: var(--green-dim);  color: var(--green);  border: 1px solid #1e4a28; }
+
+    /* ── INTEGRATION MATRIX ── */
+    .int-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; margin: .75rem 0; }
+    .int-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .85rem 1rem;
+    }
+    .int-system { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: var(--fire); margin-bottom: .35rem; text-transform: uppercase; }
+    .int-role { font-size: 12px; color: var(--text-dim); }
+    .int-arrow { color: var(--text-dim); margin: 0 .3rem; }
+
+    /* ── MISC ── */
+    h3 { font-size: 13px; font-weight: 600; color: var(--text-bright); margin: 1.25rem 0 .6rem; }
+    p  { font-size: 13px; color: var(--text); margin-bottom: .75rem; line-height: 1.7; }
+    ul { margin: .5rem 0 .75rem 1.5rem; font-size: 13px; color: var(--text); }
+    li { margin-bottom: .3rem; }
+    .dimtext { color: var(--text-dim); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+    @media (max-width: 768px) {
+      .header { flex-direction: column; padding: 1.5rem; }
+      .header-meta { align-items: flex-start; }
+      .container { padding: 1.5rem; }
+      nav { padding: 0 1rem; }
+      .two-col, .three-col, .sla-grid { grid-template-columns: 1fr; }
+      .score-row { flex-direction: column; }
+      .score-cell { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<div class="header">
+  <div class="header-left">
+    <div class="project-badge">TerraDigital · Projecto 02</div>
+    <h1><span>SAEIF</span> — Arquitectura do Sistema</h1>
+    <div class="header-sub">Sistema de Alerta e Encaminhamento Imediato em Incêndios Florestais<br>
+      <em>"Forest fire alerts, before the smoke clears"</em>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="status-pill" style="background:var(--green-dim);color:var(--green);border:1px solid #1e4a28;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:2px;">✓ Live</span>
+    <span><a href="https://saeif.terradigital.net" style="color:var(--fire);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:11px;">saeif.terradigital.net</a></span>
+    <span>Hetzner VPS · 88.198.95.103</span>
+    <span>Em produção: 30 Mai 2026</span>
+  </div>
+</div>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <a href="#overview">Visão Geral</a>
+  <a href="#fluxo">Fluxo Operacional</a>
+  <a href="#fontes">Fontes de Dados</a>
+  <a href="#stack">Stack Técnica</a>
+  <a href="#schema">Base de Dados</a>
+  <a href="#api">API</a>
+  <a href="#score">Score de Risco</a>
+  <a href="#risco-mapas">Mapas de Risco</a>
+  <a href="#integracao">Integrações</a>
+  <a href="#infra">Infraestrutura</a>
+  <a href="#slas">SLAs</a>
+  <a href="#roadmap">Roadmap</a>
+  <a href="#mobile">Interface Mobile</a>
+</nav>
+
+<!-- ─── MAIN ─── -->
+<div class="container">
+
+  <!-- 1. VISÃO GERAL -->
+  <div class="section" id="overview">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">Visão Geral e Objectivo</span>
+    </div>
+    <div class="section-body">
+      <p>O SAEIF é um sistema de alerta em tempo real para incêndios florestais em Portugal Continental, desenvolvido como proof-of-concept pela TerraDigital. O seu propósito central é fornecer, nos primeiros minutos após a detecção de uma ignição, uma avaliação automática do potencial de crescimento do incêndio — cruzando dados satelitares, meteorológicos e de protecção civil — para apoio à decisão de mobilização.</p>
+
+      <div class="alert alert-fire">
+        <strong>Contexto operacional:</strong> Portugal perdeu mais de 500.000 hectares de floresta entre 2010 e 2023. A maioria dos grandes incêndios foi precedida por ignições aparentemente menores para as quais a mobilização inicial foi insuficiente. O SAEIF endereça directamente esta lacuna de avaliação precoce.
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-label">Lacuna endereçada</div>
+          <div class="card-value">L4</div>
+          <div class="card-sub">Ausência de alerta imediato pós-ignição com avaliação de potencial de crescimento</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Tempo máximo de resposta</div>
+          <div class="card-value">&lt; 60 segundos</div>
+          <div class="card-sub">Da detecção à geração de ficha de alerta</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Fontes de ignição</div>
+          <div class="card-value">3 fontes</div>
+          <div class="card-sub">NASA FIRMS (satelitares), PROCIV/fogos.pt, alertas de bombeiros</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Regra de cruzamento</div>
+          <div class="card-value">40 km</div>
+          <div class="card-sub">Raio de proximidade para cruzamento FIRMS × PROCIV</div>
+        </div>
+      </div>
+
+      <h3>Posicionamento no ecossistema de sistemas</h3>
+      <p>O SAEIF é o Sistema 4 num conjunto de 5 sistemas complementares para a prevenção e combate a incêndios florestais. Na arquitectura de integração global, é o sistema de saída operacional: recebe dados processados dos sistemas 1 (SIGCRF — cadastro) e 3 (SMRIP — modelação de risco) e produz alertas para o CDOS/AGIF e para os corpos de bombeiros.</p>
+
+      <div class="arch-box">www.terradigital.net              ← Landing page (carousel + newsletter)
+│
+├── cal.terradigital.net          ← CAL: Análise de arbitragem  ✓ LIVE
+├── saeif.terradigital.net        ← SAEIF: Alertas de incêndio  ✓ LIVE · 30 Mai 2026
+├── ecoturismo.terradigital.net   ← Ecoturismo WebGIS            ○ PLANNED
+├── artop.terradigital.net        ← CS-THB Investigation         ⚙ IN DEV
+├── astrolabio.terradigital.net   ← Museu Descobrimentos         ○ PLANNED
+└── store.terradigital.net        ← TerraDigital Store           ○ PLANNED</div>
+    </div>
+  </div>
+
+  <!-- 2. FLUXO OPERACIONAL -->
+  <div class="section" id="fluxo">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">Fluxo Operacional</span>
+    </div>
+    <div class="section-body">
+      <p>O sistema executa um pipeline sequencial de 5 etapas desde a detecção até à notificação, com um tempo máximo de 60 segundos end-to-end.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-step-num">01</div>
+          <div class="flow-step-content">
+            <h4>Detecção de ignição</h4>
+            <p>Polling paralelo a três fontes: NASA FIRMS (hotspots VIIRS/MODIS por GeoJSON/CSV), fogos.pt scraping (fallback PROCIV) etiquetado SYS, e futuramente SGIF via API. Frequência: 5–15 minutos por fonte. Todos os alertas gerados pelo sistema são etiquetados <code>source: SYS</code>.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">02</div>
+          <div class="flow-step-content">
+            <h4>Deduplicação e geocodificação</h4>
+            <p>Cruzamento FIRMS × PROCIV por proximidade geográfica de <strong>40 km</strong>. Hotspots FIRMS já geocodificados por coordenada. Ocorrências PROCIV geocodificadas por nome de localidade (OSM Nominatim + fallback manual). Deduplicação por janela temporal de 30 minutos + raio de 2 km.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">03</div>
+          <div class="flow-step-content">
+            <h4>Enriquecimento meteorológico</h4>
+            <p>Consulta à API IPMA para o ponto de ignição: temperatura, humidade relativa, velocidade e direcção do vento, índice FWI (Fire Weather Index). Os dados meteorológicos são o input dinâmico principal para o cálculo do score de risco.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">04</div>
+          <div class="flow-step-content">
+            <h4>Cálculo do score de risco e geração de ficha</h4>
+            <p>Score composto (0–100) calculado a partir de: risco estrutural da paisagem, condições meteorológicas actuais (FWI, vento), tipo de combustível, declive, e índice de conectividade da paisagem. A ficha de alerta inclui mapa de propagação estimada a 6h/12h/24h, recomendação de mobilização, e identificação de infraestruturas em risco.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">05</div>
+          <div class="flow-step-content">
+            <h4>Notificação e dashboard</h4>
+            <p>Actualização do dashboard via <strong>WebSocket</strong> (<code>/ws</code>) — o cliente recebe novos alertas sem necessidade de recarregar a página. Frontend em HTML/JS vanilla + Leaflet.js servido directamente pelo FastAPI como ficheiro estático (<code>static/index.html</code>). Notificações SYS registadas na base de dados. Futuramente: integração SGIF e notificações push para app mobile.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-amber">
+        <strong>Nota de arquitectura:</strong> As funcionalidades de <em>simulação</em> (cenários hipotéticos sem ignição real detectada) foram removidas na totalidade do PoC. O sistema responde exclusivamente a ignições reais detectadas por pelo menos uma fonte.
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. FONTES DE DADOS -->
+  <div class="section" id="fontes">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Fontes de Dados</span>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Fonte</th>
+            <th>Dados</th>
+            <th>Acesso</th>
+            <th>Frequência</th>
+            <th>Papel</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>NASA FIRMS</strong><br><span class="dimtext">VIIRS / MODIS</span></td>
+            <td>Hotspots de calor satelitares (lat/lon, confiança, FRP)</td>
+            <td><code>API REST / GeoJSON / CSV</code></td>
+            <td>5–15 min (Near Real-Time)</td>
+            <td><span class="badge badge-fire">Primária</span></td>
+          </tr>
+          <tr>
+            <td><strong>IPMA</strong><br><span class="dimtext">API oficial</span></td>
+            <td>Temperatura, humidade, vento (dir + vel), FWI distrital</td>
+            <td><code>api.ipma.pt/open-data</code></td>
+            <td>Horária</td>
+            <td><span class="badge badge-blue">Enriquecimento</span></td>
+          </tr>
+          <tr>
+            <td><strong>fogos.pt</strong><br><span class="dimtext">Scraping PROCIV</span></td>
+            <td>Ocorrências de incêndio reportadas pela protecção civil</td>
+            <td>HTTP scraping <code>fogos.pt/v2/fires</code></td>
+            <td>5 min (polling)</td>
+            <td><span class="badge badge-amber">Fallback / Validação</span></td>
+          </tr>
+          <tr>
+            <td><strong>OpenStreetMap</strong><br><span class="dimtext">Nominatim</span></td>
+            <td>Geocodificação de topónimos PROCIV</td>
+            <td><code>nominatim.openstreetmap.org</code></td>
+            <td>Por ocorrência</td>
+            <td><span class="badge badge-purple">Geocodificação</span></td>
+          </tr>
+          <tr>
+            <td><strong>CORINE Land Cover</strong><br><span class="dimtext">Copernicus · v2018</span></td>
+            <td>Tipologia de uso do solo — base para reclassificação em valor de combustível (0.0–1.0)</td>
+            <td>GeoTIFF local (cacheado em <code>/data/corine.tif</code>)</td>
+            <td>Estático (actualização 6 anos)</td>
+            <td><span class="badge badge-fire">Risco estrutural</span></td>
+          </tr>
+          <tr>
+            <td><strong>EU-DEM / Copernicus DEM</strong><br><span class="dimtext">ESA · 25m</span></td>
+            <td>Modelo digital de elevação — cálculo de declive normalizado por ponto de ignição</td>
+            <td>GeoTIFF local (cacheado em <code>/data/dem.tif</code>)</td>
+            <td>Estático</td>
+            <td><span class="badge badge-fire">Risco estrutural</span></td>
+          </tr>
+          <tr>
+            <td><strong>Sentinel-2 / NDVI</strong><br><span class="dimtext">ESA Copernicus</span></td>
+            <td>Estado da vegetação, humidade do combustível</td>
+            <td>GeoTIFF local (cacheado em <code>/data/ndvi.tif</code>, ciclo 10 dias)</td>
+            <td>10 dias</td>
+            <td><span class="badge badge-fire">Risco dinâmico</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert alert-blue" style="margin-top: 1rem;">
+        <strong>Estratégia de fallback:</strong> Se NASA FIRMS não estiver disponível, o sistema opera em modo degradado usando apenas fogos.pt/PROCIV, com um aviso visual no dashboard. Se fogos.pt não estiver disponível, opera exclusivamente com FIRMS. O sistema nunca gera alertas sem pelo menos uma fonte activa.
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. STACK TÉCNICA -->
+  <div class="section" id="stack">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">Stack Técnica</span>
+    </div>
+    <div class="section-body">
+      <div class="two-col">
+        <div>
+          <h3>Backend</h3>
+          <table>
+            <thead><tr><th>Componente</th><th>Tecnologia</th></tr></thead>
+            <tbody>
+              <tr><td>API REST + WebSocket</td><td><code>FastAPI</code> + uvicorn (async)</td></tr>
+              <tr><td>Frontend estático</td><td><code>StaticFiles</code> do FastAPI (<code>static/</code>)</td></tr>
+              <tr><td>Scheduler / polling</td><td><code>APScheduler</code> (cron interno)</td></tr>
+              <tr><td>HTTP client</td><td><code>httpx</code> (async) + <code>BeautifulSoup4</code></td></tr>
+              <tr><td>Geoespacial</td><td><code>shapely</code> + <code>pyproj</code> + <code>rasterio</code></td></tr>
+              <tr><td>Base de dados</td><td><code>PostgreSQL 16</code> + <code>PostGIS 3.4</code></td></tr>
+              <tr><td>ORM / queries</td><td><code>asyncpg</code> (raw SQL)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Frontend</h3>
+          <table>
+            <thead><tr><th>Componente</th><th>Tecnologia</th></tr></thead>
+            <tbody>
+              <tr><td>Interface web</td><td>HTML5 / JS vanilla — ficheiro estático servido pelo FastAPI</td></tr>
+              <tr><td>Mapa interactivo</td><td><code>Leaflet.js</code> (CDN)</td></tr>
+              <tr><td>Tiles de base</td><td>OpenStreetMap + Esri Satellite</td></tr>
+              <tr><td>Actualizações tempo real</td><td><code>WebSocket</code> (<code>/ws</code>) — sem recarregar página</td></tr>
+              <tr><td>Gráficos</td><td>Chart.js ou Plotly (CDN)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3>Infraestrutura e contentorização</h3>
+      <table>
+        <thead><tr><th>Componente</th><th>Detalhe</th></tr></thead>
+        <tbody>
+          <tr><td>Contentorização</td><td><code>Docker Compose</code> — stack isolada em <code>/srv/saeif</code></td></tr>
+          <tr><td>Reverse proxy</td><td>Nginx (host) → <code>127.0.0.1:8000</code> (FastAPI + static)</td></tr>
+          <tr><td>Base de dados</td><td>PostgreSQL + PostGIS em container dedicado</td></tr>
+          <tr><td>FastAPI</td><td>Container único <code>saeif-api</code> — serve API REST, WebSocket e frontend estático</td></tr>
+          <tr><td>Certificado TLS</td><td>Let's Encrypt via Certbot (Nginx)</td></tr>
+          <tr><td>DNS</td><td>Cloudflare → <code>saeif.terradigital.net</code> → 88.198.95.103</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Arquitectura de containers</h3>
+      <div class="arch-box">
+/srv/saeif/
+├── docker-compose.yml
+├── .env                          ← FIRMS_API_KEY, DB_PASS
+├── api/
+│   ├── Dockerfile                ← Python 3.12-slim
+│   ├── main.py                   ← FastAPI app + APScheduler + WebSocket + StaticFiles
+│   ├── ingest/
+│   │   ├── firms.py              ← NASA FIRMS polling
+│   │   ├── fogos.py              ← fogos.pt scraping
+│   │   └── ipma.py               ← IPMA meteorologia
+│   ├── analysis/
+│   │   ├── dedup.py              ← Deduplicação hotspots (raio 40 km)
+│   │   ├── score.py              ← Cálculo score de risco
+│   │   └── alerts.py             ← Geração de alertas SYS
+│   ├── static/
+│   │   ├── index.html            ← Frontend (HTML/JS vanilla + Leaflet.js)
+│   │   ├── app.js                ← Lógica do mapa e WebSocket client
+│   │   └── style.css             ← Estilos
+│   └── requirements.txt
+└── pgdata/                       ← Volume persistente PostgreSQL</div>
+    </div>
+  </div>
+
+  <!-- 5. SCHEMA DA BASE DE DADOS -->
+  <div class="section" id="schema">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">Schema da Base de Dados</span>
+    </div>
+    <div class="section-body">
+      <p>PostgreSQL 16 + PostGIS 3.4. Schema único <code>public</code> no PoC. Extensões: <code>postgis</code>, <code>pgcrypto</code>, <code>pg_trgm</code>.</p>
+
+      <pre><span class="c">-- Hotspots satelitares brutos (NASA FIRMS)</span>
+<span class="k">CREATE TABLE</span> hotspots (
+    id              SERIAL PRIMARY KEY,
+    source          VARCHAR(20) NOT NULL,        <span class="c">-- 'VIIRS' | 'MODIS'</span>
+    geom            GEOMETRY(POINT, 4326) NOT NULL,
+    brightness      NUMERIC(6,2),                <span class="c">-- temperatura de brilho (K)</span>
+    frp             NUMERIC(8,2),                <span class="c">-- Fire Radiative Power (MW)</span>
+    confidence      VARCHAR(10),                 <span class="c">-- 'low' | 'nominal' | 'high'</span>
+    acq_date        DATE NOT NULL,
+    acq_time        TIME NOT NULL,
+    fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    processed       BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX ON hotspots USING GIST (geom);
+CREATE INDEX ON hotspots (acq_date, processed);
+
+<span class="c">-- Ocorrências PROCIV via fogos.pt</span>
+<span class="k">CREATE TABLE</span> ocorrencias_prociv (
+    id              SERIAL PRIMARY KEY,
+    external_id     VARCHAR(50) UNIQUE,
+    geom            GEOMETRY(POINT, 4326),
+    localidade      VARCHAR(200),
+    distrito        VARCHAR(100),
+    concelho        VARCHAR(100),
+    estado          VARCHAR(50),                 <span class="c">-- 'Em curso' | 'Resolução' | 'Conclusão'</span>
+    data_hora       TIMESTAMPTZ,
+    source_tag      VARCHAR(10) NOT NULL DEFAULT 'SYS',
+    fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX ON ocorrencias_prociv USING GIST (geom);
+
+<span class="c">-- Alertas gerados pelo sistema (cruzamento FIRMS + PROCIV)</span>
+<span class="k">CREATE TABLE</span> alertas (
+    id              SERIAL PRIMARY KEY,
+    geom            GEOMETRY(POINT, 4326) NOT NULL,
+    hotspot_id      INTEGER REFERENCES hotspots(id),
+    prociv_id       INTEGER REFERENCES ocorrencias_prociv(id),
+    score           NUMERIC(5,2) NOT NULL,       <span class="c">-- 0.00 – 100.00</span>
+    categoria       VARCHAR(10) NOT NULL,         <span class="c">-- 'BAIXO'|'MÉDIO'|'ALTO'|'CRÍTICO'</span>
+    source_tag      VARCHAR(10) NOT NULL DEFAULT 'SYS',
+    temp            NUMERIC(5,1),                <span class="c">-- IPMA: temperatura (°C)</span>
+    humidade        NUMERIC(5,1),                <span class="c">-- IPMA: humidade relativa (%)</span>
+    vento_vel       NUMERIC(5,1),                <span class="c">-- IPMA: vento (km/h)</span>
+    vento_dir       NUMERIC(5,1),                <span class="c">-- IPMA: direcção (graus)</span>
+    fwi             NUMERIC(6,2),                <span class="c">-- Fire Weather Index</span>
+    risco_estrutural NUMERIC(5,2),               <span class="c">-- CORINE/NDVI risco (0–1)</span>
+    criado_em       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    notificado      BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX ON alertas USING GIST (geom);
+CREATE INDEX ON alertas (criado_em, categoria);
+
+<span class="c">-- Log meteorológico por consulta IPMA</span>
+<span class="k">CREATE TABLE</span> meteo_log (
+    id              SERIAL PRIMARY KEY,
+    geom            GEOMETRY(POINT, 4326) NOT NULL,
+    station_id      VARCHAR(20),
+    temp            NUMERIC(5,1),
+    humidade        NUMERIC(5,1),
+    vento_vel       NUMERIC(5,1),
+    vento_dir       NUMERIC(5,1),
+    precipitacao    NUMERIC(6,2),
+    fwi             NUMERIC(6,2),
+    valido_em       TIMESTAMPTZ NOT NULL,
+    fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+<span class="c">-- Log de execução do scheduler (auditoria)</span>
+<span class="k">CREATE TABLE</span> ingest_log (
+    id              SERIAL PRIMARY KEY,
+    source          VARCHAR(30) NOT NULL,        <span class="c">-- 'FIRMS' | 'PROCIV' | 'IPMA'</span>
+    started_at      TIMESTAMPTZ NOT NULL,
+    ended_at        TIMESTAMPTZ,
+    status          VARCHAR(20),                 <span class="c">-- 'ok' | 'error' | 'timeout'</span>
+    records_fetched INTEGER,
+    records_new     INTEGER,
+    error_msg       TEXT
+);</pre>
+    </div>
+  </div>
+
+  <!-- 6. API ENDPOINTS -->
+  <div class="section" id="api">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <span class="section-title">API — Endpoints FastAPI</span>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead>
+          <tr><th>Método</th><th>Endpoint</th><th>Descrição</th><th>Auth</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/api/alertas</code></td>
+            <td>Lista alertas activos (últimas 24h). Parâmetros: <code>categoria</code>, <code>bbox</code>, <code>limit</code></td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/api/alertas/{id}</code></td>
+            <td>Ficha completa de um alerta (score, meteo, geom, propagação estimada)</td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/api/hotspots</code></td>
+            <td>Hotspots FIRMS brutos. Parâmetros: <code>date</code>, <code>bbox</code>, <code>confidence</code></td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/api/meteo/{lat}/{lon}</code></td>
+            <td>Dados meteorológicos IPMA para o ponto mais próximo</td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/api/status</code></td>
+            <td>Estado do scheduler (última execução por fonte, registos novos)</td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">POST</span></td>
+            <td><code>/api/ingest/trigger</code></td>
+            <td>Força ingest manual de uma fonte (<code>body: {source: "FIRMS"|"PROCIV"}</code>)</td>
+            <td>API Key</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Formato GeoJSON de resposta — alerta</h3>
+      <pre>{
+  <span class="s">"id"</span>: 1042,
+  <span class="s">"type"</span>: <span class="s">"Feature"</span>,
+  <span class="s">"geometry"</span>: { <span class="s">"type"</span>: <span class="s">"Point"</span>, <span class="s">"coordinates"</span>: [-8.412, 39.857] },
+  <span class="s">"properties"</span>: {
+    <span class="s">"score"</span>: 73.4,
+    <span class="s">"categoria"</span>: <span class="s">"ALTO"</span>,
+    <span class="s">"source_tag"</span>: <span class="s">"SYS"</span>,
+    <span class="s">"criado_em"</span>: <span class="s">"2026-07-15T14:32:00Z"</span>,
+    <span class="s">"meteo"</span>: {
+      <span class="s">"temp"</span>: 38.2, <span class="s">"humidade"</span>: 18, <span class="s">"vento_vel"</span>: 45.0, <span class="s">"vento_dir"</span>: 220, <span class="s">"fwi"</span>: 68.4
+    },
+    <span class="s">"risco_estrutural"</span>: 0.82,
+    <span class="s">"hotspot_confidence"</span>: <span class="s">"high"</span>,
+    <span class="s">"prociv_confirmado"</span>: <span class="k">true</span>
+  }
+}</pre>
+    </div>
+  </div>
+
+  <!-- 7. SCORE DE RISCO -->
+  <div class="section" id="score">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <span class="section-title">Score de Risco e Recomendações de Mobilização</span>
+    </div>
+    <div class="section-body">
+      <p>O score composto (0–100) é calculado em tempo real para cada ignição detectada, combinando componentes estruturais (estáticos, obtidos por lookup nos rasters locais) e meteorológicos (dinâmicos, via IPMA). Ver Secção 12 para a arquitectura completa dos mapas de risco.</p>
+
+      <h3>Fórmula de cálculo (PoC)</h3>
+      <pre><span class="c"># Componentes e pesos no PoC</span>
+<span class="c"># risco_estrutural: lookup geoespacial em fire_risk.tif (ver Secção 12)</span>
+score = (
+    0.35 * risco_estrutural_normalizado    <span class="c"># raster lookup: CORINE + declive + NDVI (0–1)</span>
+  + 0.30 * fwi_normalizado                <span class="c"># Fire Weather Index IPMA (0–1)</span>
+  + 0.20 * vento_factor                   <span class="c"># vel > 50km/h → 1.0, < 10km/h → 0.1</span>
+  + 0.15 * confirmacao_prociv             <span class="c"># confirmado por PROCIV: +15 pts</span>
+) * 100
+
+<span class="c"># Ajustamentos contextuais</span>
+<span class="k">if</span> hotspot.confidence == <span class="s">'low'</span>:   score *= 0.7
+<span class="k">if</span> hotspot.frp > 100:             score = min(score * 1.2, 100)  <span class="c"># FRP elevado</span></pre>
+
+      <div class="score-row">
+        <div class="score-cell score-baixo">
+          <div class="score-num">0–25</div>
+          <div class="score-label">BAIXO</div>
+          <div class="score-rec">Mobilização standard local</div>
+        </div>
+        <div class="score-cell score-medio">
+          <div class="score-num">26–50</div>
+          <div class="score-label">MÉDIO</div>
+          <div class="score-rec">Pré-alerta meios aéreos + reforço terrestre</div>
+        </div>
+        <div class="score-cell score-alto">
+          <div class="score-num">51–75</div>
+          <div class="score-label">ALTO</div>
+          <div class="score-rec">Mobilização imediata meios aéreos + AGIF</div>
+        </div>
+        <div class="score-cell score-critico">
+          <div class="score-num">76–100</div>
+          <div class="score-label">CRÍTICO</div>
+          <div class="score-rec">Protocolo mega-incêndio + nível nacional</div>
+        </div>
+      </div>
+
+      <div class="alert alert-amber">
+        <strong>Limitação do PoC:</strong> Os pesos do score são provisórios e devem ser calibrados com dados históricos ICNF (área ardida real vs score calculado) numa fase posterior. O sistema não deve ser usado para decisões operacionais reais sem validação formal.
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. INTEGRAÇÕES -->
+  <div class="section" id="integracao">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <span class="section-title">Integrações com Outros Sistemas</span>
+    </div>
+    <div class="section-body">
+      <p>No contexto da arquitectura de 5 sistemas para a floresta portuguesa, o SAEIF é o consumidor final dos dados produzidos pelos sistemas a montante.</p>
+
+      <div class="int-grid">
+        <div class="int-item">
+          <div class="int-system">SIGCRF (S1)</div>
+          <div class="int-role">Consulta de parcelas cadastradas na área de propagação estimada. Identifica proprietários em risco para notificação preventiva.</div>
+        </div>
+        <div class="int-item">
+          <div class="int-system">SMRIP (S3)</div>
+          <div class="int-role">Consome risco estrutural, conectividade da paisagem, probabilidade de mega-incêndio e simulações de propagação. Principal produtor de dados para o score.</div>
+        </div>
+        <div class="int-item">
+          <div class="int-system">SGIF</div>
+          <div class="int-role">Leitura de novas ocorrências via API. Escrita de dados de risco e propagação como anexo à ocorrência. Sincronização bidirecional de estado.</div>
+        </div>
+        <div class="int-item">
+          <div class="int-system">CDOS / AGIF</div>
+          <div class="int-role">Destinatários das fichas de alerta. Dashboard operacional em tempo real. Futuramente: notificações push e integração com sistemas de comunicação.</div>
+        </div>
+        <div class="int-item">
+          <div class="int-system">IPMA</div>
+          <div class="int-role">API REST pública. Dados horários de temperatura, humidade, vento e FWI para o ponto de ignição.</div>
+        </div>
+        <div class="int-item">
+          <div class="int-system">NASA FIRMS</div>
+          <div class="int-role">API REST / GeoJSON. Hotspots VIIRS e MODIS em near-real-time para Portugal Continental (bbox definido).</div>
+        </div>
+      </div>
+
+      <div class="alert alert-blue" style="margin-top: .5rem;">
+        <strong>Estado actual do PoC:</strong> As integrações com SIGCRF, SMRIP e SGIF são <em>futuras</em>. O PoC implementa apenas FIRMS + IPMA + fogos.pt, que são suficientes para demonstrar o fluxo operacional completo e validar a arquitectura.
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. INFRAESTRUTURA -->
+  <div class="section" id="infra">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <span class="section-title">Infraestrutura e Deployment</span>
+    </div>
+    <div class="section-body">
+      <div class="two-col">
+        <div>
+          <h3>Servidor</h3>
+          <table>
+            <tbody>
+              <tr><td>Fornecedor</td><td><strong>Hetzner VPS</strong></td></tr>
+              <tr><td>IP</td><td><code>88.198.95.103</code></td></tr>
+              <tr><td>OS</td><td>Ubuntu 24.04 LTS</td></tr>
+              <tr><td>Stack existente</td><td>Nginx + Docker + PostgreSQL (CAL em <code>/srv/cal</code>)</td></tr>
+              <tr><td>Directório SAEIF</td><td><code>/srv/saeif</code></td></tr>
+              <tr><td>FastAPI port</td><td><code>127.0.0.1:8000</code> (API + WS + static)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>DNS e TLS</h3>
+          <table>
+            <tbody>
+              <tr><td>Subdomínio</td><td><code>saeif.terradigital.net</code></td></tr>
+              <tr><td>Registar DNS</td><td>Cloudflare</td></tr>
+              <tr><td>Proxy Cloudflare</td><td>Activo (orange cloud)</td></tr>
+              <tr><td>TLS</td><td>Let's Encrypt via Certbot</td></tr>
+              <tr><td>Nginx config</td><td><code>/etc/nginx/sites-available/saeif</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3>docker-compose.yml (estrutura)</h3>
+      <pre><span class="n">services</span>:
+  <span class="f">db</span>:
+    <span class="n">image</span>: postgis/postgis:16-3.4
+    <span class="n">volumes</span>: [./pgdata:/var/lib/postgresql/data]
+    <span class="n">env_file</span>: .env
+    <span class="n">healthcheck</span>: pg_isready
+
+  <span class="f">api</span>:
+    <span class="n">build</span>: ./api
+    <span class="n">ports</span>: [<span class="s">"127.0.0.1:8000:8000"</span>]
+    <span class="n">depends_on</span>: [db]
+    <span class="n">env_file</span>: .env
+    <span class="n">restart</span>: unless-stopped
+    <span class="c"># Serve: API REST + WebSocket (/ws) + frontend estático (static/)</span></pre>
+
+      <div class="alert alert-green">
+        <strong>Padrão de deployment:</strong> Segue o padrão estabelecido pelo CAL em <code>/srv/cal</code> — Dockerfile Python 3.12-slim, expose interno apenas, Nginx como reverse proxy. Distinção key: o SAEIF usa um único container (FastAPI serve tudo — API, WebSocket e frontend estático), enquanto o CAL usa dois (Streamlit separado). O suporte a WebSocket no bloco Nginx é obrigatório.
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. SLAs -->
+  <div class="section" id="slas">
+    <div class="section-header">
+      <span class="section-num">10</span>
+      <span class="section-title">SLAs Operacionais</span>
+    </div>
+    <div class="section-body">
+      <div class="sla-grid">
+        <div class="sla-item">
+          <div class="sla-desc">Geração de ficha de alerta após ignição detectada</div>
+          <div class="sla-val">&lt; 60 seg</div>
+        </div>
+        <div class="sla-item">
+          <div class="sla-desc">Intervalo de polling FIRMS</div>
+          <div class="sla-val">5–15 min</div>
+        </div>
+        <div class="sla-item">
+          <div class="sla-desc">Intervalo de polling fogos.pt (PROCIV)</div>
+          <div class="sla-val">5 min</div>
+        </div>
+        <div class="sla-item">
+          <div class="sla-desc">Actualização de dados meteorológicos IPMA</div>
+          <div class="sla-val">60 min</div>
+        </div>
+        <div class="sla-item">
+          <div class="sla-desc">Latência de actualização do dashboard</div>
+          <div class="sla-val">&lt; 2 seg</div>
+        </div>
+        <div class="sla-item">
+          <div class="sla-desc">Disponibilidade do sistema (PoC)</div>
+          <div class="sla-val">best-effort</div>
+        </div>
+        <div class="sla-item">
+          <div class="sla-desc">Retenção de hotspots na base de dados</div>
+          <div class="sla-val">90 dias</div>
+        </div>
+        <div class="sla-item">
+          <div class="sla-desc">Retenção de alertas na base de dados</div>
+          <div class="sla-val">365 dias</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. ROADMAP -->
+  <div class="section" id="roadmap">
+    <div class="section-header">
+      <span class="section-num">11</span>
+      <span class="section-title">Roadmap de Desenvolvimento</span>
+    </div>
+    <div class="section-body">
+      <div class="phases">
+        <div class="phase">
+          <div class="phase-num">1</div>
+          <div class="phase-content">
+            <div class="phase-title">Fase 1 — Core pipeline funcional</div>
+            <div class="phase-desc">
+              Schema PostgreSQL + PostGIS · Ingest FIRMS (GeoJSON) · Ingest fogos.pt (scraping) · Ingest IPMA (temperatura, vento, FWI) · Deduplicação por proximidade 40 km · <strong>Pipeline raster de risco</strong> (CORINE + EU-DEM + NDVI → <code>fire_risk.tif</code>) · Lookup geoespacial por ponto de ignição · Cálculo de score · Tabela de alertas · Log de ingest · WebSocket server (<code>/ws</code>)
+            </div>
+          </div>
+          <div class="phase-badge badge-done">✓ Concluída</div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">2</div>
+          <div class="phase-content">
+            <div class="phase-title">Fase 2 — Frontend HTML/JS + Leaflet</div>
+            <div class="phase-desc">
+              Mapa Leaflet.js com hotspots em tempo real (WebSocket) · <strong>Overlay de risco estrutural</strong> (<code>fire_risk.tif</code> como WMS tile ou GeoJSON simplificado) · Painel de alertas ordenados por score · Ficha de detalhe por alerta · Indicadores de estado do scheduler · Modo degradado visível quando fonte inactiva · Layout responsivo mobile (drawer inferior + mapa superior) · <strong>Sem funcionalidade de simulação de ignições por clique</strong> — decisão de arquitectura confirmada
+            </div>
+          </div>
+          <div class="phase-badge badge-done">✓ Concluída</div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">3</div>
+          <div class="phase-content">
+            <div class="phase-title">Fase 3 — Deployment em produção</div>
+            <div class="phase-desc">
+              Docker Compose em <code>/srv/saeif</code> · Nginx reverse proxy + TLS · DNS Namecheap <code>saeif.terradigital.net</code> · Repositório <code>github.com/ppestana/saeif</code> · <strong>Em produção desde 30 Mai 2026</strong>
+            </div>
+          </div>
+          <div class="phase-badge badge-live">✓ Live · 30 Mai 2026</div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">4</div>
+          <div class="phase-content">
+            <div class="phase-title">Fase 4 — Enriquecimento geoespacial</div>
+            <div class="phase-desc">
+              Risco estrutural por ponto via CORINE Land Cover (raster lookup) · NDVI Sentinel-2 cacheado · Refinamento do score com pesos calibrados contra histórico ICNF · Propagação estimada simplificada (buffer direccionado pelo vento)
+            </div>
+          </div>
+          <div class="phase-badge badge-pending">⏳ Pendente</div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">5</div>
+          <div class="phase-content">
+            <div class="phase-title">Fase 5 — Artigo técnico + integrações futuras</div>
+            <div class="phase-desc">
+              Paper técnico EN+PT para pedropestana.com · Integração SMRIP (quando disponível) · Integração SGIF · Notificações push via Firebase · Versão mobile React Native
+            </div>
+          </div>
+          <div class="phase-badge badge-pending">⏳ Futuro</div>
+        </div>
+      </div>
+
+      <div class="alert alert-amber" style="margin-top: 1rem;">
+        <strong>Dependência crítica:</strong> O artigo técnico do SAEIF para pedropestana.com fica pendente até o sistema estar em produção estável (Fase 3 concluída). Escrever o artigo antes da estabilização do sistema seria prematuro.
+      </div>
+
+      <div class="alert alert-blue" style="margin-top: .75rem;">
+        <strong>Divergência PoC v1.0 → arquitectura alvo:</strong> O código existente (<code>README v1.0</code>) contém funcionalidades a remover antes do deploy definitivo: simulação de ignições por clique no mapa, log de comunicações simuladas (CDOS/AGIF/GNR), e 6 focos de demonstração pré-definidos. A arquitectura alvo descrita neste documento opera exclusivamente sobre ignições reais detectadas por pelo menos uma fonte activa.
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. MAPAS DE RISCO -->
+  <div class="section" id="risco-mapas">
+    <div class="section-header">
+      <span class="section-num">12</span>
+      <span class="section-title">Mapas de Risco de Incêndio</span>
+    </div>
+    <div class="section-body">
+      <p>O SAEIF produz e consome dois tipos de mapas de risco no PoC: um raster de risco estrutural pré-calculado (<code>fire_risk.tif</code>), usado internamente no pipeline de scoring, e uma camada visual no frontend Leaflet que permite ao utilizador contextualizar cada hotspot no território de risco envolvente.</p>
+
+      <div class="alert alert-fire">
+        <strong>Princípio fundamental:</strong> O mapa de risco não é decorativo — é o componente com peso 0.35 no score de cada alerta. Um hotspot numa zona de risco estrutural elevado (floresta de resinosas densa, declive acentuado, vegetação seca) gera um score significativamente mais alto do que o mesmo hotspot numa zona agrícola ou urbana.
+      </div>
+
+      <h3>Pipeline de geração do raster de risco estrutural</h3>
+      <p>O raster <code>fire_risk.tif</code> é calculado por um script Python (<code>analysis/risk_raster.py</code>) que combina três camadas de input, todas reprojectadas para EPSG:3763 (PT-TM06) a 100m de resolução:</p>
+
+      <pre><span class="c"># analysis/risk_raster.py — pipeline de geração de fire_risk.tif</span>
+<span class="k">import</span> rasterio, numpy <span class="k">as</span> np
+<span class="k">from</span> rasterio.warp <span class="k">import</span> reproject, Resampling
+
+<span class="c"># 1. CORINE Land Cover → valor de combustível (fuel)</span>
+corine_to_fuel = {
+    <span class="c"># Florestas</span>
+    311: 1.0, 312: 1.0, 313: 0.95,    <span class="c"># folhosas / resinosas / mista</span>
+    324: 0.85,                          <span class="c"># vegetação arbustiva em transição</span>
+    322: 0.80, 323: 0.75,              <span class="c"># matos / charneca</span>
+    <span class="c"># Agricultura</span>
+    243: 0.35, 211: 0.15, 231: 0.20,
+    <span class="c"># Urbano / água / artificial</span>
+    111: 0.0, 112: 0.0, 511: 0.0, 512: 0.0
+}
+
+<span class="c"># 2. EU-DEM → declive normalizado (slope_norm)</span>
+<span class="c"># gdal.DEMProcessing(slope.tif) → normalizar para 0–1 (0°=0, ≥45°=1)</span>
+
+<span class="c"># 3. Sentinel-2 NDVI → estado da vegetação</span>
+<span class="c"># ndvi_risk = 1 - ndvi_norm  (vegetação seca = risco alto)</span>
+
+<span class="c"># 4. Raster Calculator — pesos PoC</span>
+fire_risk = (
+    0.50 * fuel_norm       <span class="c"># tipo de combustível: peso dominante</span>
+  + 0.30 * slope_norm      <span class="c"># declive: propagação acelerada em encosta</span>
+  + 0.20 * ndvi_risk       <span class="c"># estado da vegetação: seca = risco</span>
+)
+
+<span class="c"># Output: fire_risk.tif — resolução 100m, EPSG:3763, valores 0.0–1.0</span>
+<span class="c"># Guardado em: /srv/saeif/api/data/fire_risk.tif</span>
+<span class="c"># Actualização: mensal (novo NDVI Sentinel-2)</span></pre>
+
+      <h3>Lookup geoespacial no pipeline de alertas</h3>
+      <p>Para cada hotspot detectado, o módulo <code>analysis/score.py</code> extrai o valor do raster no ponto de ignição via <code>rasterio</code>:</p>
+
+      <pre><span class="k">import</span> rasterio
+<span class="k">from</span> rasterio.transform <span class="k">import</span> rowcol
+<span class="k">from</span> pyproj <span class="k">import</span> Transformer
+
+<span class="k">def</span> <span class="f">get_structural_risk</span>(lat: float, lon: float) -> float:
+    <span class="s">"""Extrai o valor de risco estrutural do raster para um ponto WGS84."""</span>
+    transformer = Transformer.from_crs(<span class="s">"EPSG:4326"</span>, <span class="s">"EPSG:3763"</span>, always_xy=True)
+    x, y = transformer.transform(lon, lat)
+
+    <span class="k">with</span> rasterio.open(<span class="s">"/data/fire_risk.tif"</span>) <span class="k">as</span> src:
+        row, col = rowcol(src.transform, x, y)
+        value = src.read(1)[row, col]
+        <span class="k">return</span> float(np.clip(value, 0.0, 1.0))
+
+<span class="c"># Retorna valor normalizado 0.0 (risco nulo) → 1.0 (risco máximo)</span>
+<span class="c"># Valor é o risco_estrutural_normalizado usado no score composto</span></pre>
+
+      <h3>Reclassificação CORINE → combustível (tabela completa)</h3>
+      <table>
+        <thead>
+          <tr><th>Código CORINE</th><th>Classe de uso do solo</th><th>Valor combustível</th><th>Justificação</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>311–313</code></td><td>Floresta folhosas / resinosas / mista</td><td><span class="badge badge-fire">0.95–1.0</span></td><td>Combustível contínuo de alta densidade</td></tr>
+          <tr><td><code>324</code></td><td>Vegetação arbustiva em transição</td><td><span class="badge badge-fire">0.85</span></td><td>Pós-incêndio, regeneração densa e seca</td></tr>
+          <tr><td><code>322–323</code></td><td>Matos / charneca</td><td><span class="badge badge-amber">0.75–0.80</span></td><td>Combustível fino, propagação rápida</td></tr>
+          <tr><td><code>243</code></td><td>Agricultura com vegetação natural</td><td><span class="badge badge-amber">0.35</span></td><td>Mosaico com descontinuidades</td></tr>
+          <tr><td><code>211, 231</code></td><td>Culturas anuais / pastagens</td><td><span class="badge badge-gray">0.15–0.20</span></td><td>Baixa carga de combustível</td></tr>
+          <tr><td><code>111–142</code></td><td>Urbano / industrial / artificial</td><td><span class="badge badge-green">0.0</span></td><td>Não combustível</td></tr>
+          <tr><td><code>511–523</code></td><td>Água (rios, lagos, mar)</td><td><span class="badge badge-green">0.0</span></td><td>Barreira natural</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Camada visual no frontend Leaflet</h3>
+      <p>O raster <code>fire_risk.tif</code> é exposto no frontend de duas formas complementares:</p>
+
+      <div class="two-col" style="margin-top: .75rem;">
+        <div class="card">
+          <div class="card-label">Opção A — WMS tile (preferida)</div>
+          <div class="card-value" style="font-size:12px; margin-top:.4rem;">GeoServer local</div>
+          <div class="card-sub">O <code>fire_risk.tif</code> é publicado como camada WMS num GeoServer em container. O Leaflet consome-o como <code>L.tileLayer.wms()</code> com estilo SLD de 5 classes (verde → amarelo → laranja → vermelho → bordô). Permite zoom com resolução nativa. <em>Requer container GeoServer adicional.</em></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Opção B — GeoJSON simplificado (PoC)</div>
+          <div class="card-value" style="font-size:12px; margin-top:.4rem;">Vectorização pré-calculada</div>
+          <div class="card-sub">O raster é vectorizado e simplificado para 5 classes de risco → GeoJSON de polígonos (~2–5 MB). Servido via <code>GET /api/risk/map</code>. O Leaflet aplica fill por classe. Sem dependência de GeoServer — solução simples e robusta para o PoC.</div>
+        </div>
+      </div>
+
+      <div class="alert alert-blue" style="margin-top: 1rem;">
+        <strong>Decisão de arquitectura para o PoC:</strong> Usar a <strong>Opção B</strong> (GeoJSON simplificado). Evita a complexidade de um container GeoServer adicional. O GeoJSON de risco é gerado uma vez pelo script <code>risk_raster.py</code> e servido como ficheiro estático ou endpoint FastAPI. A transição para WMS (Opção A) fica reservada para quando o SMRIP estiver disponível.
+      </div>
+
+      <h3>Paleta de cores — 5 classes de risco</h3>
+      <div class="score-row">
+        <div class="score-cell" style="background:#0d2e0d;">
+          <div class="score-num" style="color:#3fb950; font-size:14px;">0.0–0.2</div>
+          <div class="score-label">Risco nulo</div>
+          <div class="score-rec">Urbano, água, agrícola</div>
+        </div>
+        <div class="score-cell" style="background:#1e3a10;">
+          <div class="score-num" style="color:#85e89d; font-size:14px;">0.2–0.4</div>
+          <div class="score-label">Risco baixo</div>
+          <div class="score-rec">Pastagens, culturas</div>
+        </div>
+        <div class="score-cell" style="background:var(--amber-dim);">
+          <div class="score-num" style="color:var(--amber); font-size:14px;">0.4–0.6</div>
+          <div class="score-label">Risco médio</div>
+          <div class="score-rec">Matos, mosaico</div>
+        </div>
+        <div class="score-cell" style="background:#2a1a08;">
+          <div class="score-num" style="color:#f0a060; font-size:14px;">0.6–0.8</div>
+          <div class="score-label">Risco alto</div>
+          <div class="score-rec">Arbustivo, transição</div>
+        </div>
+        <div class="score-cell" style="background:var(--fire-dim);">
+          <div class="score-num" style="color:var(--fire); font-size:14px;">0.8–1.0</div>
+          <div class="score-label">Risco crítico</div>
+          <div class="score-rec">Floresta densa, resinosas</div>
+        </div>
+      </div>
+
+      <h3>Novo endpoint API</h3>
+      <table>
+        <thead><tr><th>Método</th><th>Endpoint</th><th>Descrição</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/api/risk/map</code></td>
+            <td>GeoJSON de polígonos com classes de risco estrutural (5 classes, Portugal Continental). Cache-Control: 30 dias.</td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/api/risk/point?lat=&amp;lon=</code></td>
+            <td>Valor de risco estrutural (0.0–1.0) para um ponto WGS84. Usado internamente pelo scoring mas exposto para debug.</td>
+            <td>Pública</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Dados a obter (ficheiros de input)</h3>
+      <table>
+        <thead><tr><th>Dataset</th><th>Fonte</th><th>URL / Download</th><th>Formato</th></tr></thead>
+        <tbody>
+          <tr><td>CORINE Land Cover 2018</td><td>Copernicus Land</td><td><code>land.copernicus.eu/pan-european/corine-land-cover</code></td><td>GeoTIFF 100m</td></tr>
+          <tr><td>Copernicus DEM 25m</td><td>ESA / AWS Open Data</td><td><code>registry.opendata.aws/copernicus-dem</code></td><td>GeoTIFF 25m</td></tr>
+          <tr><td>Sentinel-2 NDVI</td><td>Copernicus Browser / GEE</td><td><code>browser.dataspace.copernicus.eu</code></td><td>GeoTIFF 10m</td></tr>
+        </tbody>
+      </table>
+
+      <div class="alert alert-amber" style="margin-top:.75rem;">
+        <strong>Nota de preparação:</strong> Os três datasets devem ser descarregados e reprojectados para EPSG:3763 antes da geração do <code>fire_risk.tif</code>. O bounding box de Portugal Continental em EPSG:4326 é: <code>[-9.50, 36.96, -6.19, 42.15]</code>. O script <code>risk_raster.py</code> assume os ficheiros em <code>/srv/saeif/api/data/</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- 13. INTERFACE MOBILE -->
+  <div class="section" id="mobile">
+    <div class="section-header">
+      <span class="section-num">13</span>
+      <span class="section-title">Interface Mobile — Design Responsivo</span>
+    </div>
+    <div class="section-body">
+      <p>O frontend do SAEIF foi optimizado para dispositivos móveis (iPhone, Android) sem alterações ao backend. Todas as modificações são exclusivamente CSS/HTML no ficheiro <code>api/static/index.html</code>. O breakpoint de transição é <code>max-width: 768px</code>.</p>
+
+      <div class="alert alert-green">
+        <strong>Decisão de arquitectura:</strong> Layout responsivo implementado em 31 Mai 2026, no dia seguinte ao go-live. Zero alterações ao backend FastAPI, Docker, Nginx ou base de dados.
+      </div>
+
+      <h3>Comparação desktop vs mobile</h3>
+      <table>
+        <thead><tr><th>Elemento</th><th>Desktop (>768px)</th><th>Mobile (≤768px)</th></tr></thead>
+        <tbody>
+          <tr><td>Layout geral</td><td>Flex row: sidebar esquerda + mapa direita</td><td>Flex column: mapa em cima + drawer em baixo</td></tr>
+          <tr><td>Sidebar</td><td><code>width: 300px</code> fixo, à esquerda</td><td><code>width: 100%</code>, drawer inferior (45% ecrã)</td></tr>
+          <tr><td>Mapa</td><td><code>flex: 1</code>, ocupa espaço restante</td><td><code>height: 55dvh</code>, parte superior</td></tr>
+          <tr><td>Header subtítulo</td><td>Visível</td><td>Oculto (<code>display: none</code>)</td></tr>
+          <tr><td>Label WebSocket</td><td>"Ligado / Desligado"</td><td>Oculta, só o ponto de cor</td></tr>
+          <tr><td>Botão actualizar</td><td>↻ + texto</td><td>Só ↻ (mais compacto)</td></tr>
+          <tr><td>Controlos zoom</td><td>Canto superior esquerdo (default)</td><td>Canto inferior direito (acessível com polegar)</td></tr>
+          <tr><td>Popups Leaflet</td><td>Largura normal</td><td><code>max-width: 85vw</code></td></tr>
+          <tr><td>Toast</td><td>Canto inferior direito</td><td>Centrado horizontalmente</td></tr>
+          <tr><td>Altura viewport</td><td><code>100vh</code></td><td><code>100dvh</code> (evita barra de endereços Safari)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Drawer mobile — comportamento interactivo</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-step-num">01</div>
+          <div class="flow-step-content">
+            <h4>Handle de arrasto</h4>
+            <p>Barra cinzenta clicável no topo do drawer. Ao tocar, alterna entre drawer aberto (mapa 55dvh) e mapa expandido (mapa 80dvh, drawer minimizado). Implementado via <code>toggleDrawer()</code>.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">02</div>
+          <div class="flow-step-content">
+            <h4>Click num alerta → flyTo + minimizar drawer</h4>
+            <p>Ao tocar num alerta na lista, o mapa faz <code>flyTo</code> para a localização e o drawer minimiza automaticamente para revelar o mapa — sem interacção manual adicional.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">03</div>
+          <div class="flow-step-content">
+            <h4>Rotação de ecrã</h4>
+            <p><code>window.addEventListener('resize')</code> chama <code>map.invalidateSize()</code> com delay de 100ms para recalcular as dimensões do mapa após rotação landscape/portrait.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Técnicas CSS aplicadas</h3>
+      <table>
+        <thead><tr><th>Técnica</th><th>Aplicação</th></tr></thead>
+        <tbody>
+          <tr><td><code>height: 100dvh</code></td><td>Evita o problema da barra de endereços do Safari iOS que causa overflow com <code>vh</code></td></tr>
+          <tr><td><code>order: 1/2</code> (CSS Flexbox)</td><td>Inverte a ordem sidebar/mapa em mobile sem alterar o HTML</td></tr>
+          <tr><td><code>-webkit-overflow-scrolling: touch</code></td><td>Scroll com momentum nativo no iOS na lista de alertas</td></tr>
+          <tr><td><code>-webkit-tap-highlight-color: transparent</code></td><td>Remove o flash azul ao tocar em elementos clicáveis no iOS</td></tr>
+          <tr><td><code>user-scalable=no</code> no viewport</td><td>Evita zoom acidental no mapa ao fazer pinch</td></tr>
+          <tr><td><code>map.zoomControl.setPosition('bottomright')</code></td><td>Controlos de zoom no canto inferior direito, acessível com polegar direito</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Commits relacionados</h3>
+      <table>
+        <thead><tr><th>Hash</th><th>Mensagem</th><th>Data</th></tr></thead>
+        <tbody>
+          <tr><td><code>2ca4c27</code></td><td>feat: mobile-responsive layout (drawer + map split)</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>5d4e708</code></td><td>fix: sidebar left on desktop, drawer bottom on mobile</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>6e2d4dc</code></td><td>fix: desktop sidebar 300px left, mobile drawer bottom</td><td>31 Mai 2026</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim);">
+    <div>
+      <strong style="color: var(--text);">SAEIF</strong> — Sistema de Alerta e Encaminhamento Imediato em Incêndios Florestais<br>
+      TerraDigital · Pedro Pestana · Torres Vedras / Lisboa · Em produção: 30 Mai 2026
+    </div>
+    <div style="text-align: right;">
+      Projecto 02 de 6<br>
+      <span style="color: var(--fire);">saeif.terradigital.net</span>
+    </div>
+  </div>
+
+</div><!-- /container -->
+</body>
+</html>
