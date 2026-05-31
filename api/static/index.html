@@ -188,8 +188,10 @@
 
       .body { flex-direction: column; }
 
+      /* Em mobile: mapa em cima, sidebar em baixo */
       /* Mapa ocupa parte superior */
-      #map {
+      #map { order: 1; }
+      .sidebar { order: 2; }
         flex: none;
         height: 55dvh;
         width: 100%;
@@ -262,9 +264,6 @@
   <!-- BODY -->
   <div class="body">
 
-    <!-- MAP -->
-    <div id="map"></div>
-
     <!-- SIDEBAR / DRAWER -->
     <div class="sidebar">
       <div class="drawer-handle" onclick="toggleDrawer()"></div>
@@ -274,6 +273,9 @@
       </div>
       <div class="sidebar-content" id="sidebarContent"></div>
     </div>
+
+    <!-- MAP -->
+    <div id="map"></div>
 
   </div>
 </div>
