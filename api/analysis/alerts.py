@@ -2,6 +2,7 @@ import logging
 import asyncpg
 from ingest.ipma import get_nearest_meteo
 from analysis.score import calcular_score, get_structural_risk
+from utils import reverse_geocode
 
 log = logging.getLogger("saeif.alerts")
 
@@ -30,27 +31,37 @@ async def gerar_alertas(conn, pares, meteo_data):
         meteo = get_nearest_meteo(lat, lon, meteo_data) if meteo_data else {}
         score, categoria = calcular_score(par, meteo)
         risco_estrutural = get_structural_risk(lat, lon)
+
+        # Geocodificacao inversa se nao ha localidade PROCIV
+        localidade_estimada = None
+        if not par.get("prociv_localidade"):
+            localidade_estimada = await reverse_geocode(lat, lon)
+            if localidade_estimada:
+                log.info(f"Nominatim: {localidade_estimada} ({lat:.3f},{lon:.3f})")
+
         try:
             alerta_id = await conn.fetchval("""
                 INSERT INTO alertas (
                     geom, hotspot_id, prociv_id, score, categoria, source_tag,
-                    temp, humidade, vento_vel, vento_dir, fwi, risco_estrutural
+                    temp, humidade, vento_vel, vento_dir, fwi, risco_estrutural,
+                    localidade_estimada
                 )
                 VALUES (
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12
+                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12, $13
                 )
                 RETURNING id
             """, lon, lat, hotspot_id, par.get("prociv_id"),
                 score, categoria,
                 meteo.get("temp"), meteo.get("humidade"),
                 meteo.get("vento_vel"), meteo.get("vento_dir"),
-                meteo.get("fwi"), risco_estrutural)
+                meteo.get("fwi"), risco_estrutural, localidade_estimada)
             alertas_gerados.append({
                 "id": alerta_id, "lat": lat, "lon": lon,
                 "score": score, "categoria": categoria, "source_tag": "SYS",
                 "prociv_confirmado": par.get("prociv_confirmado"),
                 "prociv_localidade": par.get("prociv_localidade"),
+                "localidade_estimada": localidade_estimada,
                 "meteo": {"temp": meteo.get("temp"), "humidade": meteo.get("humidade"),
                           "vento_vel": meteo.get("vento_vel"), "fwi": meteo.get("fwi")},
                 "risco_estrutural": risco_estrutural,

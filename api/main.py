@@ -226,7 +226,8 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                    a.risco_estrutural, a.criado_em,
                    h.source AS hotspot_source,
                    p.id IS NOT NULL AS prociv_confirmado,
-                   p.localidade AS prociv_localidade
+                   p.localidade AS prociv_localidade,
+                   a.localidade_estimada
             FROM alertas a
             LEFT JOIN hotspots h ON h.id = a.hotspot_id
             LEFT JOIN ocorrencias_prociv p ON p.id = a.prociv_id
@@ -244,6 +245,7 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                     "hotspot_source": r["hotspot_source"],
                     "prociv_confirmado": bool(r["prociv_confirmado"]),
                     "prociv_localidade": r["prociv_localidade"],
+                    "localidade_estimada": r["localidade_estimada"] if r.get("localidade_estimada") else None,
                     "meteo": {
                         "temp": float(r["temp"]) if r["temp"] else None,
                         "humidade": float(r["humidade"]) if r["humidade"] else None,
