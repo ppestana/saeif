@@ -55,7 +55,13 @@ async def fetch_ipma_conditions(conn):
             temp      = _f(data.get("temperatura") or data.get("temp"))
             humidade  = _f(data.get("humidade") or data.get("humRelativa"))
             vento_vel = _f(data.get("intensidadeVento") or data.get("vento_int"))
-            vento_dir = _f(data.get("direcaoVento") or data.get("vento_dir"))
+            # idDireccVento: 0=N,1=NE,2=E,3=SE,4=S,5=SO,6=O,7=NO,8=N (sem dados=-99)
+            _dir_map = {0:0,1:45,2:90,3:135,4:180,5:225,6:270,7:315,8:0}
+            _id_dir = data.get("idDireccVento")
+            if _id_dir is not None and _id_dir != -99 and int(_id_dir) in _dir_map:
+                vento_dir = float(_dir_map[int(_id_dir)])
+            else:
+                vento_dir = _f(data.get("direcaoVento") or data.get("vento_dir"))
             precip    = _f(data.get("precAcum") or data.get("precipitacao"))
             fwi       = _estimate_fwi(temp, humidade, vento_vel)
             meteo_data.append({
