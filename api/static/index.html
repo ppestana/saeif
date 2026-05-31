@@ -110,6 +110,14 @@
     .risk-tooltip{background:var(--panel);border:1px solid var(--border);
       color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;
       padding:.2rem .5rem;border-radius:2px;}
+    .map-legend{position:fixed;bottom:1.5rem;right:1.5rem;z-index:1000;
+      background:var(--panel);border:1px solid var(--border);border-radius:4px;
+      padding:.6rem .85rem;font-size:11px;color:var(--text);}
+    .legend-title{font-family:'IBM Plex Mono',monospace;font-size:10px;
+      color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;}
+    .legend-item{display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem;}
+    .legend-swatch{width:14px;height:14px;border-radius:2px;flex-shrink:0;opacity:.7;}
+    @media(max-width:768px){.map-legend{bottom:calc(45dvh + .5rem);right:.5rem;}}
     .drawer-handle{display:none;width:36px;height:4px;background:var(--border);border-radius:2px;margin:.5rem auto;cursor:pointer;}
 
     @media (max-width:768px){
@@ -151,6 +159,15 @@
       <div class="sidebar-content" id="sidebarContent"></div>
     </div>
     <div id="map"></div>
+    <div class="map-legend" id="riskLegend" style="display:none">
+      <div class="legend-title">Risco Estrutural</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f85149"></div>Risco crítico (floresta)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f0a060"></div>Risco alto (arbustivo)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#e3b341"></div>Risco médio</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#85e89d"></div>Risco baixo</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div>Risco nulo</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:.3rem">ESA WorldCover 2021</div>
+    </div>
   </div>
 </div>
 <div id="toast"></div>
@@ -185,7 +202,8 @@ async function loadRiskMap(){
         layer.bindTooltip(riskLabels[f.properties.DN]||'',{sticky:true,className:'risk-tooltip'});
       }
     }).addTo(riskLayer);
-    log.info && console.log('Mapa de risco carregado');
+    document.getElementById('riskLegend').style.display='block';
+    console.log('Mapa de risco carregado');
   }catch(e){console.warn('risk/map falhou',e);}
 }
 
@@ -255,7 +273,7 @@ function buildPopup(a){
   const fwi=a.meteo?.fwi!=null?a.meteo.fwi.toFixed(1):'--';
   const temp=a.meteo?.temp!=null?a.meteo.temp.toFixed(1)+'°C':'--';
   const hum=a.meteo?.humidade!=null?a.meteo.humidade.toFixed(0)+'%':'--';
-  const vvel=a.meteo?.vento_vel!=null?a.meteo.vento_vel.toFixed(0)+' km/h':'--';
+  const vvel=a.meteo?.vento_vel!=null && a.meteo.vento_vel > -99 ?a.meteo.vento_vel.toFixed(0)+' km/h':'--';
   const vdir=a.meteo?.vento_dir!=null?ventoDir(a.meteo.vento_dir):'--';
   const risco=a.risco_estrutural;
   const veg=vegetacaoLabel(risco);
