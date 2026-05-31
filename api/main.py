@@ -244,7 +244,6 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                     "categoria": r["categoria"], "source_tag": r["source_tag"],
                     "hotspot_source": r["hotspot_source"],
                     "prociv_confirmado": bool(r["prociv_confirmado"]),
-                    "prociv_localidade": r["prociv_localidade"],
                     "localidade_estimada": r["localidade_estimada"] if r.get("localidade_estimada") else None,
                     "meteo": {
                         "temp": float(r["temp"]) if r["temp"] else None,

@@ -32,12 +32,11 @@ async def gerar_alertas(conn, pares, meteo_data):
         score, categoria = calcular_score(par, meteo)
         risco_estrutural = get_structural_risk(lat, lon)
 
-        # Geocodificacao inversa se nao ha localidade PROCIV
-        localidade_estimada = None
-        if not par.get("prociv_localidade"):
-            localidade_estimada = await reverse_geocode(lat, lon)
-            if localidade_estimada:
-                log.info(f"Nominatim: {localidade_estimada} ({lat:.3f},{lon:.3f})")
+        # Geocodificacao inversa sempre via Nominatim
+        # (nao usamos prociv_localidade para evitar erros de associacao por proximidade)
+        localidade_estimada = await reverse_geocode(lat, lon)
+        if localidade_estimada:
+            log.info(f"Nominatim: {localidade_estimada} ({lat:.3f},{lon:.3f})")
 
         try:
             alerta_id = await conn.fetchval("""

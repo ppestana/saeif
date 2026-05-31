@@ -238,11 +238,9 @@ function buildPopup(a){
   const procivStr=a.prociv_confirmado
     ?'<span style="color:var(--amber)">&#x2713; Confirmado</span>'
     :'<span style="color:var(--dim)">Não confirmado</span>';
-  const local = a.prociv_localidade
-    ? `<div class="popup-row"><span class="popup-label">Localidade</span><span class="popup-val">${a.prociv_localidade}</span></div>`
-    : a.localidade_estimada
-      ? `<div class="popup-row"><span class="popup-label">Localidade (est.)</span><span class="popup-val" style="color:var(--dim)">${a.localidade_estimada}</span></div>`
-      : '';
+  const local = a.localidade_estimada
+    ? `<div class="popup-row"><span class="popup-label">Localidade</span><span class="popup-val">${a.localidade_estimada}</span></div>`
+    : '';
 
   return `
     <div class="popup-header">
@@ -331,7 +329,6 @@ async function loadAlertas(){
       meteo:f.properties.meteo,
       risco_estrutural:f.properties.risco_estrutural,
       prociv_confirmado:f.properties.prociv_confirmado,
-      prociv_localidade:f.properties.prociv_localidade,
       localidade_estimada:f.properties.localidade_estimada,
       hotspot_source:f.properties.hotspot_source,
     }));
