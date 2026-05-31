@@ -158,8 +158,8 @@ const state={alertas:[],hotspots:[],status:null,activeTab:'alertas',ws:null,wsRe
 const map=L.map('map',{center:[39.5,-8.0],zoom:7});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(map);
 map.zoomControl.setPosition('bottomright');
-const alertaLayer=L.layerGroup().addTo(map);
 const hotspotLayer=L.layerGroup().addTo(map);
+const alertaLayer=L.layerGroup().addTo(map);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function categoriaColor(cat){return{CRITICO:'#f85149',ALTO:'#f0a060',MEDIO:'#e3b341',BAIXO:'#3fb950'}[cat]||'#8b949e';}
@@ -334,6 +334,7 @@ async function loadAlertas(){
     renderMapAlertas();
   }catch(e){console.warn('alertas falhou',e);}
 }
+async function loadHealth(){
   try{const r=await fetch('/api/health');const d=await r.json();
     if(!d.firms_configured){state.demo=true;document.getElementById('demoBanner').classList.add('visible');}
   }catch(e){}
@@ -401,7 +402,7 @@ function renderMapAlertas(){
   alertaLayer.clearLayers();
   state.alertas.forEach(a=>{
     if(!a.lat||!a.lon)return;
-    const m=L.marker([a.lat,a.lon],{icon:alertIcon(a.categoria)});
+    const m=L.marker([a.lat,a.lon],{icon:alertIcon(a.categoria),zIndexOffset:1000});
     m.bindPopup(buildPopup(a),{maxWidth:300,className:''});
     alertaLayer.addLayer(m);
   });
