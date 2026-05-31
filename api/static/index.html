@@ -207,7 +207,64 @@ async function loadRiskMap(){
   }catch(e){console.warn('risk/map falhou',e);}
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Propagação elíptica ───────────────────────────────────────────────────────
+function drawPropagation(map, lat, lon, vento_vel, vento_dir, risco_estrutural) {
+  const layers = [];
+  if (!vento_vel || vento_vel < 0 || vento_dir == null) return layers;
+
+  // Factor de risco amplifica a propagação (floresta densa propaga mais)
+  const risco = risco_estrutural != null ? risco_estrutural : 0.5;
+  const riscoFactor = 0.5 + risco; // 0.5 a 1.5
+
+  // Velocidade de propagação estimada (km/h) baseada no vento
+  // Regra simplificada: fogo propaga a ~10% da velocidade do vento em condições normais
+  const velPropag = Math.max(0.5, vento_vel * 0.10 * riscoFactor);
+
+  // Direcção do vento em radianos (o fogo propaga na direcção DO vento)
+  const dirRad = (vento_dir * Math.PI) / 180;
+
+  [6, 12].forEach((horas, i) => {
+    const distKm = velPropag * horas;         // distância eixo maior (km)
+    const distLat = distKm / 111.0;           // graus latitude
+    const distLon = distKm / (111.0 * Math.cos(lat * Math.PI / 180));
+    const semiMinor = distLat * 0.4;          // eixo menor = 40% do maior
+
+    // Centro deslocado 60% para a frente do vento
+    const cLat = lat + Math.cos(dirRad) * distLat * 0.6;
+    const cLon = lon + Math.sin(dirRad) * distLon * 0.6;
+
+    // Gerar elipse com 36 pontos
+    const pts = [];
+    for (let a = 0; a <= 360; a += 10) {
+      const aRad = (a * Math.PI) / 180;
+      // Ponto na elipse antes de rodar
+      const ex = distLon * Math.cos(aRad);
+      const ey = semiMinor * Math.sin(aRad);
+      // Rodar pela direcção do vento
+      const rx = ex * Math.cos(dirRad) - ey * Math.sin(dirRad);
+      const ry = ex * Math.sin(dirRad) + ey * Math.cos(dirRad);
+      pts.push([cLat + ry, cLon + rx]);
+    }
+
+    const color = i === 0 ? '#e3b341' : '#f85149';
+    const layer = L.polygon(pts, {
+      color: color,
+      weight: 1.5,
+      opacity: 0.8,
+      fillColor: color,
+      fillOpacity: i === 0 ? 0.08 : 0.05,
+      dashArray: i === 0 ? '4 4' : '2 4',
+    });
+    layer.bindTooltip(`Propagação ${horas}h (~${distKm.toFixed(1)} km)`,
+      {sticky:true, className:'risk-tooltip'});
+    layer.addTo(map);
+    layers.push(layer);
+  });
+  return layers;
+}
+
+// Camada para propagações (limpa ao actualizar alertas)
+const propagLayer = L.layerGroup().addTo(map);
 function categoriaColor(cat){return{CRITICO:'#f85149',ALTO:'#f0a060',MEDIO:'#e3b341',BAIXO:'#3fb950'}[cat]||'#8b949e';}
 
 function vegetacaoLabel(risco){
@@ -451,11 +508,18 @@ function renderStatus(){
 // ── Render mapa alertas ───────────────────────────────────────────────────────
 function renderMapAlertas(){
   alertaLayer.clearLayers();
+  propagLayer.clearLayers();
   state.alertas.forEach(a=>{
     if(!a.lat||!a.lon)return;
     const m=L.marker([a.lat,a.lon],{icon:alertIcon(a.categoria),zIndexOffset:1000});
     m.bindPopup(buildPopup(a),{maxWidth:300,className:''});
     alertaLayer.addLayer(m);
+    // Propagacao para alertas ALTO e CRITICO com dados de vento validos
+    if((a.categoria==='ALTO'||a.categoria==='CRITICO') &&
+       a.meteo?.vento_vel>0 && a.meteo?.vento_dir!=null){
+      drawPropagation(propagLayer,a.lat,a.lon,
+        a.meteo.vento_vel,a.meteo.vento_dir,a.risco_estrutural);
+    }
   });
 }
 
