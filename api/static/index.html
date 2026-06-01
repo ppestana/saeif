@@ -401,6 +401,7 @@ function toggleLayer(layer, visible){
     document.getElementById('riskLegend').style.display = visible ? 'block' : 'none';
     updateLegendPositions();
   }
+  if(layer==='effis' && visible){
     loadEffisLayer(effisDay);
     document.getElementById('effisTimeSelector').style.display='flex';
     document.getElementById('effisLegend').style.display='block';
