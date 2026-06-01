@@ -119,6 +119,31 @@
     .risk-tooltip{background:var(--panel);border:1px solid var(--border);
       color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;
       padding:.2rem .5rem;border-radius:2px;}
+    /* Painel de ajuda */
+    .help-btn{position:fixed;bottom:1.5rem;left:240px;z-index:1001;
+      width:28px;height:28px;border-radius:50%;background:var(--panel);
+      border:1px solid var(--border);color:var(--dim);font-size:13px;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;
+      -webkit-tap-highlight-color:transparent;}
+    .help-btn:hover{border-color:var(--blue);color:var(--blue);}
+    .help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;
+      display:none;align-items:center;justify-content:center;padding:1rem;}
+    .help-overlay.visible{display:flex;}
+    .help-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+      max-width:480px;width:100%;max-height:85dvh;overflow-y:auto;padding:1.5rem;
+      -webkit-overflow-scrolling:touch;}
+    .help-header{display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);}
+    .help-title{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--bright);}
+    .help-close{background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:.2rem;}
+    .help-term{margin-bottom:1rem;}
+    .help-term-name{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+      color:var(--amber);margin-bottom:.3rem;}
+    .help-term-def{font-size:13px;color:var(--text);line-height:1.5;}
+    .help-term-ex{font-size:11px;color:var(--dim);margin-top:.2rem;font-style:italic;}
+    .help-section{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;
+      margin:1rem 0 .5rem;font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--border);padding-top:.75rem;}
+    @media(max-width:768px){.help-btn{left:.5rem;bottom:calc(45dvh + 2.5rem);}}
     .map-legend{position:fixed;bottom:1.5rem;right:1.5rem;z-index:1000;
       background:var(--panel);border:1px solid var(--border);border-radius:4px;
       padding:.6rem .85rem;font-size:11px;color:var(--text);}
@@ -182,6 +207,81 @@
       <div class="legend-item"><div class="legend-swatch" style="background:#85e89d"></div>Risco baixo</div>
       <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div>Risco nulo</div>
       <div style="font-size:10px;color:var(--dim);margin-top:.3rem">ESA WorldCover 2021</div>
+    </div>
+
+    <!-- Botão de ajuda -->
+    <button class="help-btn" onclick="document.getElementById('helpOverlay').classList.add('visible')" title="Glossário">?</button>
+
+    <!-- Painel de ajuda -->
+    <div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)this.classList.remove('visible')">
+      <div class="help-panel">
+        <div class="help-header">
+          <div class="help-title">Glossário de Termos</div>
+          <button class="help-close" onclick="document.getElementById('helpOverlay').classList.remove('visible')">✕</button>
+        </div>
+
+        <div class="help-section">Alerta</div>
+        <div class="help-term">
+          <div class="help-term-name">Score (0–100)</div>
+          <div class="help-term-def">Índice de risco calculado pelo SAEIF que combina quatro factores: combustível disponível, condições meteorológicas, intensidade do foco de calor e confirmação oficial. Quanto mais alto, maior a probabilidade e gravidade do incêndio.</div>
+          <div class="help-term-ex">Ex: Score 80 = situação de risco muito elevado que justifica mobilização imediata.</div>
+        </div>
+        <div class="help-term">
+          <div class="help-term-name">Categoria</div>
+          <div class="help-term-def">Classificação qualitativa do alerta em quatro níveis: BAIXO, MÉDIO, ALTO e CRÍTICO. Baseia-se no Score e define o nível de resposta operacional recomendado.</div>
+        </div>
+        <div class="help-term">
+          <div class="help-term-name">PROCIV</div>
+          <div class="help-term-def">Indica se o foco de calor detectado por satélite foi também reportado pela Protecção Civil portuguesa (ICNF/fogos.pt). Um alerta confirmado pelo PROCIV tem maior fiabilidade.</div>
+        </div>
+
+        <div class="help-section">Meteorologia IPMA</div>
+        <div class="help-term">
+          <div class="help-term-name">FWI — Fire Weather Index</div>
+          <div class="help-term-def">Índice canadiano de perigo meteorológico de incêndio. Combina temperatura, humidade, vento e precipitação recente. Valores acima de 30 indicam perigo elevado; acima de 50, perigo extremo.</div>
+          <div class="help-term-ex">Ex: FWI 17 = perigo moderado · FWI 55 = perigo extremo.</div>
+        </div>
+        <div class="help-term">
+          <div class="help-term-name">Temperatura / Humidade / Vento</div>
+          <div class="help-term-def">Dados observados em tempo real pela estação meteorológica IPMA mais próxima do foco. Reflectem as condições locais no momento da detecção.</div>
+        </div>
+
+        <div class="help-section">Perigo EFFIS · Península Ibérica</div>
+        <div class="help-term">
+          <div class="help-term-name">FWI previsto</div>
+          <div class="help-term-def">FWI calculado pelo modelo MeteoFrance para a localização do alerta. Diferente do FWI IPMA porque usa previsão meteorológica (não observação) com cobertura de toda a Península Ibérica a ~2.5 km de resolução.</div>
+        </div>
+        <div class="help-term">
+          <div class="help-term-name">Ranking histórico (%)</div>
+          <div class="help-term-def">Percentil do FWI actual face aos últimos 40 anos de registos históricos para esta localização e época do ano. Um ranking de 95% significa que apenas 5% dos dias históricos tiveram um FWI mais alto.</div>
+          <div class="help-term-ex">Ex: Ranking 99% em Junho = situação excecionalmente perigosa para a época.</div>
+        </div>
+        <div class="help-term">
+          <div class="help-term-name">Anomalia (σ)</div>
+          <div class="help-term-def">Desvio do FWI actual face à média histórica, medido em desvios padrão (σ). Valores acima de +2σ indicam condições estatisticamente raras. Complementa o ranking com informação sobre a intensidade do desvio.</div>
+          <div class="help-term-ex">Ex: +4.3σ = condições extremamente atípicas para a época do ano.</div>
+        </div>
+
+        <div class="help-section">Risco Estrutural</div>
+        <div class="help-term">
+          <div class="help-term-name">Índice de Risco Estrutural (0–100%)</div>
+          <div class="help-term-def">Risco intrínseco da localização baseado no tipo de vegetação (ESA WorldCover 2021). Floresta densa = 100%, arbustivo = 85%, pastagem = 30%, urbano = 0%. Reflecte a carga de combustível disponível independentemente das condições meteorológicas.</div>
+        </div>
+        <div class="help-term">
+          <div class="help-term-name">Tipo de vegetação</div>
+          <div class="help-term-def">Classificação do uso do solo no ponto do alerta segundo o mapa ESA WorldCover 2021 (resolução 10m). Determina o tipo e quantidade de combustível disponível para a propagação do fogo.</div>
+        </div>
+
+        <div class="help-section">Fonte dos dados</div>
+        <div class="help-term">
+          <div class="help-term-name">Satélite</div>
+          <div class="help-term-def">Satélite que detectou o foco de calor: VIIRS/Suomi-NPP, VIIRS/NOAA-20 ou VIIRS/NOAA-21 (constelação JPSS da NASA). Os três satélites passam sobre Portugal várias vezes por dia.</div>
+        </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--border);">
+          Fontes: NASA FIRMS · IPMA · fogos.pt · EFFIS/Copernicus · ESA WorldCover · OSM Nominatim<br>
+          Sistema de demonstração — sem validade operacional.
+        </div>
+      </div>
     </div>
   </div>
 </div>
