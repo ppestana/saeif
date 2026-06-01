@@ -1563,15 +1563,15 @@ fire_risk = (
           </tr>
           <tr>
             <td><strong>NDVI Sentinel-2 — risco dinâmico</strong></td>
-            <td>Integração do índice NDVI (estado da vegetação) via Copernicus Data Space Ecosystem. Actualização a cada 10 dias. Complementa o WorldCover estático com componente sazonal — no verão o risco real é mais alto do que o WorldCover indica. Requer pipeline de download Sentinel-2 + cálculo NDVI + fusão com fire_risk.tif.</td>
+            <td>Integração do índice NDVI (estado da vegetação) via Copernicus Data Space Ecosystem. Pipeline: (1) download do tile Sentinel-2 mais recente para Portugal (bandas B04/B08); (2) cálculo NDVI = (NIR−RED)/(NIR+RED); (3) normalização e fusão com WorldCover para gerar <code>fire_risk.tif</code> actualizado; (4) regeneração do <code>fire_risk.geojson</code> por distrito. Cron a cada 10 dias. Em Agosto, após meses sem chuva, o NDVI cai significativamente — a vegetação seca eleva o risco real muito acima do que o WorldCover estático indica. Esta é a componente sazonal mais importante para a precisão do score de risco no Verão.</td>
             <td><span class="badge badge-amber">Média</span></td>
-            <td>Sessão dedicada</td>
+            <td>Sessão dedicada (3–4h)</td>
           </tr>
           <tr>
             <td><strong>EU-DEM / declive</strong></td>
-            <td>Integração do modelo digital de elevação Copernicus DEM 25m para cálculo de declive normalizado por ponto de ignição. O declive amplifica significativamente a velocidade de propagação — omitido no PoC actual. Requer download do DEM, cálculo de slope com GDAL, e integração no score de risco.</td>
+            <td>Integração do modelo digital de elevação Copernicus DEM 25m para cálculo de declive normalizado por ponto de ignição. Pipeline: (1) download do EU-DEM para Portugal (~500MB GeoTIFF); (2) cálculo de slope com <code>gdaldem slope</code>; (3) normalização 0–1 (0°=0, ≥45°=1); (4) integração no <code>get_structural_risk()</code> como factor multiplicador. O declive é estático mas ausente no PoC actual — um fogo numa encosta a 30° propaga-se 3–4× mais rápido do que em terreno plano, o que subestima significativamente o risco em zonas serranas (Lousã, Gerês, Serra da Estrela).</td>
             <td><span class="badge badge-amber">Média</span></td>
-            <td>Sessão dedicada</td>
+            <td>Sessão dedicada (2–3h)</td>
           </tr>
           <tr>
             <td><strong>Notificações push / email</strong></td>
