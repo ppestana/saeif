@@ -417,19 +417,21 @@ function toggleLayer(layer, visible){
 function updateLegendPositions(){
   const riskEl = document.getElementById('riskLegend');
   const effisEl = document.getElementById('effisLegend');
-  const riskVisible = riskEl.style.display !== 'none';
   const effisVisible = effisEl.style.display !== 'none';
-  // Risco sempre no canto inferior direito
-  riskEl.style.bottom = '1.5rem';
-  riskEl.style.right = '1.5rem';
+  const riskVisible = riskEl.style.display !== 'none';
+
+  // EFFIS sempre no canto inferior direito
+  effisEl.style.bottom = '1.5rem';
+  effisEl.style.right = '1.5rem';
+
   if(effisVisible && riskVisible){
-    // EFFIS fica acima do risco — calcula altura dinamicamente
-    const riskH = riskEl.offsetHeight || 140;
-    effisEl.style.bottom = (1.5 * 16 + riskH + 8) + 'px';
-    effisEl.style.right = '1.5rem';
-  } else if(effisVisible){
-    effisEl.style.bottom = '1.5rem';
-    effisEl.style.right = '1.5rem';
+    // Risco fica acima do EFFIS
+    const effisH = effisEl.offsetHeight || 130;
+    riskEl.style.bottom = (1.5 * 16 + effisH + 8) + 'px';
+    riskEl.style.right = '1.5rem';
+  } else {
+    riskEl.style.bottom = '1.5rem';
+    riskEl.style.right = '1.5rem';
   }
 }
 
