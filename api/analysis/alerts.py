@@ -2,6 +2,7 @@ import logging
 import asyncpg
 from ingest.ipma import get_nearest_meteo
 from analysis.score import calcular_score, get_structural_risk
+from ingest.effis import get_effis_values
 from utils import reverse_geocode
 
 log = logging.getLogger("saeif.alerts")
@@ -31,6 +32,7 @@ async def gerar_alertas(conn, pares, meteo_data):
         meteo = get_nearest_meteo(lat, lon, meteo_data) if meteo_data else {}
         score, categoria = calcular_score(par, meteo)
         risco_estrutural = get_structural_risk(lat, lon)
+        effis = get_effis_values(lat, lon)
 
         # Geocodificacao inversa sempre via Nominatim
         # (nao usamos prociv_localidade para evitar erros de associacao por proximidade)
@@ -43,18 +45,19 @@ async def gerar_alertas(conn, pares, meteo_data):
                 INSERT INTO alertas (
                     geom, hotspot_id, prociv_id, score, categoria, source_tag,
                     temp, humidade, vento_vel, vento_dir, fwi, risco_estrutural,
-                    localidade_estimada
+                    localidade_estimada, effis_fwi, effis_ranking, effis_anomaly
                 )
                 VALUES (
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12, $13
+                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
                 )
                 RETURNING id
             """, lon, lat, hotspot_id, par.get("prociv_id"),
                 score, categoria,
                 meteo.get("temp"), meteo.get("humidade"),
                 meteo.get("vento_vel"), meteo.get("vento_dir"),
-                meteo.get("fwi"), risco_estrutural, localidade_estimada)
+                meteo.get("fwi"), risco_estrutural, localidade_estimada,
+                (effis or {}).get("fwi"), (effis or {}).get("ranking"), (effis or {}).get("anomaly"))
             alertas_gerados.append({
                 "id": alerta_id, "lat": lat, "lon": lon,
                 "score": score, "categoria": categoria, "source_tag": "SYS",

@@ -347,6 +347,20 @@ function buildPopup(a){
   const hum=a.meteo?.humidade!=null?a.meteo.humidade.toFixed(0)+'%':'--';
   const vvel=a.meteo?.vento_vel!=null && a.meteo.vento_vel > -99 ?a.meteo.vento_vel.toFixed(0)+' km/h':'--';
   const vdir=a.meteo?.vento_dir!=null?ventoDir(a.meteo.vento_dir):'--';
+
+  // EFFIS
+  const effis = a.effis || {};
+  const efwiStr = effis.fwi!=null ? effis.fwi.toFixed(1) : '--';
+  const rankStr = effis.ranking!=null ? effis.ranking.toFixed(1)+'%' : '--';
+  const anomStr = effis.anomaly!=null ? (effis.anomaly>=0?'+':'')+effis.anomaly.toFixed(1)+'σ' : '--';
+  const rankColor = effis.ranking>=90 ? 'var(--fire)' : effis.ranking>=80 ? '#f0a060' : effis.ranking>=60 ? 'var(--amber)' : 'var(--green)';
+  const effisSection = (effis.fwi!=null) ? `
+    <div class="popup-section">
+      <div class="popup-section-title">Perigo EFFIS · Península Ibérica</div>
+      <div class="popup-row"><span class="popup-label">FWI previsto</span><span class="popup-val">${efwiStr}</span></div>
+      <div class="popup-row"><span class="popup-label">Ranking histórico</span><span class="popup-val" style="color:${rankColor};font-weight:600">${rankStr}</span></div>
+      <div class="popup-row"><span class="popup-label">Anomalia</span><span class="popup-val">${anomStr}</span></div>
+    </div>` : '';
   const risco=a.risco_estrutural;
   const veg=vegetacaoLabel(risco);
   const riscoStr=risco!=null?(risco*100).toFixed(0)+'%':'--';
@@ -376,12 +390,14 @@ function buildPopup(a){
     </div>
 
     <div class="popup-section">
-      <div class="popup-section-title">Meteorologia</div>
+      <div class="popup-section-title">Meteorologia IPMA</div>
       <div class="popup-row"><span class="popup-label">FWI</span><span class="popup-val">${fwi}</span></div>
       <div class="popup-row"><span class="popup-label">Temperatura</span><span class="popup-val">${temp}</span></div>
       <div class="popup-row"><span class="popup-label">Humidade</span><span class="popup-val">${hum}</span></div>
       <div class="popup-row"><span class="popup-label">Vento</span><span class="popup-val">${vvel} ${vdir}</span></div>
     </div>
+
+    ${effisSection}
 
     <div class="popup-section">
       <div class="popup-section-title">Risco Estrutural</div>
@@ -448,6 +464,7 @@ async function loadAlertas(){
       risco_estrutural:f.properties.risco_estrutural,
       prociv_confirmado:f.properties.prociv_confirmado,
       localidade_estimada:f.properties.localidade_estimada,
+      effis:f.properties.effis,
       hotspot_source:f.properties.hotspot_source,
     }));
     renderAlertas();

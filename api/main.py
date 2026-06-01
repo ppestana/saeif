@@ -18,6 +18,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
 from ingest.firms import fetch_firms
+from ingest.effis import fetch_effis, get_effis_values
 from ingest.fogos import fetch_fogos
 from ingest.ipma import fetch_ipma_conditions
 from analysis.dedup import dedup_hotspots
@@ -227,7 +228,8 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                    h.source AS hotspot_source,
                    p.id IS NOT NULL AS prociv_confirmado,
                    p.localidade AS prociv_localidade,
-                   a.localidade_estimada
+                   a.localidade_estimada,
+                   a.effis_fwi, a.effis_ranking, a.effis_anomaly
             FROM alertas a
             LEFT JOIN hotspots h ON h.id = a.hotspot_id
             LEFT JOIN ocorrencias_prociv p ON p.id = a.prociv_id
@@ -253,6 +255,11 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                         "fwi": float(r["fwi"]) if r["fwi"] else None,
                     },
                     "risco_estrutural": float(r["risco_estrutural"]) if r["risco_estrutural"] else None,
+                    "effis": {
+                        "fwi": float(r["effis_fwi"]) if r.get("effis_fwi") else None,
+                        "ranking": float(r["effis_ranking"]) if r.get("effis_ranking") else None,
+                        "anomaly": float(r["effis_anomaly"]) if r.get("effis_anomaly") else None,
+                    },
                     "criado_em": r["criado_em"].isoformat(),
                 }
             })
