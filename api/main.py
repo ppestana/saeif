@@ -379,6 +379,53 @@ async def get_prociv(limit: int = 200):
         })
     return {"type": "FeatureCollection", "features": features}
 
+@app.get("/api/effis/risk")
+async def get_effis_risk(day: int = 0):
+    """GeoJSON de risco EFFIS (FWI) por distrito para D+0, D+1 ou D+2."""
+    import json, rasterio, numpy as np
+    from rasterio.mask import mask as rmask
+
+    day = max(0, min(2, day))
+    fwi_path = f"/data/effis_fwi_d{day}.tif" if day > 0 else "/data/effis_fwi.tif"
+    districts_path = "/data/concelhos.geojson"
+
+    if not os.path.exists(fwi_path):
+        raise HTTPException(status_code=404, detail=f"Raster D+{day} nao disponivel")
+
+    with open(districts_path) as f:
+        gj = json.load(f)
+
+    results = []
+    with rasterio.open(fwi_path) as src:
+        for feat in gj.get("features", []):
+            try:
+                out_image, _ = rmask(src, [feat["geometry"]], crop=True, nodata=-9999)
+                data = out_image[0]
+                valid = data[data > -9999]
+                if len(valid) == 0:
+                    continue
+                fwi_mean = float(valid.mean())
+                # Classificar em 5 niveis
+                if fwi_mean >= 60:   cls = 4
+                elif fwi_mean >= 40: cls = 3
+                elif fwi_mean >= 25: cls = 2
+                elif fwi_mean >= 10: cls = 1
+                else:                cls = 0
+                results.append({
+                    "type": "Feature",
+                    "geometry": feat["geometry"],
+                    "properties": {
+                        "name": (feat.get("properties") or {}).get("name", ""),
+                        "fwi": round(fwi_mean, 1),
+                        "DN": cls,
+                        "day": day
+                    }
+                })
+            except Exception:
+                continue
+
+    return {"type": "FeatureCollection", "features": results}
+
 @app.get("/api/risk/map")
 async def get_risk_map():
     """GeoJSON de risco estrutural para overlay no Leaflet."""

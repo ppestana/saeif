@@ -224,6 +224,13 @@
       <label class="layer-item"><input type="checkbox" id="lProciv" onchange="toggleLayer('prociv',this.checked)"><div class="layer-dot" style="background:#1c2128;border:2px solid #58a6ff"></div>Ocorrências sem alerta</label>
       <div class="layers-section">Risco Estrutural</div>
       <label class="layer-item"><input type="checkbox" id="lRisco" checked onchange="toggleLayer('risco',this.checked)"><div class="layer-dot" style="background:linear-gradient(to right,#3fb950,#f85149)"></div>Risco por distrito</label>
+      <div class="layers-section">Perigo de Incêndio EFFIS</div>
+      <label class="layer-item"><input type="checkbox" id="lEffis" onchange="toggleLayer('effis',this.checked)"><div class="layer-dot" style="background:linear-gradient(to right,#e3b341,#f85149)"></div>FWI por distrito</label>
+      <div style="display:flex;gap:.35rem;margin-top:.4rem;margin-left:1.5rem;" id="effisTimeSelector" style="display:none">
+        <button class="filter-btn active-ALTO" id="effisD0" onclick="setEffisDay(0)">Hoje</button>
+        <button class="filter-btn" id="effisD1" onclick="setEffisDay(1)">Amanhã</button>
+        <button class="filter-btn" id="effisD2" onclick="setEffisDay(2)">Depois</button>
+      </div>
     </div>
     <div class="map-legend" id="riskLegend" style="display:none">
       <div class="legend-title">Risco Estrutural</div>
@@ -320,6 +327,45 @@ const hotspotLayer=L.layerGroup().addTo(map);
 const alertaLayer=L.layerGroup().addTo(map);
 const riskLayer=L.layerGroup().addTo(map);
 const procivLayer=L.layerGroup(); // não adicionado por defeito
+const effisLayer=L.layerGroup();  // camada EFFIS dinâmica
+
+// Cores FWI: 0=verde, 1=amarelo, 2=laranja, 3=vermelho, 4=vermelho escuro
+const fwiColors={0:'#3fb950',1:'#e3b341',2:'#f0a060',3:'#f85149',4:'#b22020'};
+const fwiLabels={0:'Reduzido (FWI<10)',1:'Moderado (FWI 10–25)',2:'Alto (FWI 25–40)',3:'Muito alto (FWI 40–60)',4:'Máximo (FWI>60)'};
+let effisDay=0;
+
+async function loadEffisLayer(day=0){
+  effisLayer.clearLayers();
+  try{
+    const r=await fetch(`/api/effis/risk?day=${day}`);
+    const geojson=await r.json();
+    L.geoJSON(geojson,{
+      style:f=>({
+        fillColor:fwiColors[f.properties.DN]||'transparent',
+        fillOpacity:0.45,
+        color:'none',
+        weight:0
+      }),
+      filter:f=>f.properties.DN>0,
+      onEachFeature:(f,layer)=>{
+        layer.bindTooltip(
+          `${f.properties.name}<br>FWI ${f.properties.fwi} — ${fwiLabels[f.properties.DN]||''}`,
+          {sticky:true,className:'risk-tooltip'}
+        );
+      }
+    }).addTo(effisLayer);
+    console.log(`EFFIS D+${day}: ${geojson.features.length} features`);
+  }catch(e){console.warn('effis/risk falhou',e);}
+}
+
+function setEffisDay(day){
+  effisDay=day;
+  ['effisD0','effisD1','effisD2'].forEach((id,i)=>{
+    const btn=document.getElementById(id);
+    if(btn) btn.className='filter-btn'+(i===day?' active-ALTO':'');
+  });
+  if(map.hasLayer(effisLayer)) loadEffisLayer(day);
+}
 
 // ── Controlo de camadas ───────────────────────────────────────────────────────
 function toggleLayersPanel(){
@@ -331,13 +377,20 @@ map.on('click', ()=>document.getElementById('layersPanel').classList.remove('ope
 function toggleLayer(layer, visible){
   const layers = {
     alertas: alertaLayer, propag: propagLayer,
-    hotspots: hotspotLayer, prociv: procivLayer, risco: riskLayer
+    hotspots: hotspotLayer, prociv: procivLayer,
+    risco: riskLayer, effis: effisLayer
   };
   if(visible) layers[layer].addTo(map);
   else map.removeLayer(layers[layer]);
-  // Carregar ocorrências PROCIV se activado pela primeira vez
   if(layer==='prociv' && visible && procivLayer.getLayers().length===0){
     loadProcivLayer();
+  }
+  if(layer==='effis' && visible){
+    loadEffisLayer(effisDay);
+    document.getElementById('effisTimeSelector').style.display='flex';
+  }
+  if(layer==='effis' && !visible){
+    document.getElementById('effisTimeSelector').style.display='none';
   }
 }
 
