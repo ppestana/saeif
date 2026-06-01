@@ -364,20 +364,20 @@ async def get_prociv(limit: int = 200):
             ORDER BY p.criado_em DESC LIMIT {limit}
         """)
     await conn.close()
-        features = []
-        for r in rows:
-            features.append({{
-                "type": "Feature",
-                "geometry": {{"type": "Point", "coordinates": [r["lon"], r["lat"]]}},
-                "properties": {{
-                    "id": r["id"],
-                    "localidade": r["localidade"],
-                    "distrito": r["distrito"],
-                    "estado": r["estado"],
-                    "criado_em": r["criado_em"].isoformat() if r["criado_em"] else None,
-                }}
-            }})
-        return {{"type": "FeatureCollection", "features": features}}
+    features = []
+    for r in rows:
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [r["lon"], r["lat"]]},
+            "properties": {
+                "id": r["id"],
+                "localidade": r["localidade"],
+                "distrito": r["distrito"],
+                "estado": r["estado"],
+                "criado_em": r["criado_em"].isoformat() if r["criado_em"] else None,
+            }
+        })
+    return {"type": "FeatureCollection", "features": features}
 
 @app.get("/api/risk/map")
 async def get_risk_map():
