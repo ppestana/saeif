@@ -1450,6 +1450,9 @@ fire_risk = (
           <tr><td><code>007321c</code></td><td>feat: propagacao eliptica 6h/12h para alertas ALTO e CRITICO</td><td>31 Mai 2026</td></tr>
           <tr><td><code>108d75b</code></td><td>fix: propagacao sempre visivel para ALTO/CRITICO, default 5km/h</td><td>31 Mai 2026</td></tr>
           <tr><td><code>3fc9592</code></td><td>feat: mostrar ID do alerta no card da sidebar</td><td>31 Mai 2026</td></tr>
+          <tr><td><code>78f790d</code></td><td>feat: filtro por categoria na sidebar (CRITICO/ALTO/MEDIO/BAIXO)</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>f010f33</code></td><td>feat: favicon SVG, pagina 404 personalizada</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>c14849a</code></td><td>feat: script actualizacao automatica risco estrutural + cron mensal</td><td>1 Jun 2026</td></tr>
         </tbody>
       </table>
 
@@ -1515,27 +1518,45 @@ fire_risk = (
           </tr>
           <tr>
             <td><strong>Filtro por categoria</strong></td>
-            <td>Botões na sidebar para filtrar alertas por CRÍTICO / ALTO / MÉDIO / BAIXO.</td>
-            <td><span class="badge badge-amber">Média</span></td>
-            <td>1 hora</td>
+            <td>Botões na sidebar (CRÍTICO / ALTO / MÉDIO / BAIXO) que filtram a lista de alertas e os marcadores no mapa. Toggle: clique activa/desactiva. Contador mostra filtrados/total. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
           </tr>
           <tr>
             <td><strong>Favicon e página 404</strong></td>
-            <td>Favicon SVG com ícone de chama TerraDigital. Página 404 personalizada.</td>
-            <td><span class="badge badge-gray">Baixa</span></td>
-            <td>1 hora</td>
+            <td>Favicon SVG com ícone 🔥 em fundo escuro (#0d1117). Página 404 personalizada no estilo do frontend — código 404 em vermelho, botão "Voltar ao mapa", link SAEIF no canto. Handler FastAPI <code>@app.exception_handler(404)</code>. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
           </tr>
           <tr>
-            <td><strong>Actualização automática risco</strong></td>
-            <td>Script que combina WorldCover + NDVI Sentinel-2 e recalcula o GeoJSON por distrito. Cron job mensal (ou a cada 10 dias no verão).</td>
-            <td><span class="badge badge-amber">Média</span></td>
-            <td>Sessão dedicada</td>
+            <td><strong>Actualização automática do risco estrutural</strong></td>
+            <td>Script <code>api/analysis/update_risk.py</code> que recalcula o <code>fire_risk.geojson</code> por distrito/província a partir do <code>wc_2km.tif</code> (WorldCover reamostrado). Faz backup do GeoJSON anterior. Agendado via cron no 1º dia do mês às 03:00 UTC. Nota: o WorldCover base (2021) é estático — a ESA não publicou versões posteriores. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
           </tr>
           <tr>
             <td><strong>Artigo técnico</strong></td>
             <td>Paper EN+PT para pedropestana.com documentando arquitectura e resultados do PoC.</td>
             <td><span class="badge badge-blue">Futura</span></td>
             <td>Sessão dedicada</td>
+          </tr>
+          <tr>
+            <td><strong>NDVI Sentinel-2 — risco dinâmico</strong></td>
+            <td>Integração do índice NDVI (estado da vegetação) via Copernicus Data Space Ecosystem. Actualização a cada 10 dias. Complementa o WorldCover estático com componente sazonal — no verão o risco real é mais alto do que o WorldCover indica. Requer pipeline de download Sentinel-2 + cálculo NDVI + fusão com fire_risk.tif.</td>
+            <td><span class="badge badge-amber">Média</span></td>
+            <td>Sessão dedicada</td>
+          </tr>
+          <tr>
+            <td><strong>EU-DEM / declive</strong></td>
+            <td>Integração do modelo digital de elevação Copernicus DEM 25m para cálculo de declive normalizado por ponto de ignição. O declive amplifica significativamente a velocidade de propagação — omitido no PoC actual. Requer download do DEM, cálculo de slope com GDAL, e integração no score de risco.</td>
+            <td><span class="badge badge-amber">Média</span></td>
+            <td>Sessão dedicada</td>
+          </tr>
+          <tr>
+            <td><strong>Notificações push / email</strong></td>
+            <td>Envio de alertas por email ou webhook quando um alerta ALTO ou CRÍTICO é gerado. Integração com SendGrid ou similar. Útil para monitorização sem acesso ao browser.</td>
+            <td><span class="badge badge-gray">Baixa</span></td>
+            <td>2–3 horas</td>
           </tr>
           <tr>
             <td><strong>Integração SMRIP</strong></td>
