@@ -354,14 +354,14 @@ async def get_prociv(limit: int = 200):
     conn = await get_db()
     rows = await conn.fetch(f"""
             SELECT p.id, ST_X(p.geom) AS lon, ST_Y(p.geom) AS lat,
-                   p.localidade, p.distrito, p.estado, p.criado_em
+                   p.localidade, p.distrito, p.estado, p.fetched_at
             FROM ocorrencias_prociv p
-            WHERE p.criado_em > NOW() - INTERVAL '24 hours'
+            WHERE p.fetched_at > NOW() - INTERVAL '24 hours'
               AND NOT EXISTS (
                 SELECT 1 FROM alertas a WHERE a.prociv_id = p.id
               )
               AND p.geom IS NOT NULL
-            ORDER BY p.criado_em DESC LIMIT {limit}
+            ORDER BY p.fetched_at DESC LIMIT {limit}
         """)
     await conn.close()
     features = []
@@ -374,7 +374,7 @@ async def get_prociv(limit: int = 200):
                 "localidade": r["localidade"],
                 "distrito": r["distrito"],
                 "estado": r["estado"],
-                "criado_em": r["criado_em"].isoformat() if r["criado_em"] else None,
+                "criado_em": r["fetched_at"].isoformat() if r["fetched_at"] else None,
             }
         })
     return {"type": "FeatureCollection", "features": features}
