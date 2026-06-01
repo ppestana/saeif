@@ -348,6 +348,36 @@ async def not_found_handler(request, exc):
     from fastapi.responses import FileResponse
     return FileResponse("/app/static/404.html", status_code=404)
 
+@app.get("/api/prociv")
+async def get_prociv(limit: int = 200):
+    """Ocorrencias PROCIV sem alerta SAEIF gerado — para camada no mapa."""
+    async with get_db() as conn:
+        rows = await conn.fetch(f"""
+            SELECT p.id, ST_X(p.geom) AS lon, ST_Y(p.geom) AS lat,
+                   p.localidade, p.distrito, p.estado, p.criado_em
+            FROM ocorrencias_prociv p
+            WHERE p.criado_em > NOW() - INTERVAL '24 hours'
+              AND NOT EXISTS (
+                SELECT 1 FROM alertas a WHERE a.prociv_id = p.id
+              )
+              AND p.geom IS NOT NULL
+            ORDER BY p.criado_em DESC LIMIT {limit}
+        """)
+        features = []
+        for r in rows:
+            features.append({{
+                "type": "Feature",
+                "geometry": {{"type": "Point", "coordinates": [r["lon"], r["lat"]]}},
+                "properties": {{
+                    "id": r["id"],
+                    "localidade": r["localidade"],
+                    "distrito": r["distrito"],
+                    "estado": r["estado"],
+                    "criado_em": r["criado_em"].isoformat() if r["criado_em"] else None,
+                }}
+            }})
+        return {{"type": "FeatureCollection", "features": features}}
+
 @app.get("/api/risk/map")
 async def get_risk_map():
     """GeoJSON de risco estrutural para overlay no Leaflet."""
