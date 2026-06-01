@@ -331,6 +331,16 @@ async def get_status():
     finally:
         await conn.close()
 
+@app.get("/favicon.svg", include_in_schema=False)
+async def favicon():
+    from fastapi.responses import FileResponse
+    return FileResponse("/app/static/favicon.svg", media_type="image/svg+xml")
+
+@app.exception_handler(404)
+async def not_found_handler(request, exc):
+    from fastapi.responses import FileResponse
+    return FileResponse("/app/static/404.html", status_code=404)
+
 @app.get("/api/risk/map")
 async def get_risk_map():
     """GeoJSON de risco estrutural para overlay no Leaflet."""
