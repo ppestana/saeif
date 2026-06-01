@@ -36,7 +36,15 @@
     .sidebar{width:300px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);
       display:flex;flex-direction:column;overflow:hidden;order:1;}
     #map{flex:1;min-width:0;order:2;}
-    .sidebar-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+    .filter-bar{display:flex;gap:.35rem;padding:.5rem .75rem;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+    .filter-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;
+      padding:.25rem .55rem;border-radius:2px;cursor:pointer;border:1px solid var(--border);
+      background:var(--card);color:var(--dim);text-transform:uppercase;letter-spacing:.04em;
+      -webkit-tap-highlight-color:transparent;transition:all .15s;}
+    .filter-btn.active-CRITICO{background:#3d1f1e;color:var(--fire);border-color:var(--fire);}
+    .filter-btn.active-ALTO{background:#2a1a08;color:#f0a060;border-color:#f0a060;}
+    .filter-btn.active-MEDIO{background:#2d2316;color:var(--amber);border-color:var(--amber);}
+    .filter-btn.active-BAIXO{background:#192c1e;color:var(--green);border-color:var(--green);}
     .tab{flex:1;padding:.6rem;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;
       color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;}
     .tab.active{color:var(--fire);border-bottom-color:var(--fire);}
@@ -156,6 +164,12 @@
         <div class="tab active" id="tabAlertas" onclick="switchTab('alertas')">Alertas</div>
         <div class="tab" id="tabStatus" onclick="switchTab('status')">Estado</div>
       </div>
+      <div class="filter-bar" id="filterBar">
+        <button class="filter-btn" id="fCRITICO" onclick="toggleFilter('CRITICO')">Crítico</button>
+        <button class="filter-btn" id="fALTO"    onclick="toggleFilter('ALTO')">Alto</button>
+        <button class="filter-btn" id="fMEDIO"   onclick="toggleFilter('MEDIO')">Médio</button>
+        <button class="filter-btn" id="fBAIXO"   onclick="toggleFilter('BAIXO')">Baixo</button>
+      </div>
       <div class="sidebar-content" id="sidebarContent"></div>
     </div>
     <div id="map"></div>
@@ -173,7 +187,7 @@
 <div id="toast"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const state={alertas:[],hotspots:[],status:null,activeTab:'alertas',ws:null,wsRetries:0,demo:false};
+const state={alertas:[],hotspots:[],status:null,activeTab:'alertas',activeFilter:null,ws:null,wsRetries:0,demo:false};
 
 const map=L.map('map',{center:[39.5,-8.0],zoom:7});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(map);
@@ -458,13 +472,16 @@ async function triggerIngest(){
 function renderAlertas(){
   if(state.activeTab!=='alertas')return;
   const cont=document.getElementById('sidebarContent');
+  const filtered = state.activeFilter
+    ? state.alertas.filter(a=>a.categoria===state.activeFilter)
+    : state.alertas;
   const criticos=state.alertas.filter(a=>a.categoria==='CRITICO').length;
   cont.innerHTML=`<div class="stats">
     <div class="stat"><div class="stat-num" style="color:var(--fire)">${criticos}</div><div class="stat-label">Criticos</div></div>
-    <div class="stat"><div class="stat-num">${state.alertas.length}</div><div class="stat-label">Total 24h</div></div>
+    <div class="stat"><div class="stat-num">${filtered.length}${state.activeFilter?'<span style="font-size:12px;color:var(--dim)"> / '+state.alertas.length+'</span>':''}</div><div class="stat-label">Total 24h</div></div>
   </div>`;
-  if(state.alertas.length===0){cont.innerHTML+='<div class="empty">Sem alertas nas ultimas 24 horas</div>';return;}
-  state.alertas.forEach(a=>{
+  if(filtered.length===0){cont.innerHTML+='<div class="empty">Sem alertas'+(state.activeFilter?' '+state.activeFilter:'')+' nas ultimas 24 horas</div>';return;}
+  filtered.forEach(a=>{
     const ts=a.criado_em?new Date(a.criado_em).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}):'';
     const div=document.createElement('div');
     div.className=`alerta-card ${a.categoria}`;
@@ -509,7 +526,10 @@ function renderStatus(){
 function renderMapAlertas(){
   alertaLayer.clearLayers();
   propagLayer.clearLayers();
-  state.alertas.forEach(a=>{
+  const filtered = state.activeFilter
+    ? state.alertas.filter(a=>a.categoria===state.activeFilter)
+    : state.alertas;
+  filtered.forEach(a=>{
     if(!a.lat||!a.lon)return;
     const m=L.marker([a.lat,a.lon],{icon:alertIcon(a.categoria),zIndexOffset:1000});
     m.bindPopup(buildPopup(a),{maxWidth:300,className:''});
@@ -537,10 +557,23 @@ function renderMapHotspots(){
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
+function toggleFilter(cat){
+  // Toggle: se já activo desactiva, senão activa
+  state.activeFilter = state.activeFilter === cat ? null : cat;
+  // Actualizar visual dos botões
+  ['CRITICO','ALTO','MEDIO','BAIXO'].forEach(c=>{
+    const btn = document.getElementById('f'+c);
+    if(btn) btn.className = 'filter-btn' + (state.activeFilter===c ? ' active-'+c : '');
+  });
+  renderAlertas();
+  renderMapAlertas();
+}
+
 function switchTab(tab){
   state.activeTab=tab;
   document.getElementById('tabAlertas').className='tab'+(tab==='alertas'?' active':'');
   document.getElementById('tabStatus').className='tab'+(tab==='status'?' active':'');
+  document.getElementById('filterBar').style.display=tab==='alertas'?'flex':'none';
   if(tab==='alertas')renderAlertas();else{loadStatus();renderStatus();}
 }
 
