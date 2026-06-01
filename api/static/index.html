@@ -120,12 +120,6 @@
       color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;
       padding:.2rem .5rem;border-radius:2px;}
     /* Painel de ajuda */
-    .help-btn{position:fixed;bottom:1.5rem;left:240px;z-index:1001;
-      width:28px;height:28px;border-radius:50%;background:var(--panel);
-      border:1px solid var(--border);color:var(--dim);font-size:13px;
-      cursor:pointer;display:flex;align-items:center;justify-content:center;
-      -webkit-tap-highlight-color:transparent;}
-    .help-btn:hover{border-color:var(--blue);color:var(--blue);}
     .help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;
       display:none;align-items:center;justify-content:center;padding:1rem;}
     .help-overlay.visible{display:flex;}
@@ -179,7 +173,8 @@
         <div class="ws-dot" id="wsDot"></div>
         <span id="wsLabel" class="ws-label-text">A ligar...</span>
       </div>
-      <button class="btn-refresh" onclick="triggerIngest()">&#8635;</button>
+      <button class="btn-refresh" onclick="triggerIngest()" title="Actualizar">&#8635;</button>
+      <button class="btn-refresh" onclick="document.getElementById('helpOverlay').classList.add('visible')" title="Glossário">?</button>
     </div>
   </div>
   <div class="demo-banner" id="demoBanner">SISTEMA DE DEMONSTRAÇÃO — alertas sem validade operacional</div>
@@ -208,9 +203,6 @@
       <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div>Risco nulo</div>
       <div style="font-size:10px;color:var(--dim);margin-top:.3rem">ESA WorldCover 2021</div>
     </div>
-
-    <!-- Botão de ajuda -->
-    <button class="help-btn" onclick="document.getElementById('helpOverlay').classList.add('visible')" title="Glossário">?</button>
 
     <!-- Painel de ajuda -->
     <div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)this.classList.remove('visible')">
