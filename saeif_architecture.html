@@ -1456,6 +1456,9 @@ fire_risk = (
           <tr><td><code>82d6046</code></td><td>feat: integracao EFFIS — FWI previsto, ranking historico, anomalia</td><td>1 Jun 2026</td></tr>
           <tr><td><code>faaf043</code></td><td>feat: glossario de termos com botao de ajuda no header</td><td>1 Jun 2026</td></tr>
           <tr><td><code>12ebfd8</code></td><td>feat: painel de camadas — alertas, hotspots, PROCIV, risco, propagacao</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>c7f6467</code></td><td>feat: EFFIS FWI por distrito com selector temporal Hoje/Amanha/Depois</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>3019625</code></td><td>feat: legendas Risco Estrutural e EFFIS FWI completas e posicionadas</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>7bb8bed</code></td><td>fix: legendas EFFIS em baixo, risco estrutural acima, sem duplicados</td><td>1 Jun 2026</td></tr>
         </tbody>
       </table>
 
@@ -1552,6 +1555,18 @@ fire_risk = (
           <tr>
             <td><strong>Painel de camadas</strong></td>
             <td>Botão "⊡ Camadas" no header abre painel com toggles independentes para: Alertas SAEIF, Propagação estimada, Hotspots FIRMS (VIIRS), Ocorrências PROCIV sem alerta, Risco por distrito. Endpoint <code>/api/prociv</code> serve ocorrências PROCIV das últimas 24h sem alerta gerado. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>EFFIS FWI temporal — Hoje/Amanhã/Depois</strong></td>
+            <td>Endpoint <code>/api/effis/risk?day=0|1|2</code> que serve GeoJSON de FWI médio por distrito para D+0, D+1 e D+2. Rasters descarregados via WMS EFFIS (mf010.fwi) com parâmetro TIME. Selector temporal no painel de camadas. 5 classes de perigo: Reduzido/Moderado/Alto/Muito alto/Máximo. Ingest actualiza os 3 dias a cada 6 horas. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Legendas completas das camadas</strong></td>
+            <td>Legenda "Risco Estrutural · ESA WorldCover" com 5 classes e valores de risco (0.0–1.0). Legenda "Perigo Incêndio EFFIS · FWI previsto" com 5 classes e intervalos FWI. Posicionamento dinâmico: EFFIS em baixo, Risco Estrutural acima quando ambas visíveis. Legendas aparecem/desaparecem com os toggles do painel de camadas. Implementado em 1 Jun 2026.</td>
             <td><span class="badge badge-done">✓ Concluído</span></td>
             <td>1 Jun 2026</td>
           </tr>
