@@ -158,6 +158,9 @@
     .map-legend{position:fixed;bottom:1.5rem;right:1.5rem;z-index:1000;
       background:var(--panel);border:1px solid var(--border);border-radius:4px;
       padding:.6rem .85rem;font-size:11px;color:var(--text);}
+    #effisLegend{bottom:auto;top:auto;right:1.5rem;}
+    #riskLegend{bottom:1.5rem;right:1.5rem;}
+    /* posicao dinamica gerida pelo JS */
     .legend-title{font-family:'IBM Plex Mono',monospace;font-size:10px;
       color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;}
     .legend-item{display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem;}
@@ -233,13 +236,22 @@
       </div>
     </div>
     <div class="map-legend" id="riskLegend" style="display:none">
-      <div class="legend-title">Risco Estrutural</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#f85149"></div>Risco crítico (floresta)</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#f0a060"></div>Risco alto (arbustivo)</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#e3b341"></div>Risco médio</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#85e89d"></div>Risco baixo</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div>Risco nulo</div>
-      <div style="font-size:10px;color:var(--dim);margin-top:.3rem">ESA WorldCover 2021</div>
+      <div class="legend-title">Risco Estrutural · ESA WorldCover</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f85149"></div>Risco crítico — floresta (1.0)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f0a060"></div>Risco alto — arbustivo (0.85)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#e3b341"></div>Risco médio — matos/musgos (0.20)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#85e89d"></div>Risco baixo — pastagem/cultura (0.15–0.30)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div>Risco nulo — urbano/água (0.0)</div>
+    </div>
+
+    <div class="map-legend" id="effisLegend" style="display:none">
+      <div class="legend-title">Perigo Incêndio EFFIS · FWI previsto</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#b22020"></div>Máximo (FWI &gt; 60)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f85149"></div>Muito alto (FWI 40–60)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f0a060"></div>Alto (FWI 25–40)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#e3b341"></div>Moderado (FWI 10–25)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div>Reduzido (FWI &lt; 10)</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:.3rem">EFFIS/Copernicus · MeteoFrance</div>
     </div>
 
     <!-- Painel de ajuda -->
@@ -385,14 +397,39 @@ function toggleLayer(layer, visible){
   if(layer==='prociv' && visible && procivLayer.getLayers().length===0){
     loadProcivLayer();
   }
-  if(layer==='effis' && visible){
+  if(layer==='risco'){
+    document.getElementById('riskLegend').style.display = visible ? 'block' : 'none';
+    updateLegendPositions();
+  }
     loadEffisLayer(effisDay);
     document.getElementById('effisTimeSelector').style.display='flex';
+    document.getElementById('effisLegend').style.display='block';
+    updateLegendPositions();
   }
   if(layer==='effis' && !visible){
     document.getElementById('effisTimeSelector').style.display='none';
+    document.getElementById('effisLegend').style.display='none';
+    updateLegendPositions();
   }
 }
+
+function updateLegendPositions(){
+  const riskEl = document.getElementById('riskLegend');
+  const effisEl = document.getElementById('effisLegend');
+  const riskVisible = riskEl.style.display !== 'none';
+  const effisVisible = effisEl.style.display !== 'none';
+  // Risco sempre no canto inferior direito
+  riskEl.style.bottom = '1.5rem';
+  riskEl.style.right = '1.5rem';
+  if(effisVisible && riskVisible){
+    // EFFIS fica acima do risco — calcula altura dinamicamente
+    const riskH = riskEl.offsetHeight || 140;
+    effisEl.style.bottom = (1.5 * 16 + riskH + 8) + 'px';
+    effisEl.style.right = '1.5rem';
+  } else if(effisVisible){
+    effisEl.style.bottom = '1.5rem';
+    effisEl.style.right = '1.5rem';
+  }
 
 async function loadProcivLayer(){
   try{
@@ -442,6 +479,7 @@ async function loadRiskMap(){
       }
     }).addTo(riskLayer);
     document.getElementById('riskLegend').style.display='block';
+    updateLegendPositions();
     console.log('Mapa de risco carregado');
   }catch(e){console.warn('risk/map falhou',e);}
 }
