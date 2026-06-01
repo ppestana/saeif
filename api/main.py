@@ -351,8 +351,8 @@ async def not_found_handler(request, exc):
 @app.get("/api/prociv")
 async def get_prociv(limit: int = 200):
     """Ocorrencias PROCIV sem alerta SAEIF gerado — para camada no mapa."""
-    async with get_db() as conn:
-        rows = await conn.fetch(f"""
+    conn = await get_db()
+    rows = await conn.fetch(f"""
             SELECT p.id, ST_X(p.geom) AS lon, ST_Y(p.geom) AS lat,
                    p.localidade, p.distrito, p.estado, p.criado_em
             FROM ocorrencias_prociv p
@@ -363,6 +363,7 @@ async def get_prociv(limit: int = 200):
               AND p.geom IS NOT NULL
             ORDER BY p.criado_em DESC LIMIT {limit}
         """)
+    await conn.close()
         features = []
         for r in rows:
             features.append({{
