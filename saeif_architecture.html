@@ -1453,6 +1453,9 @@ fire_risk = (
           <tr><td><code>78f790d</code></td><td>feat: filtro por categoria na sidebar (CRITICO/ALTO/MEDIO/BAIXO)</td><td>1 Jun 2026</td></tr>
           <tr><td><code>f010f33</code></td><td>feat: favicon SVG, pagina 404 personalizada</td><td>1 Jun 2026</td></tr>
           <tr><td><code>c14849a</code></td><td>feat: script actualizacao automatica risco estrutural + cron mensal</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>82d6046</code></td><td>feat: integracao EFFIS — FWI previsto, ranking historico, anomalia</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>faaf043</code></td><td>feat: glossario de termos com botao de ajuda no header</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>12ebfd8</code></td><td>feat: painel de camadas — alertas, hotspots, PROCIV, risco, propagacao</td><td>1 Jun 2026</td></tr>
         </tbody>
       </table>
 
@@ -1531,6 +1534,24 @@ fire_risk = (
           <tr>
             <td><strong>Actualização automática do risco estrutural</strong></td>
             <td>Script <code>api/analysis/update_risk.py</code> que recalcula o <code>fire_risk.geojson</code> por distrito/província a partir do <code>wc_2km.tif</code> (WorldCover reamostrado). Faz backup do GeoJSON anterior. Agendado via cron no 1º dia do mês às 03:00 UTC. Nota: o WorldCover base (2021) é estático — a ESA não publicou versões posteriores. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Integração EFFIS</strong></td>
+            <td>Módulo <code>ingest/effis.py</code> que descarrega FWI previsto, ranking histórico (percentil 40 anos) e anomalia (σ) via WMS Copernicus para a Península Ibérica (~2.5km resolução). Actualização a cada 6 horas. Colunas <code>effis_fwi</code>, <code>effis_ranking</code>, <code>effis_anomaly</code> na tabela alertas. Ranking ≥80% amplifica o score ×1.10. Secção "Perigo EFFIS · Península Ibérica" no popup. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Glossário de termos</strong></td>
+            <td>Painel modal acessível pelo botão "?" no header. Explica em linguagem corrente: Score, Categoria, PROCIV, FWI, Ranking histórico, Anomalia, Índice de Risco Estrutural, Tipo de vegetação, Satélite. Secções organizadas por tema. Implementado em 1 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>1 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Painel de camadas</strong></td>
+            <td>Botão "⊡ Camadas" no header abre painel com toggles independentes para: Alertas SAEIF, Propagação estimada, Hotspots FIRMS (VIIRS), Ocorrências PROCIV sem alerta, Risco por distrito. Endpoint <code>/api/prociv</code> serve ocorrências PROCIV das últimas 24h sem alerta gerado. Implementado em 1 Jun 2026.</td>
             <td><span class="badge badge-done">✓ Concluído</span></td>
             <td>1 Jun 2026</td>
           </tr>
