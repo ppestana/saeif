@@ -119,6 +119,47 @@
     .risk-tooltip{background:var(--panel);border:1px solid var(--border);
       color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;
       padding:.2rem .5rem;border-radius:2px;}
+    /* Banner RGPD */
+    .rgpd-banner{position:fixed;bottom:0;left:0;right:0;z-index:3000;
+      background:#161b22;border-top:1px solid var(--border);
+      padding:.85rem 1.25rem;display:flex;align-items:center;
+      gap:1rem;flex-wrap:wrap;font-size:12px;color:var(--dim);}
+    .rgpd-banner a{color:var(--amber);}
+    .rgpd-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:.35rem .8rem;
+      border-radius:2px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);}
+    .rgpd-btn.accept{background:#1a4228;color:#4ade80;border-color:#4ade80;}
+    /* Modal de subscrição */
+    .sub-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2500;
+      display:none;align-items:center;justify-content:center;padding:1rem;}
+    .sub-overlay.open{display:flex;}
+    .sub-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+      width:min(560px,96vw);max-height:90dvh;overflow-y:auto;padding:1.5rem;
+      box-shadow:0 20px 60px rgba(0,0,0,.5);}
+    .sub-title{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;
+      color:var(--fire);margin-bottom:1.2rem;}
+    .sub-map{height:220px;border-radius:3px;border:1px solid var(--border);margin-bottom:1rem;}
+    .sub-field{margin-bottom:.85rem;}
+    .sub-label{font-size:11px;color:var(--dim);font-family:'IBM Plex Mono',monospace;
+      text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:.3rem;}
+    .sub-input{width:100%;background:var(--card);border:1px solid var(--border);
+      color:var(--text);padding:.5rem .75rem;border-radius:2px;font-size:13px;
+      font-family:'IBM Plex Mono',monospace;box-sizing:border-box;}
+    .sub-input:focus{outline:none;border-color:var(--fire);}
+    .sub-radio-group{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .sub-radio{display:none;}
+    .sub-radio-label{font-family:'IBM Plex Mono',monospace;font-size:11px;
+      padding:.3rem .7rem;border-radius:2px;border:1px solid var(--border);
+      cursor:pointer;color:var(--dim);}
+    .sub-radio:checked + .sub-radio-label{background:var(--fire);color:#fff;border-color:var(--fire);}
+    .sub-consent{display:flex;align-items:flex-start;gap:.6rem;font-size:11px;color:var(--dim);margin:.75rem 0;}
+    .sub-consent input{margin-top:2px;flex-shrink:0;}
+    .sub-btn{width:100%;background:var(--fire);color:#fff;border:none;padding:.7rem;
+      border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+      font-weight:600;cursor:pointer;letter-spacing:.05em;}
+    .sub-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .sub-msg{font-size:12px;margin-top:.75rem;text-align:center;padding:.5rem;border-radius:2px;}
+    .sub-msg.ok{background:#1a4228;color:#4ade80;}
+    .sub-msg.err{background:#3d1f1e;color:var(--fire);}
     .layers-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--card);
       border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:2px;
       cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;gap:.35rem;}
@@ -190,6 +231,7 @@
     </div>
     <div class="header-right">
       <button class="layers-btn" onclick="toggleLayersPanel()" title="Camadas">&#9741; Camadas</button>
+      <button class="btn-refresh" onclick="document.getElementById('subOverlay').classList.add('open')" title="Subscrever alertas" style="background:#3d1f1e;border-color:#f85149;color:#f85149">🔔</button>
       <div class="ws-indicator">
         <div class="ws-dot" id="wsDot"></div>
         <span id="wsLabel" class="ws-label-text">A ligar...</span>
@@ -881,6 +923,169 @@ function toast(msg,isFire=false){
   setInterval(loadHotspots,5*60*1000);
   setInterval(loadStatus,5*60*1000);
 })();
+
+// ── RGPD ─────────────────────────────────────────────────────────────────────
+function rgpdAccept(){
+  localStorage.setItem('saeif_rgpd','accepted');
+  document.getElementById('rgpdBanner').style.display='none';
+}
+function rgpdReject(){
+  localStorage.setItem('saeif_rgpd','rejected');
+  document.getElementById('rgpdBanner').style.display='none';
+}
+if(!localStorage.getItem('saeif_rgpd')){
+  setTimeout(()=>document.getElementById('rgpdBanner').style.display='flex', 2000);
+}
+
+// ── Subscrição ────────────────────────────────────────────────────────────────
+let subMap, subMarker, subCircle;
+
+function initSubMap(){
+  if(subMap) return;
+  subMap = L.map('subMap',{zoomControl:true}).setView([39.5,-8.0],7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap'}).addTo(subMap);
+  const icon = L.divIcon({
+    html:'<div style="width:20px;height:20px;background:#f85149;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)"></div>',
+    className:'',iconSize:[20,20],iconAnchor:[10,10]
+  });
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const {latitude:lat,longitude:lon}=pos.coords;
+      subMap.setView([lat,lon],9);
+      subMarker=L.marker([lat,lon],{icon,draggable:true}).addTo(subMap);
+      updateSubCircle(lat,lon);
+      subMarker.on('dragend',e=>{const {lat,lng}=e.target.getLatLng();updateSubCircle(lat,lng);});
+    },()=>addDefaultMarker(icon));
+  } else { addDefaultMarker(icon); }
+  document.querySelectorAll('input[name="raio"]').forEach(r=>{
+    r.addEventListener('change',()=>{
+      if(subMarker){const {lat,lng}=subMarker.getLatLng();updateSubCircle(lat,lng);}
+    });
+  });
+}
+
+function addDefaultMarker(icon){
+  subMarker=L.marker([39.5,-8.0],{icon,draggable:true}).addTo(subMap);
+  updateSubCircle(39.5,-8.0);
+  subMarker.on('dragend',e=>{const {lat,lng}=e.target.getLatLng();updateSubCircle(lat,lng);});
+}
+
+function updateSubCircle(lat,lng){
+  const raio=parseInt(document.querySelector('input[name="raio"]:checked')?.value||50);
+  if(subCircle) subMap.removeLayer(subCircle);
+  subCircle=L.circle([lat,lng],{radius:raio*1000,color:'#f85149',fillColor:'#f85149',
+    fillOpacity:.1,weight:1.5,dashArray:'4 4'}).addTo(subMap);
+}
+
+const subObserver=new MutationObserver(()=>{
+  if(document.getElementById('subOverlay').classList.contains('open')){
+    setTimeout(()=>{if(subMap)subMap.invalidateSize();else initSubMap();},150);
+  }
+});
+subObserver.observe(document.getElementById('subOverlay'),{attributes:true,attributeFilter:['class']});
+
+async function submitSubscricao(){
+  const email=document.getElementById('subEmail').value.trim();
+  const consent=document.getElementById('subConsent').checked;
+  const raio=parseInt(document.querySelector('input[name="raio"]:checked')?.value||50);
+  const catmin=document.querySelector('input[name="catmin"]:checked')?.value||'ALTO';
+  const btn=document.getElementById('subBtn');
+  if(!email||!email.includes('@')){showSubMsg('Introduza um email válido','err');return;}
+  if(!consent){showSubMsg('Precisa de aceitar os termos para subscrever','err');return;}
+  if(!subMarker){showSubMsg('Aguarde o carregamento do mapa','err');return;}
+  const {lat,lng}=subMarker.getLatLng();
+  btn.disabled=true;btn.textContent='A enviar…';
+  try{
+    const r=await fetch('/api/subscricoes',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,lat,lon:lng,raio_km:raio,categoria_min:catmin})
+    });
+    if(r.ok){
+      showSubMsg('✓ Email de confirmação enviado! Verifique a sua caixa de entrada.','ok');
+      btn.textContent='Enviado ✓';
+    }else{
+      const d=await r.json();
+      showSubMsg(d.detail||'Erro ao subscrever','err');
+      btn.disabled=false;btn.textContent='Subscrever alertas →';
+    }
+  }catch(e){
+    showSubMsg('Erro de ligação. Tente novamente.','err');
+    btn.disabled=false;btn.textContent='Subscrever alertas →';
+  }
+}
+
+function showSubMsg(text,type){
+  const el=document.getElementById('subMsg');
+  el.textContent=text;el.className='sub-msg '+type;el.style.display='block';
+}
 </script>
+  <!-- Banner RGPD -->
+  <div class="rgpd-banner" id="rgpdBanner" style="display:none">
+    <span style="flex:1">🍪 Este site utiliza cookies essenciais para o seu funcionamento. Ao subscrever alertas, aceita o tratamento do seu email para envio de notificações de incêndio. <a href="#" onclick="document.getElementById('rgpdBanner').style.display='none'">Política de privacidade</a></span>
+    <button class="rgpd-btn" onclick="rgpdReject()">Recusar</button>
+    <button class="rgpd-btn accept" onclick="rgpdAccept()">Aceitar</button>
+  </div>
+
+  <!-- Modal de subscrição -->
+  <div class="sub-overlay" id="subOverlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="sub-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="sub-title">🔔 Subscrever Alertas</div>
+        <button class="help-close" onclick="document.getElementById('subOverlay').classList.remove('open')">✕</button>
+      </div>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:1rem">
+        Será notificado por email quando ocorrer um alerta de incêndio na área que definir.
+      </p>
+
+      <div class="sub-field">
+        <span class="sub-label">Localização e raio de alerta</span>
+        <div id="subMap" class="sub-map"></div>
+        <div style="font-size:11px;color:var(--dim);margin-top:.3rem">
+          📍 Arraste o pin para a localização desejada
+        </div>
+      </div>
+
+      <div class="sub-field">
+        <span class="sub-label">Raio de cobertura</span>
+        <div class="sub-radio-group">
+          <input class="sub-radio" type="radio" name="raio" id="r25" value="25">
+          <label class="sub-radio-label" for="r25">25 km</label>
+          <input class="sub-radio" type="radio" name="raio" id="r50" value="50" checked>
+          <label class="sub-radio-label" for="r50">50 km</label>
+          <input class="sub-radio" type="radio" name="raio" id="r100" value="100">
+          <label class="sub-radio-label" for="r100">100 km</label>
+          <input class="sub-radio" type="radio" name="raio" id="r200" value="200">
+          <label class="sub-radio-label" for="r200">200 km</label>
+        </div>
+      </div>
+
+      <div class="sub-field">
+        <span class="sub-label">Categoria mínima de alerta</span>
+        <div class="sub-radio-group">
+          <input class="sub-radio" type="radio" name="catmin" id="cCRITICO" value="CRITICO">
+          <label class="sub-radio-label" for="cCRITICO" style="color:#f85149">Crítico</label>
+          <input class="sub-radio" type="radio" name="catmin" id="cALTO" value="ALTO" checked>
+          <label class="sub-radio-label" for="cALTO" style="color:#f0a060">Alto+</label>
+          <input class="sub-radio" type="radio" name="catmin" id="cMEDIO" value="MEDIO">
+          <label class="sub-radio-label" for="cMEDIO" style="color:#e3b341">Médio+</label>
+        </div>
+      </div>
+
+      <div class="sub-field">
+        <span class="sub-label">Email</span>
+        <input class="sub-input" type="email" id="subEmail" placeholder="o-seu@email.com">
+      </div>
+
+      <div class="sub-consent">
+        <input type="checkbox" id="subConsent">
+        <label for="subConsent">Aceito receber alertas de incêndio por email e compreendo que posso cancelar a subscrição em qualquer momento através do link incluído em cada email. (RGPD)</label>
+      </div>
+
+      <button class="sub-btn" id="subBtn" onclick="submitSubscricao()">Subscrever alertas →</button>
+      <div class="sub-msg" id="subMsg" style="display:none"></div>
+    </div>
+  </div>
+
 </body>
 </html>
