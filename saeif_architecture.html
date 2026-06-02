@@ -1459,6 +1459,7 @@ fire_risk = (
           <tr><td><code>c7f6467</code></td><td>feat: EFFIS FWI por distrito com selector temporal Hoje/Amanha/Depois</td><td>1 Jun 2026</td></tr>
           <tr><td><code>3019625</code></td><td>feat: legendas Risco Estrutural e EFFIS FWI completas e posicionadas</td><td>1 Jun 2026</td></tr>
           <tr><td><code>ee3f27d</code></td><td>feat: NDVI Sentinel Hub — risco estrutural dinamico 60% WorldCover + 40% NDVI</td><td>2 Jun 2026</td></tr>
+          <tr><td><code>b9d3236</code></td><td>feat: EU-DEM declive — risco estrutural 50% WorldCover + 30% NDVI + 20% slope</td><td>2 Jun 2026</td></tr>
         </tbody>
       </table>
 
@@ -1584,9 +1585,9 @@ fire_risk = (
           </tr>
           <tr>
             <td><strong>EU-DEM / declive</strong></td>
-            <td>Integração do modelo digital de elevação Copernicus DEM 25m para cálculo de declive normalizado por ponto de ignição. Pipeline: (1) download do EU-DEM para Portugal (~500MB GeoTIFF); (2) cálculo de slope com <code>gdaldem slope</code>; (3) normalização 0–1 (0°=0, ≥45°=1); (4) integração no <code>get_structural_risk()</code> como factor multiplicador. O declive é estático mas ausente no PoC actual — um fogo numa encosta a 30° propaga-se 3–4× mais rápido do que em terreno plano, o que subestima significativamente o risco em zonas serranas (Lousã, Gerês, Serra da Estrela).</td>
-            <td><span class="badge badge-amber">Média</span></td>
-            <td>Sessão dedicada (2–3h)</td>
+            <td>Módulo <code>ingest/dem.py</code> que descarrega Copernicus DEM GLO-30 via Sentinel Hub Process API e calcula declive normalizado (0°=0.0, 45°=1.0) via gradiente numpy. Raster <code>slope_norm.tif</code> 340×532px para a Península Ibérica. Integrado no <code>get_structural_risk()</code>: 50% WorldCover + 30% NDVI + 20% slope. O declive amplifica o risco em zonas serranas — um fogo numa encosta a 30° propaga-se 3–4× mais rápido. Ficheiro estático (declive não muda); actualização manual via <code>fetch_dem()</code>. Implementado em 2 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>2 Jun 2026</td>
           </tr>
           <tr>
             <td><strong>Notificações push / email</strong></td>
