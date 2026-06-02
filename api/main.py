@@ -249,9 +249,9 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                     "prociv_confirmado": bool(r["prociv_confirmado"]),
                     "localidade_estimada": r["localidade_estimada"] if r.get("localidade_estimada") else None,
                     "meteo": {
-                        "temp": float(r["temp"]) if r["temp"] else None,
-                        "humidade": float(r["humidade"]) if r["humidade"] else None,
-                        "vento_vel": float(r["vento_vel"]) if r["vento_vel"] else None,
+                        "temp": float(r["temp"]) if r["temp"] and float(r["temp"]) > -99 else None,
+                        "humidade": float(r["humidade"]) if r["humidade"] and float(r["humidade"]) > -99 else None,
+                        "vento_vel": float(r["vento_vel"]) if r["vento_vel"] and float(r["vento_vel"]) > -99 else None,
                         "vento_dir": float(r["vento_dir"]) if r["vento_dir"] else None,
                         "fwi": float(r["fwi"]) if r["fwi"] else None,
                     },
