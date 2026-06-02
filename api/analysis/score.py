@@ -39,10 +39,14 @@ def get_structural_risk(lat, lon):
                     val = float(src.read(1, window=window)[0, 0])
                     if val > -999:
                         wc_risk = float(np.clip(val, 0.0, 1.0))
-                    # Fusao com NDVI
+                    # Fusao com NDVI e declive
                     from ingest.ndvi import get_ndvi_factor
-                    ndvi_factor = get_ndvi_factor(lat, lon)
-                    if ndvi_factor is not None:
+                    from ingest.dem import get_slope_factor
+                    ndvi_factor  = get_ndvi_factor(lat, lon)
+                    slope_factor = get_slope_factor(lat, lon)
+                    if ndvi_factor is not None and slope_factor is not None:
+                        return round(0.5 * wc_risk + 0.3 * ndvi_factor + 0.2 * slope_factor, 3)
+                    elif ndvi_factor is not None:
                         return round(0.6 * wc_risk + 0.4 * ndvi_factor, 3)
                     return wc_risk
         except Exception as e:
