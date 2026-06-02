@@ -252,7 +252,7 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                         "temp": float(r["temp"]) if r["temp"] and float(r["temp"]) > -99 else None,
                         "humidade": float(r["humidade"]) if r["humidade"] and float(r["humidade"]) > -99 else None,
                         "vento_vel": float(r["vento_vel"]) if r["vento_vel"] and float(r["vento_vel"]) > -99 else None,
-                        "vento_dir": float(r["vento_dir"]) if r["vento_dir"] else None,
+                        "vento_dir": float(r["vento_dir"]) if r["vento_dir"] is not None else None,
                         "fwi": float(r["fwi"]) if r["fwi"] else None,
                     },
                     "risco_estrutural": float(r["risco_estrutural"]) if r["risco_estrutural"] else None,
