@@ -231,7 +231,7 @@
     </div>
     <div class="header-right">
       <button class="layers-btn" onclick="toggleLayersPanel()" title="Camadas">&#9741; Camadas</button>
-      <button class="btn-refresh" onclick="document.getElementById('subOverlay').classList.add('open')" title="Subscrever alertas" style="background:#3d1f1e;border-color:#f85149;color:#f85149">🔔</button>
+      <button class="btn-refresh" onclick="document.getElementById('subOverlay').classList.add('open');setTimeout(()=>{if(subMap)subMap.invalidateSize();else initSubMap();},200)" title="Subscrever alertas" style="background:#3d1f1e;border-color:#f85149;color:#f85149">🔔</button>
       <div class="ws-indicator">
         <div class="ws-dot" id="wsDot"></div>
         <span id="wsLabel" class="ws-label-text">A ligar...</span>
