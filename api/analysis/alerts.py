@@ -1,7 +1,7 @@
 import logging
 import asyncpg
 from ingest.ipma import get_nearest_meteo
-from analysis.score import calcular_score, get_structural_risk
+from analysis.score import calcular_score, get_structural_risk, get_area_ardida_factor
 from ingest.effis import get_effis_values
 from utils import reverse_geocode
 
@@ -30,7 +30,8 @@ async def gerar_alertas(conn, pares, meteo_data):
             log.info(f"Alerta duplicado ignorado (raio 2km): lat={lat:.3f} lon={lon:.3f}")
             continue
         meteo = get_nearest_meteo(lat, lon, meteo_data) if meteo_data else {}
-        score, categoria = calcular_score(par, meteo)
+        area_factor = await get_area_ardida_factor(conn, lat, lon)
+        score, categoria = calcular_score(par, meteo, area_ardida_factor=area_factor)
         risco_estrutural = get_structural_risk(lat, lon)
         effis = get_effis_values(lat, lon)
 

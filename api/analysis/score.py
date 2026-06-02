@@ -62,10 +62,49 @@ def _estimate_by_zone(lat, lon):
         return 0.45
     return 0.60
 
-def calcular_score(par, meteo):
+async def get_area_ardida_factor(conn, lat, lon):
+    """
+    Verifica se o ponto esta numa area ardida recente (2020-2025).
+    Devolve factor de risco adicional:
+    - Area ardida ha menos de 2 anos: +0.25 (vegetacao em regeneracao activa)
+    - Area ardida ha 2-4 anos:        +0.15 (matos jovens muito inflamaveis)
+    - Area ardida ha 4-6 anos:        +0.05 (recuperacao parcial)
+    - Sem historico de fogo:           0.0
+    """
+    import datetime
+    ano_actual = datetime.datetime.now().year
+    try:
+        row = await conn.fetchrow("""
+            SELECT ano, MIN(area_ha) as area_ha
+            FROM areas_ardidas
+            WHERE ST_DWithin(
+                geom::geography,
+                ST_SetSRID(ST_MakePoint($1,$2),4326)::geography,
+                5000
+            )
+            GROUP BY ano
+            ORDER BY ano DESC
+            LIMIT 1
+        """, lon, lat)
+        if not row:
+            return 0.0
+        anos_desde = ano_actual - row["ano"]
+        if anos_desde <= 2:
+            return 0.25
+        elif anos_desde <= 4:
+            return 0.15
+        else:
+            return 0.05
+    except Exception as e:
+        import logging
+        logging.getLogger("saeif.score").warning(f"area_ardida_factor ({lat},{lon}): {e}")
+        return 0.0
+
+
+def calcular_score(par, meteo, area_ardida_factor=0.0):
     lat = par.get("lat", 0)
     lon = par.get("lon", 0)
-    risco_estrutural = get_structural_risk(lat, lon)
+    risco_estrutural = min(1.0, get_structural_risk(lat, lon) + area_ardida_factor)
     fwi = meteo.get("fwi") or 0
     fwi_norm = min(1.0, fwi / 80.0)
     vento_vel = meteo.get("vento_vel") or 0
