@@ -957,7 +957,11 @@ function initSubMap(){
       subMap.setView([lat,lon],9);
       subMarker=L.marker([lat,lon],{icon,draggable:true}).addTo(subMap);
       updateSubCircle(lat,lon);
-      subMarker.on('dragend',e=>{const {lat,lng}=e.target.getLatLng();updateSubCircle(lat,lng);});
+      document.getElementById('coordLat').value = lat.toFixed(6);
+      document.getElementById('coordLon').value = lon.toFixed(6);
+      document.getElementById('coordDMSLat').value = decToDMS(lat,'lat');
+      document.getElementById('coordDMSLon').value = decToDMS(lon,'lon');
+      setupPinDragSync();
     },()=>addDefaultMarker(icon));
   } else { addDefaultMarker(icon); }
   document.querySelectorAll('input[name="raio"]').forEach(r=>{
@@ -970,7 +974,11 @@ function initSubMap(){
 function addDefaultMarker(icon){
   subMarker=L.marker([39.5,-8.0],{icon,draggable:true}).addTo(subMap);
   updateSubCircle(39.5,-8.0);
-  subMarker.on('dragend',e=>{const {lat,lng}=e.target.getLatLng();updateSubCircle(lat,lng);});
+  document.getElementById('coordLat').value = '39.500000';
+  document.getElementById('coordLon').value = '-8.000000';
+  document.getElementById('coordDMSLat').value = decToDMS(39.5,'lat');
+  document.getElementById('coordDMSLon').value = decToDMS(-8.0,'lon');
+  setupPinDragSync();
 }
 
 function updateSubCircle(lat,lng){
@@ -978,6 +986,82 @@ function updateSubCircle(lat,lng){
   if(subCircle) subMap.removeLayer(subCircle);
   subCircle=L.circle([lat,lng],{radius:raio*1000,color:'#f85149',fillColor:'#f85149',
     fillOpacity:.1,weight:1.5,dashArray:'4 4'}).addTo(subMap);
+}
+
+// ── Conversão de coordenadas ──────────────────────────────────────────────────
+function movePin(lat, lon){
+  if(!subMarker) return;
+  subMarker.setLatLng([lat, lon]);
+  subMap.setView([lat, lon], subMap.getZoom());
+  updateSubCircle(lat, lon);
+}
+
+function coordDecimalChanged(){
+  const lat = parseFloat(document.getElementById('coordLat').value);
+  const lon = parseFloat(document.getElementById('coordLon').value);
+  if(isNaN(lat)||isNaN(lon)) return;
+  if(lat<-90||lat>90||lon<-180||lon>180) return;
+  // Actualizar DMS
+  document.getElementById('coordDMSLat').value = decToDMS(lat, 'lat');
+  document.getElementById('coordDMSLon').value = decToDMS(lon, 'lon');
+  document.getElementById('coordStatus').textContent = '✓ Coordenadas válidas';
+  document.getElementById('coordStatus').style.color = '#4ade80';
+  movePin(lat, lon);
+}
+
+function coordDMSChanged(){
+  const latStr = document.getElementById('coordDMSLat').value.trim();
+  const lonStr = document.getElementById('coordDMSLon').value.trim();
+  if(!latStr || !lonStr) return;
+  const lat = dmsToDec(latStr);
+  const lon = dmsToDec(lonStr);
+  if(lat===null||lon===null){
+    document.getElementById('coordStatus').textContent = '⚠ Formato inválido. Use: 39° 05\' 31" N';
+    document.getElementById('coordStatus').style.color = '#f85149';
+    return;
+  }
+  // Actualizar decimal
+  document.getElementById('coordLat').value = lat.toFixed(6);
+  document.getElementById('coordLon').value = lon.toFixed(6);
+  document.getElementById('coordStatus').textContent = '✓ Coordenadas válidas';
+  document.getElementById('coordStatus').style.color = '#4ade80';
+  movePin(lat, lon);
+}
+
+function decToDMS(dec, type){
+  const dir = type==='lat' ? (dec>=0?'N':'S') : (dec>=0?'E':'W');
+  const abs = Math.abs(dec);
+  const d = Math.floor(abs);
+  const mFull = (abs - d) * 60;
+  const m = Math.floor(mFull);
+  const s = ((mFull - m) * 60).toFixed(1);
+  return `${String(d).padStart(2,'0')}° ${String(m).padStart(2,'0')}' ${s}" ${dir}`;
+}
+
+function dmsToDec(str){
+  // Aceita: 39° 05' 31" N  |  39°05'31"N  |  39 05 31 N
+  const m = str.replace(/[°'"]/g,' ').replace(/\s+/g,' ').trim().match(
+    /^(\d+)\s+(\d+)\s+([\d.]+)\s*([NSEWnsew])$/
+  );
+  if(!m) return null;
+  let dec = parseFloat(m[1]) + parseFloat(m[2])/60 + parseFloat(m[3])/3600;
+  if(['S','s','W','w'].includes(m[4])) dec = -dec;
+  return Math.round(dec * 1000000) / 1000000;
+}
+
+// Actualizar campos quando o pin é arrastado
+function setupPinDragSync(){
+  if(!subMarker) return;
+  subMarker.on('dragend', e=>{
+    const {lat,lng} = e.target.getLatLng();
+    updateSubCircle(lat, lng);
+    document.getElementById('coordLat').value = lat.toFixed(6);
+    document.getElementById('coordLon').value = lng.toFixed(6);
+    document.getElementById('coordDMSLat').value = decToDMS(lat,'lat');
+    document.getElementById('coordDMSLon').value = decToDMS(lng,'lon');
+    document.getElementById('coordStatus').textContent = '✓ Posição actualizada';
+    document.getElementById('coordStatus').style.color = '#4ade80';
+  });
 }
 
 const subObserver=new MutationObserver(()=>{
@@ -1078,8 +1162,37 @@ function showSubMsg(text,type){
         <span class="sub-label">Localização e raio de alerta</span>
         <div id="subMap" class="sub-map"></div>
         <div style="font-size:11px;color:var(--dim);margin-top:.3rem">
-          📍 Arraste o pin para a localização desejada
+          📍 Arraste o pin para a localização desejada ou introduza as coordenadas abaixo
         </div>
+      </div>
+
+      <div class="sub-field">
+        <span class="sub-label">Coordenadas — formato decimal</span>
+        <div style="display:flex;gap:.5rem">
+          <div style="flex:1">
+            <input class="sub-input" type="text" id="coordLat" placeholder="ex: 39.0920" oninput="coordDecimalChanged()">
+            <div style="font-size:10px;color:var(--dim);margin-top:.2rem">Latitude (N)</div>
+          </div>
+          <div style="flex:1">
+            <input class="sub-input" type="text" id="coordLon" placeholder="ex: -9.2610" oninput="coordDecimalChanged()">
+            <div style="font-size:10px;color:var(--dim);margin-top:.2rem">Longitude (W negativo)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-field">
+        <span class="sub-label">Coordenadas — formato graus/minutos/segundos</span>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <input class="sub-input" type="text" id="coordDMSLat" placeholder="ex: 39° 05' 31&quot; N" oninput="coordDMSChanged()">
+            <div style="font-size:10px;color:var(--dim);margin-top:.2rem">Latitude</div>
+          </div>
+          <div style="flex:1;min-width:180px">
+            <input class="sub-input" type="text" id="coordDMSLon" placeholder="ex: 09° 15' 40&quot; W" oninput="coordDMSChanged()">
+            <div style="font-size:10px;color:var(--dim);margin-top:.2rem">Longitude</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--dim);margin-top:.3rem" id="coordStatus"></div>
       </div>
 
       <div class="sub-field">
