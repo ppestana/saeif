@@ -612,7 +612,7 @@ function buildPopup(a){
   const temp=a.meteo?.temp!=null?a.meteo.temp.toFixed(1)+'°C':'--';
   const hum=a.meteo?.humidade!=null?a.meteo.humidade.toFixed(0)+'%':'--';
   const vvel=a.meteo?.vento_vel!=null && a.meteo.vento_vel > -99 ?a.meteo.vento_vel.toFixed(0)+' km/h':'--';
-  const vdir=a.meteo?.vento_dir!=null?ventoDir(a.meteo.vento_dir):'--';
+  const vdir=a.meteo?.vento_vel!=null && a.meteo.vento_vel > -99 && a.meteo?.vento_dir!=null?ventoDir(a.meteo.vento_dir):'--';
 
   // EFFIS
   const effis = a.effis || {};
