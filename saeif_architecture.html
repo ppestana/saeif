@@ -1464,6 +1464,9 @@ fire_risk = (
           <tr><td><code>fe16b03</code></td><td>fix: vento_dir=0.0 tratado como falsy, usar is not None</td><td>2 Jun 2026</td></tr>
           <tr><td><code>9701d8f</code></td><td>fix: filtrar FWI negativo e vento_vel=-99 na API</td><td>2 Jun 2026</td></tr>
           <tr><td><code>bb90c73</code></td><td>fix: nao mostrar direccao cardeal sem velocidade de vento</td><td>2 Jun 2026</td></tr>
+          <tr><td><code>775a521</code></td><td>feat: sistema de subscricoes com double opt-in via Resend</td><td>2 Jun 2026</td></tr>
+          <tr><td><code>49edcea</code></td><td>feat: formulario subscricao com mapa Leaflet, pin arrastavel, banner RGPD</td><td>2 Jun 2026</td></tr>
+          <tr><td><code>f7fbcb6</code></td><td>fix: politica privacidade abre modal, pin subscricao usa icone Leaflet</td><td>2 Jun 2026</td></tr>
         </tbody>
       </table>
 
@@ -1595,9 +1598,9 @@ fire_risk = (
           </tr>
           <tr>
             <td><strong>Notificações push / email</strong></td>
-            <td>Envio de alertas por email ou webhook quando um alerta ALTO ou CRÍTICO é gerado. Integração com SendGrid ou similar. Útil para monitorização sem acesso ao browser.</td>
-            <td><span class="badge badge-gray">Baixa</span></td>
-            <td>2–3 horas</td>
+            <td>Sistema completo de subscrição via email (Resend, domínio <code>terradigital.net</code> verificado). Tabela <code>subscritores</code> com geom PostGIS, raio_km (25/50/100/200km), categoria_min, tokens de confirmação e cancelamento. Double opt-in obrigatório (RGPD). Formulário no frontend com mapa Leaflet, pin arrastável e selector de raio/categoria. Banner RGPD com modal de política de privacidade. Notificação automática quando alerta ALTO/CRÍTICO gerado no raio do subscritor. Implementado em 2 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>2 Jun 2026</td>
           </tr>
           <tr>
             <td><strong>Integração SMRIP</strong></td>
