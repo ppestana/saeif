@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 import asyncpg
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -338,6 +338,73 @@ async def get_status():
         }
     finally:
         await conn.close()
+
+# ── Endpoints de subscrição ───────────────────────────────────────────────────
+
+@app.post("/api/subscricoes")
+async def criar_subscricao(req: Request):
+    """Regista nova subscrição com double opt-in."""
+    from notifications import registar_subscritor
+    data = await req.json()
+    email        = data.get("email","").strip().lower()
+    lat          = float(data.get("lat", 0))
+    lon          = float(data.get("lon", 0))
+    raio_km      = int(data.get("raio_km", 50))
+    categoria_min= data.get("categoria_min", "ALTO").upper()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Email inválido")
+    if raio_km not in (25, 50, 100, 200):
+        raise HTTPException(status_code=400, detail="Raio inválido")
+    if categoria_min not in ("CRITICO","ALTO","MEDIO"):
+        raise HTTPException(status_code=400, detail="Categoria inválida")
+    conn = await get_db()
+    try:
+        await registar_subscritor(conn, email, lat, lon, raio_km, categoria_min)
+    finally:
+        await conn.close()
+    return {"status": "ok", "msg": "Email de confirmação enviado"}
+
+@app.get("/api/subscricoes/confirmar")
+async def confirmar_subscricao(token: str):
+    """Activa subscrição via token de confirmação."""
+    from notifications import confirmar_subscritor
+    from fastapi.responses import HTMLResponse
+    conn = await get_db()
+    try:
+        ok = await confirmar_subscritor(conn, token)
+    finally:
+        await conn.close()
+    if ok:
+        html = """<html><body style="font-family:monospace;background:#0d1117;color:#c9d1d9;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+        <div style="text-align:center"><h2 style="color:#3fb950">✓ Subscrição activada</h2>
+        <p>Irá receber alertas de incêndio na sua área.</p>
+        <a href="https://saeif.terradigital.net" style="color:#f85149">Ver mapa →</a></div></body></html>"""
+    else:
+        html = """<html><body style="font-family:monospace;background:#0d1117;color:#c9d1d9;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+        <div style="text-align:center"><h2 style="color:#f85149">Token inválido ou já confirmado</h2>
+        <a href="https://saeif.terradigital.net" style="color:#f85149">Voltar ao mapa →</a></div></body></html>"""
+    return HTMLResponse(content=html)
+
+@app.get("/api/subscricoes/cancelar")
+async def cancelar_subscricao(token: str):
+    """Cancela subscrição via token."""
+    from notifications import cancelar_subscritor
+    from fastapi.responses import HTMLResponse
+    conn = await get_db()
+    try:
+        ok = await cancelar_subscritor(conn, token)
+    finally:
+        await conn.close()
+    if ok:
+        html = """<html><body style="font-family:monospace;background:#0d1117;color:#c9d1d9;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+        <div style="text-align:center"><h2 style="color:#e3b341">Subscrição cancelada</h2>
+        <p>Não irá receber mais alertas.</p>
+        <a href="https://saeif.terradigital.net" style="color:#f85149">Voltar ao mapa →</a></div></body></html>"""
+    else:
+        html = """<html><body style="font-family:monospace;background:#0d1117;color:#c9d1d9;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+        <div style="text-align:center"><h2 style="color:#f85149">Token inválido</h2>
+        <a href="https://saeif.terradigital.net" style="color:#f85149">Voltar ao mapa →</a></div></body></html>"""
+    return HTMLResponse(content=html)
 
 @app.get("/favicon.svg", include_in_schema=False)
 async def favicon():
