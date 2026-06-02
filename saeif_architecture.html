@@ -1458,7 +1458,7 @@ fire_risk = (
           <tr><td><code>12ebfd8</code></td><td>feat: painel de camadas — alertas, hotspots, PROCIV, risco, propagacao</td><td>1 Jun 2026</td></tr>
           <tr><td><code>c7f6467</code></td><td>feat: EFFIS FWI por distrito com selector temporal Hoje/Amanha/Depois</td><td>1 Jun 2026</td></tr>
           <tr><td><code>3019625</code></td><td>feat: legendas Risco Estrutural e EFFIS FWI completas e posicionadas</td><td>1 Jun 2026</td></tr>
-          <tr><td><code>7bb8bed</code></td><td>fix: legendas EFFIS em baixo, risco estrutural acima, sem duplicados</td><td>1 Jun 2026</td></tr>
+          <tr><td><code>ee3f27d</code></td><td>feat: NDVI Sentinel Hub — risco estrutural dinamico 60% WorldCover + 40% NDVI</td><td>2 Jun 2026</td></tr>
         </tbody>
       </table>
 
@@ -1578,9 +1578,9 @@ fire_risk = (
           </tr>
           <tr>
             <td><strong>NDVI Sentinel-2 — risco dinâmico</strong></td>
-            <td>Integração do índice NDVI (estado da vegetação) via Copernicus Data Space Ecosystem. Pipeline: (1) download do tile Sentinel-2 mais recente para Portugal (bandas B04/B08); (2) cálculo NDVI = (NIR−RED)/(NIR+RED); (3) normalização e fusão com WorldCover para gerar <code>fire_risk.tif</code> actualizado; (4) regeneração do <code>fire_risk.geojson</code> por distrito. Cron a cada 10 dias. Em Agosto, após meses sem chuva, o NDVI cai significativamente — a vegetação seca eleva o risco real muito acima do que o WorldCover estático indica. Esta é a componente sazonal mais importante para a precisão do score de risco no Verão.</td>
-            <td><span class="badge badge-amber">Média</span></td>
-            <td>Sessão dedicada (3–4h)</td>
+            <td>Módulo <code>ingest/ndvi.py</code> que calcula NDVI via Sentinel Hub Process API (Copernicus Data Space Ecosystem). Evalscript com máscara de nuvens (SCL). Raster 340×532px (~2km resolução) para a Península Ibérica. Fusão com WorldCover no <code>get_structural_risk()</code>: 60% WorldCover + 40% NDVI normalizado. NDVI baixo (&lt;0.2) = vegetação seca = risco alto; NDVI alto (&gt;0.6) = vegetação verde = risco baixo. Actualização automática nos dias 1, 11 e 21 de cada mês às 04:00 UTC. Credenciais CDSE_USER/CDSE_PASSWORD no .env. Implementado em 2 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>2 Jun 2026</td>
           </tr>
           <tr>
             <td><strong>EU-DEM / declive</strong></td>
