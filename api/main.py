@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 from ingest.firms import fetch_firms
 from ingest.effis import fetch_effis, get_effis_values
+from ingest.ndvi import fetch_ndvi, get_ndvi_factor
 from ingest.fogos import fetch_fogos
 from ingest.ipma import fetch_ipma_conditions
 from analysis.dedup import dedup_hotspots

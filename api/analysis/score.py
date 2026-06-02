@@ -22,6 +22,12 @@ def _get_transformer():
     return _transformer
 
 def get_structural_risk(lat, lon):
+    """
+    Risco estrutural combinado:
+    - 60% WorldCover (uso do solo permanente)
+    - 40% NDVI (estado da vegetacao, dinamico)
+    Se NDVI nao disponivel, usa 100% WorldCover.
+    """
     if RASTER_OK and os.path.exists(RISK_RASTER_PATH):
         try:
             with rasterio.open(RISK_RASTER_PATH) as src:
@@ -32,7 +38,13 @@ def get_structural_risk(lat, lon):
                     window = Window(col, row, 1, 1)
                     val = float(src.read(1, window=window)[0, 0])
                     if val > -999:
-                        return float(np.clip(val, 0.0, 1.0))
+                        wc_risk = float(np.clip(val, 0.0, 1.0))
+                    # Fusao com NDVI
+                    from ingest.ndvi import get_ndvi_factor
+                    ndvi_factor = get_ndvi_factor(lat, lon)
+                    if ndvi_factor is not None:
+                        return round(0.6 * wc_risk + 0.4 * ndvi_factor, 3)
+                    return wc_risk
         except Exception as e:
             log.warning(f"Erro lookup raster ({lat},{lon}): {e}")
     return _estimate_by_zone(lat, lon)
