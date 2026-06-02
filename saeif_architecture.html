@@ -1634,5 +1634,149 @@ fire_risk = (
   </div>
 
 </div><!-- /container -->
+
+<div class="container">
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">15</span>
+      <h2 class="section-title">Procedimentos de Manutenção</h2>
+    </div>
+
+    <h3 style="color:var(--fire);margin-bottom:1rem">15.1 — Actualização Anual das Áreas Ardidas ICNF</h3>
+
+    <p>O ICNF publica os polígonos de áreas ardidas do ano anterior em formato shapefile e via ArcGIS REST API. A actualização deve ser feita em <strong>Janeiro de cada ano</strong>, após publicação dos dados completos do ano anterior.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo 1 — Descobrir o novo layer_id</h4>
+    <p>Cada ano corresponde a um layer distinto no MapServer do ICNF. Para ver os layers disponíveis:</p>
+    <pre><code>curl -s "https://sigservices.icnf.pt/server/rest/services/BDG/areas_ardidas/MapServer?f=json" \
+  | python3 -c "import json,sys; [print(l['id'],l['name']) for l in json.load(sys.stdin).get('layers',[])]"</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo 2 — Download do novo layer (no servidor Hetzner)</h4>
+    <pre><code>cat > /tmp/download_novo_ano.py << 'EOF'
+import requests, json, time, os
+
+BASE = "https://sigservices.icnf.pt/server/rest/services/BDG/areas_ardidas/MapServer"
+LAYER_ID = 21        # substituir pelo layer_id do novo ano
+ANO = "2026"         # substituir pelo ano correcto
+OUT = f"/srv/saeif/data/areas_ardidas/ardidas_{ANO}.geojson"
+FIELDS = "OBJECTID,Ano,AreaHaPoly,DH_Inicio,DH_Fim,PI_Distrit,PI_Conc,PI_Freg,Causa_Tipo"
+PAGE = 200
+
+features, offset = [], 0
+time.sleep(30)  # aguardar para evitar rate limiting
+
+while True:
+    url = (f"{BASE}/{LAYER_ID}/query?where=1%3D1&outFields={FIELDS}"
+           f"&resultOffset={offset}&resultRecordCount={PAGE}"
+           f"&returnGeometry=true&geometryPrecision=5&f=geojson")
+    for attempt in range(5):
+        try:
+            r = requests.get(url, timeout=120)
+            if r.status_code == 200 and r.text.strip():
+                d = r.json()
+                if "features" in d: break
+        except Exception as e:
+            print(f"  tentativa {attempt+1}: {e}")
+        time.sleep(20 * (attempt + 1))
+    else:
+        print("Falhou definitivamente"); break
+    batch = d.get("features", [])
+    features.extend(batch)
+    print(f"  offset={offset} +{len(batch)} total={len(features)}")
+    if len(batch) < PAGE: break
+    offset += PAGE
+    time.sleep(15)
+
+with open(OUT, "w") as f:
+    json.dump({"type": "FeatureCollection", "features": features}, f)
+print(f"Guardado: {len(features)} features em {OUT}")
+EOF
+python3 /tmp/download_novo_ano.py</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo 3 — Importar para PostGIS</h4>
+    <pre><code>python3 << 'EOF'
+import json, os, subprocess
+from datetime import datetime, timezone
+
+def ms_to_ts(ms):
+    if not ms: return 'NULL'
+    try:
+        dt = datetime.fromtimestamp(int(ms)/1000, tz=timezone.utc)
+        return f"'{dt.isoformat()}'"
+    except: return 'NULL'
+
+ANO = 2026  # substituir pelo ano correcto
+path = f"/srv/saeif/data/areas_ardidas/ardidas_{ANO}.geojson"
+d = json.load(open(path))
+features = d.get('features', [])
+print(f"{len(features)} features a importar")
+
+sql_path = f"/tmp/import_{ANO}.sql"
+with open(sql_path, 'w') as sql_f:
+    for f in features:
+        props = f.get('properties', {})
+        geom  = f.get('geometry')
+        if not geom: continue
+        area_ha   = props.get('AreaHaPoly') or 0
+        di_sql    = ms_to_ts(props.get('DH_Inicio'))
+        df_sql    = ms_to_ts(props.get('DH_Fim'))
+        distrito  = (props.get('PI_Distrit') or '').replace("'","''")[:50]
+        concelho  = (props.get('PI_Conc') or '').replace("'","''")[:50]
+        freguesia = (props.get('PI_Freg') or '').replace("'","''")[:50]
+        causa     = (props.get('Causa_Tipo') or '').replace("'","''")[:50]
+        gj        = json.dumps(geom).replace("'","''")
+        sql_f.write(
+            f"INSERT INTO areas_ardidas (ano,area_ha,data_inicio,data_fim,distrito,concelho,freguesia,causa_tipo,geom) "
+            f"VALUES ({ANO},{area_ha},{di_sql},{df_sql},'{distrito}','{concelho}','{freguesia}','{causa}',"
+            f"ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON('{gj}'),4326))) ON CONFLICT DO NOTHING;\n"
+        )
+
+subprocess.run(['docker','compose','cp', sql_path, f'db:/tmp/import_{ANO}.sql'],
+               cwd='/srv/saeif', check=True)
+r = subprocess.run(
+    ['docker','compose','exec','-T','db','psql','-U','saeif','-d','saeif',
+     '-v','ON_ERROR_STOP=0','-f',f'/tmp/import_{ANO}.sql'],
+    capture_output=True, text=True, cwd='/srv/saeif'
+)
+print(f"Inseridos: {r.stdout.count('INSERT 0 1')} Erros: {r.stderr.count('ERROR')}")
+EOF</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo 4 — Verificar</h4>
+    <pre><code>docker compose exec db psql -U saeif -d saeif -c \
+  "SELECT ano, COUNT(*) as ocorrencias, ROUND(SUM(area_ha)::numeric,0) as area_ha
+   FROM areas_ardidas GROUP BY ano ORDER BY ano;"</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo 5 — Rebuild da API</h4>
+    <pre><code>cd /srv/saeif && docker compose build api && docker compose up -d</code></pre>
+
+    <div class="callout" style="margin-top:1.2rem">
+      <strong>⚠ Rate limiting do ICNF</strong><br>
+      O servidor ArcGIS do ICNF aplica rate limiting agressivo — tipicamente 3-5 requests seguidos antes de dar timeout. Estratégias: páginas de 100-200 registos, pausa de 15s entre páginas, pausa de 60s entre layers. Se falhar a meio, o script mantém o ficheiro parcial; re-executar com offset manual.
+    </div>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (2 Jun 2026)</strong><br>
+      5018 polígonos importados: 2020 (400), 2021 (918), 2022 (100 — incompleto), 2023 (1000 — incompleto), 2024 (600 — incompleto), 2025 (2000 — incompleto).<br>
+      Layers completos a completar: 2022, 2023, 2024, 2025 — recomendado em Setembro/Outubro fora da época de fogos.
+    </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.2 — Actualização do NDVI Sentinel-2</h3>
+    <p>O NDVI é actualizado automaticamente nos dias <strong>1, 11 e 21 de cada mês às 04:00 UTC</strong> via cron job no módulo <code>ingest/ndvi.py</code>. Não requer intervenção manual.</p>
+    <p>Em caso de falha (verificar nos logs): <code>docker compose logs api | grep NDVI</code></p>
+    <p>Para forçar actualização manual:</p>
+    <pre><code>docker compose exec api python3 -c "
+import asyncio, sys; sys.path.insert(0,'/app')
+from ingest.ndvi import fetch_ndvi
+asyncio.run(fetch_ndvi(None))
+"</code></pre>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.3 — Renovação do Token Copernicus</h3>
+    <p>As credenciais <code>CDSE_USER</code> e <code>CDSE_PASSWORD</code> no <code>/srv/saeif/.env</code> são as credenciais da conta <code>subs@terradigital.net</code> no <a href="https://dataspace.copernicus.eu">Copernicus Data Space Ecosystem</a>. O token OAuth2 é gerado automaticamente em cada pedido — não há renovação manual necessária. Se falhar, verificar que a conta Copernicus não expirou.</p>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.4 — Renovação do API Key Resend</h3>
+    <p>A chave <code>RESEND_API_KEY</code> no <code>/srv/saeif/.env</code> pertence à conta <code>subs@terradigital.net</code> no <a href="https://resend.com">Resend</a>. O domínio <code>terradigital.net</code> está verificado com DKIM + SPF via Namecheap. Em caso de rotação da chave, actualizar o <code>.env</code> e fazer rebuild da API.</p>
+
+  </div>
+</div><!-- /container -->
 </body>
 </html>
