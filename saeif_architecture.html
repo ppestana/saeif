@@ -1467,6 +1467,8 @@ fire_risk = (
           <tr><td><code>775a521</code></td><td>feat: sistema de subscricoes com double opt-in via Resend</td><td>2 Jun 2026</td></tr>
           <tr><td><code>49edcea</code></td><td>feat: formulario subscricao com mapa Leaflet, pin arrastavel, banner RGPD</td><td>2 Jun 2026</td></tr>
           <tr><td><code>f7fbcb6</code></td><td>fix: politica privacidade abre modal, pin subscricao usa icone Leaflet</td><td>2 Jun 2026</td></tr>
+          <tr><td><code>1e72261</code></td><td>feat: campos coordenadas decimal e DMS com sincronizacao bidirecional</td><td>2 Jun 2026</td></tr>
+          <tr><td><code>be78d12</code></td><td>feat: areas ardidas ICNF 2020-2025 integradas no score via PostGIS</td><td>2 Jun 2026</td></tr>
         </tbody>
       </table>
 
@@ -1577,6 +1579,12 @@ fire_risk = (
             <td>Legenda "Risco Estrutural · ESA WorldCover" com 5 classes e valores de risco (0.0–1.0). Legenda "Perigo Incêndio EFFIS · FWI previsto" com 5 classes e intervalos FWI. Posicionamento dinâmico: EFFIS em baixo, Risco Estrutural acima quando ambas visíveis. Legendas aparecem/desaparecem com os toggles do painel de camadas. Implementado em 1 Jun 2026.</td>
             <td><span class="badge badge-done">✓ Concluído</span></td>
             <td>1 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Áreas ardidas ICNF 2020-2025</strong></td>
+            <td>5018 polígonos de áreas ardidas descarregados via ArcGIS REST API do ICNF (<code>sigservices.icnf.pt</code>) para os anos 2020-2025. Importados para tabela PostGIS <code>areas_ardidas</code> com índice GIST. Função <code>get_area_ardida_factor()</code> que consulta áreas ardidas num raio de 5km e devolve factor de risco adicional: +0.25 se ardeu há ≤2 anos, +0.15 se 2-4 anos, +0.05 se 4-6 anos. Factor integrado em <code>calcular_score()</code> via parâmetro <code>area_ardida_factor</code>. Actualização anual prevista. Implementado em 2 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>2 Jun 2026</td>
           </tr>
           <tr>
             <td><strong>Artigo técnico</strong></td>
