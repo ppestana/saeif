@@ -1022,7 +1022,7 @@ function closeExportModal() {
   document.getElementById('expOverlay').classList.remove('open');
 }
 
-function downloadCSV() {
+async function downloadCSV() {
   const from = document.getElementById('expDateFrom').value;
   const to   = document.getElementById('expDateTo').value;
   const err  = document.getElementById('expDateErr');
@@ -1035,16 +1035,24 @@ function downloadCSV() {
   if(document.getElementById('expAlerts').checked)   layers.push('alertas');
   if(document.getElementById('expHotspots').checked) layers.push('hotspots');
   if(document.getElementById('expProciv').checked)   layers.push('prociv');
-  if(layers.length === 0) { err.textContent='Seleccione pelo menos uma camada'; err.style.display='block'; return; }
+  if(layers.length === 0) {
+    err.textContent='Seleccione pelo menos uma camada';
+    err.style.display='block'; return;
+  }
 
-  // Converter data para dd/mm/yyyy
   const fmtDate = d => d.split('-').reverse().join('/');
   const url = `/api/export/csv?layers=${layers.join(',')}&date_from=${fmtDate(from)}&date_to=${fmtDate(to)}`;
 
-  // Download via link temporário
+  // Gerar nome base e sufixo sequencial usando localStorage
+  const baseName = `saeif_${from}_${to}`;
+  const key = `saeif_csv_counter_${baseName}`;
+  const count = parseInt(localStorage.getItem(key) || '0');
+  const fileName = count === 0 ? `${baseName}.csv` : `${baseName}-${count}.csv`;
+  localStorage.setItem(key, count + 1);
+
   const a = document.createElement('a');
   a.href = url;
-  a.download = `saeif_${from}_${to}.csv`;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
