@@ -59,7 +59,7 @@ async def export_alertas_csv(conn, date_from, date_to) -> str:
             a.effis_ranking,
             a.effis_anomaly,
             a.risco_estrutural,
-            '' AS vegetacao_tipo
+            a.vegetacao_tipo
         FROM alertas a
         LEFT JOIN hotspots h ON h.id = a.hotspot_id
         WHERE a.criado_em >= $1 AND a.criado_em <= $2
@@ -91,8 +91,8 @@ async def export_alertas_csv(conn, date_from, date_to) -> str:
         writer.writerow([
             r['id'],
             fmt_dt(r['criado_em']),
-            fmt_num(r['lat'], 5),
-            fmt_num(r['lon'], 5),
+            fmt_num(r['lat'], 5).replace('.',','),
+            fmt_num(r['lon'], 5).replace('.',','),
             r['localidade_estimada'] or "",
             fmt_num(r['score'], 1),
             r['categoria'] or "",
@@ -102,7 +102,7 @@ async def export_alertas_csv(conn, date_from, date_to) -> str:
             fmt_num(r['temp'], 1),
             fmt_num(r['humidade'], 0),
             fmt_num(r['vento_vel'], 1) if r['vento_vel'] and float(r['vento_vel']) > -99 else "",
-            dir_card(r['vento_dir']),
+            dir_card(r['vento_dir']) if r['vento_dir'] is not None and (r['vento_vel'] is None or float(r['vento_vel'] or -99) > -99) else '',
             fmt_num(r['effis_fwi'], 1),
             fmt_pct(r['effis_ranking']),
             fmt_num(r['effis_anomaly'], 2),
@@ -134,7 +134,7 @@ async def export_hotspots_csv(conn, date_from, date_to) -> str:
     for r in rows:
         writer.writerow([
             r['id'], fmt_dt(r['fetched_at']),
-            fmt_num(r['lat'], 5), fmt_num(r['lon'], 5),
+            fmt_num(r['lat'], 5).replace('.',','), fmt_num(r['lon'], 5),
             r['source'] or "", r['confidence'] or "",
             fmt_num(r['frp'], 1), fmt_num(r['brightness'], 1),
         ])
@@ -161,7 +161,7 @@ async def export_prociv_csv(conn, date_from, date_to) -> str:
     for r in rows:
         writer.writerow([
             r['id'], fmt_dt(r['data_hora']),
-            fmt_num(r['lat'], 5), fmt_num(r['lon'], 5),
+            fmt_num(r['lat'], 5).replace('.',','), fmt_num(r['lon'], 5),
             r['localidade'] or "", r['distrito'] or "",
             r['concelho'] or "", r['estado'] or "",
         ])
