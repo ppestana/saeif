@@ -22,6 +22,38 @@
     .header-logo{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--fire);flex-shrink:0;}
     .header-sub{font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .header-right{display:flex;align-items:center;gap:.6rem;flex-shrink:0;}
+    /* Contador satélite */
+    .sat-counter{display:flex;align-items:center;gap:.4rem;font-family:'IBM Plex Mono',monospace;
+      font-size:11px;background:var(--card);border:1px solid var(--border);border-radius:2px;
+      padding:.3rem .6rem;color:var(--dim);}
+    .sat-counter .sat-name{color:var(--amber);font-weight:600;}
+    .sat-counter .sat-time{color:var(--text);letter-spacing:.05em;}
+    .sat-counter .sat-icon{font-size:13px;}
+    /* Modal exportação */
+    .exp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2500;
+      display:none;align-items:center;justify-content:center;padding:1rem;}
+    .exp-overlay.open{display:flex;}
+    .exp-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+      width:min(480px,96vw);padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+    .exp-title{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;
+      color:var(--amber);margin-bottom:1.2rem;}
+    .exp-field{margin-bottom:.85rem;}
+    .exp-label{font-size:11px;color:var(--dim);font-family:'IBM Plex Mono',monospace;
+      text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:.3rem;}
+    .exp-date-row{display:flex;gap:.5rem;align-items:center;}
+    .exp-input{background:var(--card);border:1px solid var(--border);color:var(--text);
+      padding:.45rem .7rem;border-radius:2px;font-size:13px;font-family:'IBM Plex Mono',monospace;
+      width:100%;box-sizing:border-box;}
+    .exp-input:focus{outline:none;border-color:var(--amber);}
+    .exp-check-group{display:flex;flex-direction:column;gap:.4rem;}
+    .exp-check-label{display:flex;align-items:center;gap:.5rem;font-size:12px;
+      color:var(--dim);cursor:pointer;}
+    .exp-check-label input{accent-color:var(--amber);}
+    .exp-btn{width:100%;background:var(--amber);color:#0d1117;border:none;padding:.7rem;
+      border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+      font-weight:700;cursor:pointer;letter-spacing:.05em;margin-top:.5rem;}
+    .exp-btn:hover{opacity:.85;}
+    .exp-err{font-size:11px;color:var(--fire);margin-top:.4rem;display:none;}
     .ws-indicator{display:flex;align-items:center;gap:.3rem;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);}
     .ws-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:background .3s;flex-shrink:0;}
     .ws-dot.live{background:var(--green);animation:pulse 2s infinite;}
@@ -230,6 +262,12 @@
       <div class="header-sub">Sistema de Alerta de Incêndios Florestais · TerraDigital</div>
     </div>
     <div class="header-right">
+      <div class="sat-counter" id="satCounter" title="Próxima passagem de satélite sobre Portugal">
+        <span class="sat-icon">🛰</span>
+        <span class="sat-name" id="satName">--</span>
+        <span class="sat-time" id="satCountdown">--:--:--</span>
+      </div>
+      <button class="btn-refresh" onclick="openExportModal()" title="Exportar dados CSV" style="background:#1a2e1a;border-color:var(--amber);color:var(--amber)">⬇ CSV</button>
       <button class="layers-btn" onclick="toggleLayersPanel()" title="Camadas">&#9741; Camadas</button>
       <button class="btn-refresh" onclick="document.getElementById('subOverlay').classList.add('open');setTimeout(()=>{if(subMap)subMap.invalidateSize();else initSubMap();},200)" title="Subscrever alertas" style="background:#3d1f1e;border-color:#f85149;color:#f85149">🔔</button>
       <div class="ws-indicator">
@@ -626,9 +664,10 @@ function ventoDir(graus){
 function horaFormatada(iso){
   if(!iso) return '--';
   const d=new Date(iso);
-  const hoje=new Date();
-  const prefix=d.toDateString()===hoje.toDateString()?'hoje':'ontem';
-  return prefix+' às '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+  const dd=String(d.getDate()).padStart(2,'0');
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const yyyy=d.getFullYear();
+  return `${dd}/${mm}/${yyyy} às ${d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})}`;
 }
 
 function alertIcon(cat){
@@ -924,7 +963,99 @@ function toast(msg,isFire=false){
   setInterval(loadStatus,5*60*1000);
 })();
 
-// ── RGPD ─────────────────────────────────────────────────────────────────────
+// ── Contador de satélites ─────────────────────────────────────────────────────
+let satPasses = [];
+let satCounterInterval = null;
+
+async function loadSatPasses() {
+  try {
+    const r = await fetch('/api/satellite/next-passes');
+    const d = await r.json();
+    satPasses = d.passes || [];
+    startSatCounter();
+  } catch(e) {
+    console.warn('Sat passes:', e);
+  }
+}
+
+function startSatCounter() {
+  if(satCounterInterval) clearInterval(satCounterInterval);
+  satCounterInterval = setInterval(updateSatCounter, 1000);
+  updateSatCounter();
+}
+
+function updateSatCounter() {
+  const now = Date.now() / 1000;
+  // Encontrar a próxima passagem futura
+  const next = satPasses.find(p => p.timestamp > now);
+  if(!next) {
+    document.getElementById('satName').textContent = '--';
+    document.getElementById('satCountdown').textContent = '--:--:--';
+    // Recarregar passagens quando esgotam
+    loadSatPasses();
+    return;
+  }
+  const diff = Math.max(0, Math.floor(next.timestamp - now));
+  const hh = String(Math.floor(diff / 3600)).padStart(2,'0');
+  const mm = String(Math.floor((diff % 3600) / 60)).padStart(2,'0');
+  const ss = String(diff % 60).padStart(2,'0');
+  // Nome abreviado
+  const shortName = next.satellite.replace('Suomi-','').replace('NOAA ','N');
+  document.getElementById('satName').textContent = shortName;
+  document.getElementById('satCountdown').textContent = `${hh}:${mm}:${ss}`;
+  // Tooltip com elevação
+  document.getElementById('satCounter').title =
+    `Próxima passagem: ${next.satellite} às ${next.datetime_utc.substring(11,16)} UTC — Elevação: ${next.elevation_deg}°`;
+}
+
+// ── Exportação CSV ────────────────────────────────────────────────────────────
+function openExportModal() {
+  // Defaults: hoje
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('expDateFrom').value = today;
+  document.getElementById('expDateTo').value = today;
+  document.getElementById('expDateErr').style.display = 'none';
+  document.getElementById('expOverlay').classList.add('open');
+}
+
+function closeExportModal() {
+  document.getElementById('expOverlay').classList.remove('open');
+}
+
+function downloadCSV() {
+  const from = document.getElementById('expDateFrom').value;
+  const to   = document.getElementById('expDateTo').value;
+  const err  = document.getElementById('expDateErr');
+
+  if(!from || !to) { err.style.display='block'; return; }
+  if(new Date(to) < new Date(from)) { err.style.display='block'; return; }
+  err.style.display = 'none';
+
+  const layers = [];
+  if(document.getElementById('expAlerts').checked)   layers.push('alertas');
+  if(document.getElementById('expHotspots').checked) layers.push('hotspots');
+  if(document.getElementById('expProciv').checked)   layers.push('prociv');
+  if(layers.length === 0) { err.textContent='Seleccione pelo menos uma camada'; err.style.display='block'; return; }
+
+  // Converter data para dd/mm/yyyy
+  const fmtDate = d => d.split('-').reverse().join('/');
+  const url = `/api/export/csv?layers=${layers.join(',')}&date_from=${fmtDate(from)}&date_to=${fmtDate(to)}`;
+
+  // Download via link temporário
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `saeif_${from}_${to}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  closeExportModal();
+}
+
+// Carregar passagens de satélite ao iniciar e renovar a cada 6 horas
+loadSatPasses();
+setInterval(loadSatPasses, 6 * 60 * 60 * 1000);
+
+
 function rgpdAccept(){
   localStorage.setItem('saeif_rgpd','accepted');
   document.getElementById('rgpdBanner').style.display='none';
@@ -1106,7 +1237,52 @@ function showSubMsg(text,type){
   el.textContent=text;el.className='sub-msg '+type;el.style.display='block';
 }
 </script>
-  <!-- Banner RGPD -->
+  <!-- Modal Exportação CSV -->
+  <div class="exp-overlay" id="expOverlay" onclick="if(event.target===this)closeExportModal()">
+    <div class="exp-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="exp-title">⬇ Exportar dados CSV</div>
+        <button class="help-close" onclick="closeExportModal()">✕</button>
+      </div>
+
+      <div class="exp-field">
+        <span class="exp-label">Período</span>
+        <div class="exp-date-row">
+          <div style="flex:1">
+            <span class="exp-label" style="font-size:10px">Desde</span>
+            <input class="exp-input" type="date" id="expDateFrom">
+          </div>
+          <div style="flex:1">
+            <span class="exp-label" style="font-size:10px">Até</span>
+            <input class="exp-input" type="date" id="expDateTo">
+          </div>
+        </div>
+        <div class="exp-err" id="expDateErr">⚠ A data "Até" não pode ser anterior à data "Desde"</div>
+      </div>
+
+      <div class="exp-field">
+        <span class="exp-label">Camadas a exportar</span>
+        <div class="exp-check-group">
+          <label class="exp-check-label">
+            <input type="checkbox" id="expAlerts" checked>
+            🔥 Alertas SAEIF (score, risco, meteorologia, EFFIS)
+          </label>
+          <label class="exp-check-label">
+            <input type="checkbox" id="expHotspots">
+            🛰 Hotspots NASA FIRMS (detecções brutas)
+          </label>
+          <label class="exp-check-label">
+            <input type="checkbox" id="expProciv">
+            🚒 Ocorrências PROCIV
+          </label>
+        </div>
+      </div>
+
+      <button class="exp-btn" onclick="downloadCSV()">⬇ Exportar CSV</button>
+    </div>
+  </div>
+
+</body>
   <div class="rgpd-banner" id="rgpdBanner" style="display:none">
     <span style="flex:1">🍪 Este site utiliza cookies essenciais para o seu funcionamento. Ao subscrever alertas, aceita o tratamento do seu email para envio de notificações de incêndio. <a href="#" onclick="event.preventDefault();document.getElementById('privacyOverlay').classList.add('visible')">Política de privacidade</a></span>
     <button class="rgpd-btn" onclick="rgpdReject()">Recusar</button>

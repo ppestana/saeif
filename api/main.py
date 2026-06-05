@@ -406,6 +406,59 @@ async def cancelar_subscricao(token: str):
         <a href="https://saeif.terradigital.net" style="color:#f85149">Voltar ao mapa →</a></div></body></html>"""
     return HTMLResponse(content=html)
 
+
+# ── Endpoints satélite e exportação ──────────────────────────────────────────
+
+@app.get("/api/satellite/next-passes")
+async def get_satellite_passes():
+    """Proximas passagens dos satelites VIIRS sobre Portugal."""
+    from satellite import get_next_passes
+    passes = await get_next_passes()
+    return {"passes": passes[:10]}
+
+@app.get("/api/export/csv")
+async def export_csv(
+    layers: str = "alertas",
+    date_from: str = "",
+    date_to: str = ""
+):
+    """Exporta dados para CSV. layers=alertas,hotspots,prociv"""
+    from fastapi.responses import StreamingResponse
+    from export import export_alertas_csv, export_hotspots_csv, export_prociv_csv
+    from datetime import datetime, timezone
+    import io
+
+    # Defaults: ultimas 24h
+    now = datetime.now(timezone.utc)
+    try:
+        dt_from = datetime.strptime(date_from, "%d/%m/%Y").replace(tzinfo=timezone.utc) if date_from else now.replace(hour=0,minute=0,second=0)
+        dt_to   = datetime.strptime(date_to,   "%d/%m/%Y").replace(tzinfo=timezone.utc, hour=23, minute=59, second=59) if date_to else now
+    except:
+        dt_from = now.replace(hour=0,minute=0,second=0)
+        dt_to   = now
+
+    selected = [l.strip() for l in layers.split(",")]
+    conn = await get_db()
+    try:
+        parts = []
+        if "alertas" in selected:
+            parts.append(await export_alertas_csv(conn, dt_from, dt_to))
+        if "hotspots" in selected:
+            parts.append(await export_hotspots_csv(conn, dt_from, dt_to))
+        if "prociv" in selected:
+            parts.append(await export_prociv_csv(conn, dt_from, dt_to))
+    finally:
+        await conn.close()
+
+    combined = "\n".join(p for p in parts if p.strip())
+    filename = f"saeif_{dt_from.strftime('%Y%m%d')}_{dt_to.strftime('%Y%m%d')}.csv"
+
+    return StreamingResponse(
+        io.StringIO(combined),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 @app.get("/favicon.svg", include_in_schema=False)
 async def favicon():
     from fastapi.responses import FileResponse
