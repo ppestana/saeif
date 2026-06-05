@@ -39,28 +39,31 @@ async def export_alertas_csv(conn, date_from, date_to) -> str:
     """Exporta alertas para CSV."""
     rows = await conn.fetch("""
         SELECT
-            id,
-            criado_em,
-            ST_Y(geom) AS lat,
-            ST_X(geom) AS lon,
-            localidade_estimada,
-            score,
-            categoria,
-            satelite,
-            prociv_confirmado,
-            fwi,
-            temp,
-            humidade,
-            vento_vel,
-            vento_dir,
-            effis_fwi,
-            effis_ranking,
-            effis_anomaly,
-            risco_estrutural,
-            vegetacao_tipo
-        FROM alertas
-        WHERE criado_em >= $1 AND criado_em <= $2
-        ORDER BY criado_em DESC
+            a.id,
+            a.criado_em,
+            ST_Y(a.geom) AS lat,
+            ST_X(a.geom) AS lon,
+            a.localidade_estimada,
+            a.score,
+            a.categoria,
+            h.source AS satelite,
+            h.confidence AS confianca,
+            h.frp,
+            (a.prociv_id IS NOT NULL) AS prociv_confirmado,
+            a.fwi,
+            a.temp,
+            a.humidade,
+            a.vento_vel,
+            a.vento_dir,
+            a.effis_fwi,
+            a.effis_ranking,
+            a.effis_anomaly,
+            a.risco_estrutural,
+            '' AS vegetacao_tipo
+        FROM alertas a
+        LEFT JOIN hotspots h ON h.id = a.hotspot_id
+        WHERE a.criado_em >= $1 AND a.criado_em <= $2
+        ORDER BY a.criado_em DESC
     """, date_from, date_to)
 
     output = io.StringIO()
@@ -95,10 +98,10 @@ async def export_alertas_csv(conn, date_from, date_to) -> str:
             r['categoria'] or "",
             r['satelite'] or "",
             "Sim" if r['prociv_confirmado'] else "Nao",
-            fmt_num(r['fwi'], 1),
+            fmt_num(r['fwi'], 1) if r['fwi'] and float(r['fwi']) >= 0 else "",
             fmt_num(r['temp'], 1),
             fmt_num(r['humidade'], 0),
-            fmt_num(r['vento_vel'], 1),
+            fmt_num(r['vento_vel'], 1) if r['vento_vel'] and float(r['vento_vel']) > -99 else "",
             dir_card(r['vento_dir']),
             fmt_num(r['effis_fwi'], 1),
             fmt_pct(r['effis_ranking']),
@@ -114,12 +117,12 @@ async def export_hotspots_csv(conn, date_from, date_to) -> str:
     """Exporta hotspots FIRMS para CSV."""
     rows = await conn.fetch("""
         SELECT
-            id, criado_em,
+            id, fetched_at,
             ST_Y(geom) AS lat, ST_X(geom) AS lon,
-            satelite, confianca, frp, temp_brilho
+            source, confidence, frp, brightness
         FROM hotspots
-        WHERE criado_em >= $1 AND criado_em <= $2
-        ORDER BY criado_em DESC
+        WHERE fetched_at >= $1 AND fetched_at <= $2
+        ORDER BY fetched_at DESC
     """, date_from, date_to)
 
     output = io.StringIO()
@@ -130,10 +133,10 @@ async def export_hotspots_csv(conn, date_from, date_to) -> str:
     ])
     for r in rows:
         writer.writerow([
-            r['id'], fmt_dt(r['criado_em']),
+            r['id'], fmt_dt(r['fetched_at']),
             fmt_num(r['lat'], 5), fmt_num(r['lon'], 5),
-            r['satelite'] or "", r['confianca'] or "",
-            fmt_num(r['frp'], 1), fmt_num(r['temp_brilho'], 1),
+            r['source'] or "", r['confidence'] or "",
+            fmt_num(r['frp'], 1), fmt_num(r['brightness'], 1),
         ])
     return output.getvalue()
 
@@ -141,24 +144,25 @@ async def export_prociv_csv(conn, date_from, date_to) -> str:
     """Exporta ocorrencias PROCIV para CSV."""
     rows = await conn.fetch("""
         SELECT
-            id, criado_em,
+            id, data_hora,
             ST_Y(geom) AS lat, ST_X(geom) AS lon,
-            localidade, natureza, estado
-        FROM prociv_ocorrencias
-        WHERE criado_em >= $1 AND criado_em <= $2
-        ORDER BY criado_em DESC
+            localidade, distrito, concelho, estado
+        FROM ocorrencias_prociv
+        WHERE data_hora >= $1 AND data_hora <= $2
+        ORDER BY data_hora DESC
     """, date_from, date_to)
 
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
     writer.writerow([
         "ID", "Data/Hora", "Latitude", "Longitude",
-        "Localidade", "Natureza", "Estado"
+        "Localidade", "Distrito", "Concelho", "Estado"
     ])
     for r in rows:
         writer.writerow([
-            r['id'], fmt_dt(r['criado_em']),
+            r['id'], fmt_dt(r['data_hora']),
             fmt_num(r['lat'], 5), fmt_num(r['lon'], 5),
-            r['localidade'] or "", r['natureza'] or "", r['estado'] or "",
+            r['localidade'] or "", r['distrito'] or "",
+            r['concelho'] or "", r['estado'] or "",
         ])
     return output.getvalue()
