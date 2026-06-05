@@ -1587,6 +1587,12 @@ fire_risk = (
             <td>2 Jun 2026</td>
           </tr>
           <tr>
+            <td><strong>Exportação CSV + Contador de passagens de satélite</strong></td>
+            <td>Módulo <code>export.py</code> com exportação de alertas, hotspots FIRMS e ocorrências PROCIV para CSV separado por ponto-e-vírgula. Filtro por intervalo de datas e selecção de camadas. Campos exportados nos alertas: ID, Data/Hora (dd/mm/yyyy hh:mm), Latitude, Longitude, Localidade, Score, Categoria, Satélite, PROCIV, FWI, Temperatura, Humidade, Vento, Direcção, FWI EFFIS, Ranking histórico, Anomalia, Risco Estrutural, Recomendação. Modal de exportação acessível via botão ⬇ CSV no header. Módulo <code>satellite.py</code> que calcula próximas passagens dos satélites Suomi-NPP, NOAA-20 e NOAA-21 sobre Portugal Continental (centro: 39.6°N, 8.0°W) usando TLE da Celestrak e biblioteca skyfield. Contador HH:MM:SS no header actualizado em tempo real. TLE actualizados automaticamente a cada 6 horas. Implementado em 5 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>5 Jun 2026</td>
+          </tr>
+          <tr>
             <td><strong>Artigo técnico</strong></td>
             <td>Paper EN+PT para pedropestana.com documentando arquitectura e resultados do PoC.</td>
             <td><span class="badge badge-blue">Futura</span></td>
