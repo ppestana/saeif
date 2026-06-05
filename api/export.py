@@ -67,6 +67,7 @@ async def export_alertas_csv(conn, date_from, date_to) -> str:
     """, date_from, date_to)
 
     output = io.StringIO()
+    output.write('\ufeff')  # BOM para Excel PT
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
 
     # Cabeçalho
@@ -126,6 +127,7 @@ async def export_hotspots_csv(conn, date_from, date_to) -> str:
     """, date_from, date_to)
 
     output = io.StringIO()
+    output.write('\ufeff')  # BOM para Excel PT
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
     writer.writerow([
         "ID", "Data/Hora", "Latitude", "Longitude",
@@ -153,10 +155,11 @@ async def export_prociv_csv(conn, date_from, date_to) -> str:
     """, date_from, date_to)
 
     output = io.StringIO()
+    output.write('\ufeff')  # BOM para Excel PT
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
     writer.writerow([
         "ID", "Data/Hora", "Latitude", "Longitude",
-        "Localidade", "Distrito", "Concelho", "Estado"
+        "Localidade", "Distrito", "Concelho", "Tipo de Terreno"
     ])
     for r in rows:
         writer.writerow([
