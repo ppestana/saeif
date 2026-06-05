@@ -264,6 +264,7 @@
     <div class="header-right">
       <div class="sat-counter" id="satCounter" title="Próxima passagem de satélite sobre Portugal">
         <span class="sat-icon">🛰</span>
+        <span class="sat-label" style="color:var(--dim)">Próxima passagem</span>
         <span class="sat-name" id="satName">--</span>
         <span class="sat-time" id="satCountdown">--:--:--</span>
       </div>
@@ -1000,7 +1001,7 @@ function updateSatCounter() {
   const mm = String(Math.floor((diff % 3600) / 60)).padStart(2,'0');
   const ss = String(diff % 60).padStart(2,'0');
   // Nome abreviado
-  const shortName = next.satellite.replace('Suomi-','').replace('NOAA ','N');
+  const shortName = next.satellite.replace('Suomi NPP','Suomi-NPP').replace('NOAA 20','NOAA-20').replace('NOAA 21','NOAA-21');
   document.getElementById('satName').textContent = shortName;
   document.getElementById('satCountdown').textContent = `${hh}:${mm}:${ss}`;
   // Tooltip com elevação
