@@ -62,6 +62,48 @@ def _estimate_by_zone(lat, lon):
         return 0.45
     return 0.60
 
+def get_vegetacao_tipo(lat, lon):
+    """Devolve a classificacao textual do tipo de vegetacao WorldCover para um ponto."""
+    import os, numpy as np
+    DATA_DIR = "/data"
+    wc_path = os.path.join(DATA_DIR, "wc_2km.tif")
+    if not os.path.exists(wc_path):
+        return ""
+    try:
+        import rasterio
+        from rasterio.windows import Window
+        with rasterio.open(wc_path) as src:
+            row, col = src.index(lon, lat)
+            if row < 0 or col < 0 or row >= src.height or col >= src.width:
+                return ""
+            w = Window(max(0, col-1), max(0, row-1), 3, 3)
+            data = src.read(1, window=w)
+            # WorldCover classes
+            # 10=Tree cover, 20=Shrubland, 30=Grassland, 40=Cropland
+            # 50=Built-up, 60=Bare, 70=Snow, 80=Water, 90=Wetland, 95=Mangrove, 100=Moss
+            vals = data.flatten()
+            vals = vals[vals > 0]
+            if len(vals) == 0:
+                return ""
+            val = int(np.bincount(vals).argmax())
+            mapa = {
+                10: "Floresta densa (resinosas)",
+                20: "Arbustivo",
+                30: "Pastagem",
+                40: "Cultura agricola",
+                50: "Urbano/edificado",
+                60: "Solo nu",
+                70: "Neve/gelo",
+                80: "Agua",
+                90: "Zonas humidas",
+                95: "Mangal",
+                100: "Musgos/liquenes",
+            }
+            return mapa.get(val, f"Classe {val}")
+    except Exception as e:
+        return ""
+
+
 async def get_area_ardida_factor(conn, lat, lon):
     """
     Verifica se o ponto esta numa area ardida recente (2020-2025).

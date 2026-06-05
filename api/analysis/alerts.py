@@ -1,7 +1,7 @@
 import logging
 import asyncpg
 from ingest.ipma import get_nearest_meteo
-from analysis.score import calcular_score, get_structural_risk, get_area_ardida_factor
+from analysis.score import calcular_score, get_structural_risk, get_area_ardida_factor, get_vegetacao_tipo
 from ingest.effis import get_effis_values
 from utils import reverse_geocode
 
@@ -31,6 +31,7 @@ async def gerar_alertas(conn, pares, meteo_data):
             continue
         meteo = get_nearest_meteo(lat, lon, meteo_data) if meteo_data else {}
         area_factor = await get_area_ardida_factor(conn, lat, lon)
+        vegetacao_tipo = get_vegetacao_tipo(lat, lon)
         score, categoria = calcular_score(par, meteo, area_ardida_factor=area_factor)
         risco_estrutural = get_structural_risk(lat, lon)
         effis = get_effis_values(lat, lon)
@@ -45,7 +46,7 @@ async def gerar_alertas(conn, pares, meteo_data):
             alerta_id = await conn.fetchval("""
                 INSERT INTO alertas (
                     geom, hotspot_id, prociv_id, score, categoria, source_tag,
-                    temp, humidade, vento_vel, vento_dir, fwi, risco_estrutural,
+                    temp, humidade, vento_vel, vento_dir, fwi, risco_estrutural, vegetacao_tipo,
                     localidade_estimada, effis_fwi, effis_ranking, effis_anomaly
                 )
                 VALUES (
@@ -57,7 +58,7 @@ async def gerar_alertas(conn, pares, meteo_data):
                 score, categoria,
                 meteo.get("temp"), meteo.get("humidade"),
                 meteo.get("vento_vel"), meteo.get("vento_dir"),
-                meteo.get("fwi"), risco_estrutural, localidade_estimada,
+meteo.get("fwi"), risco_estrutural, vegetacao_tipo, localidade_estimada,
                 (effis or {}).get("fwi"), (effis or {}).get("ranking"), (effis or {}).get("anomaly"))
             alertas_gerados.append({
                 "id": alerta_id, "lat": lat, "lon": lon,
