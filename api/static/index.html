@@ -753,7 +753,7 @@ function buildPopup(a){
       <div class="popup-row"><span class="popup-label">Vegetação</span><span class="popup-val" style="max-width:130px;text-align:right">${veg}</span></div>
     </div>
 
-    <div class="popup-mobilizacao mob-${cat}">&#x1F6A8; ${mob}</div>
+    ${a.prociv_confirmado ? `<div class="popup-mobilizacao mob-${cat}">&#x1F6A8; ${mob}</div>` : `<div class="popup-mobilizacao mob-BAIXO" style="color:var(--dim);border-color:var(--border)">&#x26A0; Detecção não confirmada — aguardar validação PROCIV</div>`}
   `;
 }
 
