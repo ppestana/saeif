@@ -84,10 +84,13 @@
       border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:12px;
       font-weight:700;cursor:pointer;letter-spacing:.05em;margin-top:.5rem;}
     .hist-btn:hover{opacity:.85;}
-    .hist-mode-bar{display:none;background:rgba(210,153,34,.15);border-bottom:1px solid var(--amber);
-      padding:.4rem 1rem;font-size:11px;color:var(--amber);font-family:'IBM Plex Mono',monospace;
-      align-items:center;justify-content:space-between;}
-    .hist-mode-bar.visible{display:flex;}
+    .hist-mode-badge{display:none;position:absolute;bottom:2.5rem;left:.8rem;z-index:1000;
+      background:rgba(13,17,23,.92);border:1px solid var(--amber);border-radius:4px;
+      padding:.4rem .8rem;font-size:11px;color:var(--amber);font-family:'IBM Plex Mono',monospace;
+      align-items:center;gap:.6rem;backdrop-filter:blur(4px);}
+    .hist-mode-badge.visible{display:flex;}
+    .hist-mode-badge button{background:none;border:1px solid var(--amber);color:var(--amber);
+      padding:.15rem .5rem;border-radius:2px;font-size:10px;cursor:pointer;white-space:nowrap;}
     .ws-indicator{display:flex;align-items:center;gap:.3rem;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);}
     .ws-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:background .3s;flex-shrink:0;}
     .ws-dot.live{background:var(--green);animation:pulse 2s infinite;}
@@ -330,11 +333,11 @@
       </div>
       <div class="sidebar-content" id="sidebarContent"></div>
     </div>
-    <div class="hist-mode-bar" id="histModeBar">
-    <span id="histModeLabel">Modo histórico activo</span>
-    <button onclick="closeHistoricoMode()" style="background:none;border:1px solid var(--amber);color:var(--amber);padding:.2rem .6rem;border-radius:2px;font-size:11px;cursor:pointer">✕ Voltar ao tempo real</button>
-  </div>
-  <div id="map"></div>
+    <div id="map" style="position:relative">
+    <div class="hist-mode-badge" id="histModeBar">
+      <span id="histModeLabel">Modo histórico</span>
+      <button onclick="closeHistoricoMode()">✕ Tempo real</button>
+    </div>></div>
 
     <!-- Painel de camadas -->
     <div class="layers-panel" id="layersPanel">
