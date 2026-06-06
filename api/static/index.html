@@ -1093,7 +1093,7 @@ function initSubMap(){
   });
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(pos=>{
-      const {latitude:lat,longitude:lon}=pos.coords;
+      const {latitude:lat,longitude:lon,accuracy}=pos.coords;
       subMap.setView([lat,lon],9);
       subMarker=L.marker([lat,lon],{icon,draggable:true}).addTo(subMap);
       updateSubCircle(lat,lon);
@@ -1102,8 +1102,24 @@ function initSubMap(){
       document.getElementById('coordDMSLat').value = decToDMS(lat,'lat');
       document.getElementById('coordDMSLon').value = decToDMS(lon,'lon');
       setupPinDragSync();
-    },()=>addDefaultMarker(icon));
-  } else { addDefaultMarker(icon); }
+      // Aviso se precisão baixa (provável geolocalização por IP)
+      if(accuracy > 5000){
+        const w = document.getElementById('geoWarning');
+        w.innerHTML = '⚠ A localização mostrada corresponde ao equipamento do seu fornecedor de internet, não à sua localização real. Por favor arraste o pin para o local onde se encontra.';
+        w.style.display = 'block';
+      }
+    },()=>{
+      addDefaultMarker(icon);
+      const w = document.getElementById('geoWarning');
+      w.innerHTML = '⚠ Não foi possível obter a sua localização. O pin foi colocado no centro de Portugal. Por favor arraste-o para o local onde se encontra.';
+      w.style.display = 'block';
+    },{enableHighAccuracy:true, timeout:8000, maximumAge:0});
+  } else {
+    addDefaultMarker(icon);
+    const w = document.getElementById('geoWarning');
+    w.innerHTML = '⚠ O seu browser não suporta geolocalização. Por favor arraste o pin para o local onde se encontra.';
+    w.style.display = 'block';
+  }
   document.querySelectorAll('input[name="raio"]').forEach(r=>{
     r.addEventListener('change',()=>{
       if(subMarker){const {lat,lng}=subMarker.getLatLng();updateSubCircle(lat,lng);}
@@ -1345,6 +1361,8 @@ function showSubMsg(text,type){
 
       <div class="sub-field">
         <span class="sub-label">Localização e raio de alerta</span>
+        <div id="geoWarning" style="display:none;background:rgba(210,153,34,0.12);border:1px solid var(--amber);
+          border-radius:3px;padding:.5rem .7rem;font-size:11px;color:var(--amber);margin-bottom:.6rem;line-height:1.5"></div>
         <div id="subMap" class="sub-map"></div>
         <div style="font-size:11px;color:var(--dim);margin-top:.3rem">
           📍 Arraste o pin para a localização desejada ou introduza as coordenadas abaixo
