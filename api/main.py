@@ -329,33 +329,33 @@ async def get_alertas_historico(
 
         features = []
         for r in rows:
-            features.append({{
+            features.append({
                 "type": "Feature",
-                "geometry": {{"type": "Point", "coordinates": [r["lon"], r["lat"]]}},
-                "properties": {{
+                "geometry": {"type": "Point", "coordinates": [r["lon"], r["lat"]]},
+                "properties": {
                     "id": r["id"], "score": float(r["score"]),
                     "categoria": r["categoria"], "source_tag": r["source_tag"],
                     "hotspot_source": r["hotspot_source"],
                     "prociv_confirmado": bool(r["prociv_confirmado"]),
                     "localidade_estimada": r.get("localidade_estimada"),
                     "vegetacao_tipo": r.get("vegetacao_tipo"),
-                    "meteo": {{
+                    "meteo": {
                         "temp": float(r["temp"]) if r["temp"] and float(r["temp"]) > -99 else None,
                         "humidade": float(r["humidade"]) if r["humidade"] and float(r["humidade"]) > -99 else None,
                         "vento_vel": float(r["vento_vel"]) if r["vento_vel"] and float(r["vento_vel"]) > -99 else None,
                         "vento_dir": float(r["vento_dir"]) if r["vento_dir"] is not None else None,
                         "fwi": float(r["fwi"]) if r["fwi"] is not None and float(r["fwi"]) >= 0 else None,
-                    }},
+                    },
                     "risco_estrutural": float(r["risco_estrutural"]) if r["risco_estrutural"] else None,
-                    "effis": {{
+                    "effis": {
                         "fwi": float(r["effis_fwi"]) if r.get("effis_fwi") else None,
                         "ranking": float(r["effis_ranking"]) if r.get("effis_ranking") else None,
                         "anomaly": float(r["effis_anomaly"]) if r.get("effis_anomaly") else None,
-                    }},
+                    },
                     "criado_em": r["criado_em"].isoformat(),
-                }}
-            }})
-        return {{"type": "FeatureCollection", "features": features, "count": len(features)}}
+                }
+            })
+        return {"type": "FeatureCollection", "features": features, "count": len(features)}
     finally:
         await conn.close()
 
