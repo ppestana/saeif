@@ -1038,7 +1038,7 @@ function closeHistoricoMode() {
   if(map.hasLayer(histLayer)) map.removeLayer(histLayer);
   document.getElementById('histModeBar').classList.remove('visible');
   // Restaurar alertas em tempo real
-  loadAlerts();
+  loadAlertas();
   loadHotspots();
 }
 
@@ -1081,7 +1081,7 @@ async function aplicarHistorico() {
     if(!map.hasLayer(histLayer)) histLayer.addTo(map);
 
     // Esconder alertas actuais
-    if(map.hasLayer(alertLayer)) map.removeLayer(alertLayer);
+    if(map.hasLayer(alertaLayer)) map.removeLayer(alertaLayer);
 
     // Renderizar resultados
     gj.features.forEach(f => {
@@ -1093,7 +1093,7 @@ async function aplicarHistorico() {
         radius: 8, fillColor: c, color: '#fff', weight: 1,
         fillOpacity: 0.85, opacity: 0.9
       });
-      m.on('click', () => showAlertPopup(p));
+      m.bindPopup(buildPopup(p), {maxWidth:300});
       histLayer.addLayer(m);
     });
 
