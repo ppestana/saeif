@@ -550,6 +550,28 @@ async def export_csv(
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+
+@app.get("/robots.txt", include_in_schema=False)
+async def robots():
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse("""User-agent: *
+Allow: /
+Sitemap: https://saeif.terradigital.net/sitemap.xml
+""")
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap():
+    from fastapi.responses import Response
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://saeif.terradigital.net/</loc>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
 @app.get("/favicon.svg", include_in_schema=False)
 async def favicon():
     from fastapi.responses import FileResponse
