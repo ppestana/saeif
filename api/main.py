@@ -268,6 +268,97 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
     finally:
         await conn.close()
 
+
+@app.get("/api/alertas/historico")
+async def get_alertas_historico(
+    date_from: str = "",
+    date_to: str = "",
+    categorias: str = "",
+    prociv: str = "todos",
+    limit: int = 500
+):
+    """Exploração histórica de alertas com filtros."""
+    from datetime import datetime, timezone
+    conn = await get_db()
+    try:
+        # Datas
+        try:
+            dt_from = datetime.strptime(date_from, "%d/%m/%Y %H:%M").replace(tzinfo=timezone.utc) if date_from else datetime(2020,1,1,tzinfo=timezone.utc)
+            dt_to   = datetime.strptime(date_to,   "%d/%m/%Y %H:%M").replace(tzinfo=timezone.utc) if date_to   else datetime.now(timezone.utc)
+        except:
+            dt_from = datetime(2020,1,1,tzinfo=timezone.utc)
+            dt_to   = datetime.now(timezone.utc)
+
+        conditions = ["a.criado_em >= $1", "a.criado_em <= $2"]
+        params = [dt_from, dt_to]
+        idx = 3
+
+        # Categorias
+        if categorias:
+            cats = [c.strip().upper() for c in categorias.split(",") if c.strip()]
+            if cats:
+                placeholders = ",".join(f"${i+idx}" for i in range(len(cats)))
+                conditions.append(f"a.categoria IN ({placeholders})")
+                params.extend(cats)
+                idx += len(cats)
+
+        # PROCIV
+        if prociv == "sim":
+            conditions.append("a.prociv_id IS NOT NULL")
+        elif prociv == "nao":
+            conditions.append("a.prociv_id IS NULL")
+
+        where = "WHERE " + " AND ".join(conditions)
+
+        rows = await conn.fetch(f"""
+            SELECT a.id, ST_X(a.geom) AS lon, ST_Y(a.geom) AS lat,
+                   a.score, a.categoria, a.source_tag,
+                   a.temp, a.humidade, a.vento_vel, a.vento_dir, a.fwi,
+                   a.risco_estrutural, a.criado_em,
+                   a.vegetacao_tipo,
+                   h.source AS hotspot_source,
+                   p.id IS NOT NULL AS prociv_confirmado,
+                   a.localidade_estimada,
+                   a.effis_fwi, a.effis_ranking, a.effis_anomaly
+            FROM alertas a
+            LEFT JOIN hotspots h ON h.id = a.hotspot_id
+            LEFT JOIN ocorrencias_prociv p ON p.id = a.prociv_id
+            {where}
+            ORDER BY a.criado_em DESC LIMIT {limit}
+        """, *params)
+
+        features = []
+        for r in rows:
+            features.append({{
+                "type": "Feature",
+                "geometry": {{"type": "Point", "coordinates": [r["lon"], r["lat"]]}},
+                "properties": {{
+                    "id": r["id"], "score": float(r["score"]),
+                    "categoria": r["categoria"], "source_tag": r["source_tag"],
+                    "hotspot_source": r["hotspot_source"],
+                    "prociv_confirmado": bool(r["prociv_confirmado"]),
+                    "localidade_estimada": r.get("localidade_estimada"),
+                    "vegetacao_tipo": r.get("vegetacao_tipo"),
+                    "meteo": {{
+                        "temp": float(r["temp"]) if r["temp"] and float(r["temp"]) > -99 else None,
+                        "humidade": float(r["humidade"]) if r["humidade"] and float(r["humidade"]) > -99 else None,
+                        "vento_vel": float(r["vento_vel"]) if r["vento_vel"] and float(r["vento_vel"]) > -99 else None,
+                        "vento_dir": float(r["vento_dir"]) if r["vento_dir"] is not None else None,
+                        "fwi": float(r["fwi"]) if r["fwi"] is not None and float(r["fwi"]) >= 0 else None,
+                    }},
+                    "risco_estrutural": float(r["risco_estrutural"]) if r["risco_estrutural"] else None,
+                    "effis": {{
+                        "fwi": float(r["effis_fwi"]) if r.get("effis_fwi") else None,
+                        "ranking": float(r["effis_ranking"]) if r.get("effis_ranking") else None,
+                        "anomaly": float(r["effis_anomaly"]) if r.get("effis_anomaly") else None,
+                    }},
+                    "criado_em": r["criado_em"].isoformat(),
+                }}
+            }})
+        return {{"type": "FeatureCollection", "features": features, "count": len(features)}}
+    finally:
+        await conn.close()
+
 @app.get("/api/alertas/{alerta_id}")
 async def get_alerta(alerta_id: int):
     conn = await get_db()

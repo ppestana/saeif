@@ -54,6 +54,40 @@
       font-weight:700;cursor:pointer;letter-spacing:.05em;margin-top:.5rem;}
     .exp-btn:hover{opacity:.85;}
     .exp-err{font-size:11px;color:var(--fire);margin-top:.4rem;display:none;}
+    /* Modal histórico */
+    .hist-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2500;
+      display:none;align-items:center;justify-content:center;padding:1rem;}
+    .hist-overlay.open{display:flex;}
+    .hist-panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+      width:min(520px,96vw);padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+    .hist-title{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;
+      color:var(--amber);margin-bottom:1.2rem;}
+    .hist-field{margin-bottom:.85rem;}
+    .hist-label{font-size:11px;color:var(--dim);font-family:'IBM Plex Mono',monospace;
+      text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:.3rem;}
+    .hist-row{display:flex;gap:.5rem;align-items:center;}
+    .hist-input{background:var(--card);border:1px solid var(--border);color:var(--text);
+      padding:.45rem .7rem;border-radius:2px;font-size:13px;font-family:'IBM Plex Mono',monospace;
+      width:100%;box-sizing:border-box;}
+    .hist-input:focus{outline:none;border-color:var(--amber);}
+    .hist-cat-group{display:flex;gap:.4rem;flex-wrap:wrap;}
+    .hist-cat-btn{padding:.3rem .7rem;border-radius:2px;border:1px solid var(--border);
+      background:var(--card);color:var(--dim);font-size:11px;font-family:'IBM Plex Mono',monospace;
+      cursor:pointer;transition:all .15s;}
+    .hist-cat-btn.active{border-color:var(--amber);color:var(--amber);background:rgba(210,153,34,.1);}
+    .hist-cat-btn.cat-CRITICO.active{border-color:#f85149;color:#f85149;background:rgba(248,81,73,.1);}
+    .hist-cat-btn.cat-ALTO.active{border-color:#e3812a;color:#e3812a;background:rgba(227,129,42,.1);}
+    .hist-cat-btn.cat-MEDIO.active{border-color:#d29922;color:#d29922;background:rgba(210,153,34,.1);}
+    .hist-cat-btn.cat-BAIXO.active{border-color:#3fb950;color:#3fb950;background:rgba(63,185,80,.1);}
+    .hist-prociv-group{display:flex;gap:.4rem;}
+    .hist-btn{width:100%;background:var(--amber);color:#0d1117;border:none;padding:.7rem;
+      border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+      font-weight:700;cursor:pointer;letter-spacing:.05em;margin-top:.5rem;}
+    .hist-btn:hover{opacity:.85;}
+    .hist-mode-bar{display:none;background:rgba(210,153,34,.15);border-bottom:1px solid var(--amber);
+      padding:.4rem 1rem;font-size:11px;color:var(--amber);font-family:'IBM Plex Mono',monospace;
+      align-items:center;justify-content:space-between;}
+    .hist-mode-bar.visible{display:flex;}
     .ws-indicator{display:flex;align-items:center;gap:.3rem;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);}
     .ws-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:background .3s;flex-shrink:0;}
     .ws-dot.live{background:var(--green);animation:pulse 2s infinite;}
@@ -268,6 +302,7 @@
         <span class="sat-name" id="satName">--</span>
         <span class="sat-time" id="satCountdown">--:--:--</span>
       </div>
+      <button class="btn-refresh" onclick="openHistoricoModal()" title="Exploração histórica" style="background:#1a1a2e;border-color:#8b949e;color:#8b949e">🕐 Histórico</button>
       <button class="btn-refresh" onclick="openExportModal()" title="Exportar dados CSV" style="background:#1a2e1a;border-color:var(--amber);color:var(--amber)">⬇ CSV</button>
       <button class="layers-btn" onclick="toggleLayersPanel()" title="Camadas">&#9741; Camadas</button>
       <button class="btn-refresh" onclick="document.getElementById('subOverlay').classList.add('open');setTimeout(()=>{if(subMap)subMap.invalidateSize();else initSubMap();},200)" title="Subscrever alertas" style="background:#3d1f1e;border-color:#f85149;color:#f85149">🔔</button>
@@ -295,7 +330,11 @@
       </div>
       <div class="sidebar-content" id="sidebarContent"></div>
     </div>
-    <div id="map"></div>
+    <div class="hist-mode-bar" id="histModeBar">
+    <span id="histModeLabel">Modo histórico activo</span>
+    <button onclick="closeHistoricoMode()" style="background:none;border:1px solid var(--amber);color:var(--amber);padding:.2rem .6rem;border-radius:2px;font-size:11px;cursor:pointer">✕ Voltar ao tempo real</button>
+  </div>
+  <div id="map"></div>
 
     <!-- Painel de camadas -->
     <div class="layers-panel" id="layersPanel">
@@ -964,6 +1003,118 @@ function toast(msg,isFire=false){
   setInterval(loadStatus,5*60*1000);
 })();
 
+
+// ── Exploração Histórica ──────────────────────────────────────────────────────
+let histProciv = 'todos';
+let histLayer = L.layerGroup();
+let histMode = false;
+
+function openHistoricoModal() {
+  const now = new Date();
+  const from = new Date(now - 7 * 24 * 3600 * 1000);
+  document.getElementById('histDateFrom').value = from.toISOString().slice(0,16);
+  document.getElementById('histDateTo').value = now.toISOString().slice(0,16);
+  document.getElementById('histOverlay').classList.add('open');
+}
+
+function closeHistoricoModal() {
+  document.getElementById('histOverlay').classList.remove('open');
+}
+
+function toggleHistCat(btn) {
+  btn.classList.toggle('active');
+}
+
+function setHistProciv(val, btn) {
+  histProciv = val;
+  ['histProcivTodos','histProcivSim','histProcivNao'].forEach(id =>
+    document.getElementById(id).classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function closeHistoricoMode() {
+  histMode = false;
+  histLayer.clearLayers();
+  if(map.hasLayer(histLayer)) map.removeLayer(histLayer);
+  document.getElementById('histModeBar').classList.remove('visible');
+  // Restaurar alertas em tempo real
+  loadAlerts();
+  loadHotspots();
+}
+
+async function aplicarHistorico() {
+  const from = document.getElementById('histDateFrom').value;
+  const to   = document.getElementById('histDateTo').value;
+  if(!from || !to) return;
+
+  // Formatar datas para dd/mm/yyyy hh:mm
+  const fmtDT = s => {
+    const d = new Date(s);
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  };
+
+  // Categorias activas
+  const cats = [...document.querySelectorAll('.hist-cat-btn[data-cat].active')]
+    .map(b => b.dataset.cat).join(',');
+
+  const params = new URLSearchParams({
+    date_from: fmtDT(from),
+    date_to:   fmtDT(to),
+    categorias: cats,
+    prociv: histProciv,
+    limit: 500
+  });
+
+  closeHistoricoModal();
+
+  try {
+    const r = await fetch('/api/alertas/historico?' + params);
+    const gj = await r.json();
+
+    // Limpar camada histórica anterior
+    histLayer.clearLayers();
+    if(!map.hasLayer(histLayer)) histLayer.addTo(map);
+
+    // Esconder alertas actuais
+    if(map.hasLayer(alertLayer)) map.removeLayer(alertLayer);
+
+    // Renderizar resultados
+    gj.features.forEach(f => {
+      const p = f.properties;
+      const cat = p.categoria || 'BAIXO';
+      const colors = {CRITICO:'#f85149',ALTO:'#e3812a',MEDIO:'#d29922',BAIXO:'#3fb950'};
+      const c = colors[cat] || '#888';
+      const m = L.circleMarker([f.geometry.coordinates[1], f.geometry.coordinates[0]], {
+        radius: 8, fillColor: c, color: '#fff', weight: 1,
+        fillOpacity: 0.85, opacity: 0.9
+      });
+      m.on('click', () => showAlertPopup(p));
+      histLayer.addLayer(m);
+    });
+
+    // Barra de modo histórico
+    histMode = true;
+    const fromD = new Date(from).toLocaleDateString('pt-PT');
+    const toD   = new Date(to).toLocaleDateString('pt-PT');
+    document.getElementById('histModeLabel').textContent =
+      `Modo histórico · ${gj.count} alertas · ${fromD} → ${toD}`;
+    document.getElementById('histModeBar').classList.add('visible');
+
+    // Ajustar mapa se houver resultados
+    if(gj.features.length > 0) {
+      const bounds = histLayer.getBounds();
+      if(bounds.isValid()) map.fitBounds(bounds, {padding:[30,30]});
+    }
+  } catch(e) {
+    console.error('Histórico:', e);
+  }
+}
+
 // ── Contador de satélites ─────────────────────────────────────────────────────
 let satPasses = [];
 let satCounterInterval = null;
@@ -1262,6 +1413,51 @@ function showSubMsg(text,type){
   el.textContent=text;el.className='sub-msg '+type;el.style.display='block';
 }
 </script>
+  <!-- Modal Histórico -->
+  <div class="hist-overlay" id="histOverlay" onclick="if(event.target===this)closeHistoricoModal()">
+    <div class="hist-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="hist-title">🕐 Exploração Histórica</div>
+        <button class="help-close" onclick="closeHistoricoModal()">✕</button>
+      </div>
+
+      <div class="hist-field">
+        <span class="hist-label">Período</span>
+        <div class="hist-row">
+          <div style="flex:1">
+            <span class="hist-label" style="font-size:10px">Desde</span>
+            <input class="hist-input" type="datetime-local" id="histDateFrom">
+          </div>
+          <div style="flex:1">
+            <span class="hist-label" style="font-size:10px">Até</span>
+            <input class="hist-input" type="datetime-local" id="histDateTo">
+          </div>
+        </div>
+      </div>
+
+      <div class="hist-field">
+        <span class="hist-label">Categoria</span>
+        <div class="hist-cat-group">
+          <button class="hist-cat-btn cat-CRITICO active" data-cat="CRITICO" onclick="toggleHistCat(this)">CRÍTICO</button>
+          <button class="hist-cat-btn cat-ALTO active" data-cat="ALTO" onclick="toggleHistCat(this)">ALTO</button>
+          <button class="hist-cat-btn cat-MEDIO active" data-cat="MEDIO" onclick="toggleHistCat(this)">MÉDIO</button>
+          <button class="hist-cat-btn cat-BAIXO active" data-cat="BAIXO" onclick="toggleHistCat(this)">BAIXO</button>
+        </div>
+      </div>
+
+      <div class="hist-field">
+        <span class="hist-label">Confirmação PROCIV</span>
+        <div class="hist-prociv-group">
+          <button class="hist-cat-btn active" id="histProcivTodos" onclick="setHistProciv('todos',this)">Todos</button>
+          <button class="hist-cat-btn" id="histProcivSim" onclick="setHistProciv('sim',this)">Confirmados</button>
+          <button class="hist-cat-btn" id="histProcivNao" onclick="setHistProciv('nao',this)">Não confirmados</button>
+        </div>
+      </div>
+
+      <button class="hist-btn" onclick="aplicarHistorico()">🔍 Pesquisar</button>
+    </div>
+  </div>
+
   <!-- Modal Exportação CSV -->
   <div class="exp-overlay" id="expOverlay" onclick="if(event.target===this)closeExportModal()">
     <div class="exp-panel">
