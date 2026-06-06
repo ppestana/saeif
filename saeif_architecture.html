@@ -535,7 +535,7 @@
       </div>
 
       <h3>Posicionamento no ecossistema de sistemas</h3>
-      <p>O SAEIF é o Sistema 4 num conjunto de 5 sistemas complementares para a prevenção e combate a incêndios florestais. Na arquitectura de integração global, é o sistema de saída operacional: recebe dados processados dos sistemas 1 (SIGCRF — cadastro) e 3 (SMRIP — modelação de risco) e produz alertas para o CDOS/AGIF e para os corpos de bombeiros.</p>
+      <p>O SAEIF é o Sistema 4 num conjunto de 5 sistemas complementares para a prevenção e combate a incêndios florestais. Na arquitectura de integração global, é o sistema de saída operacional: recebe dados processados dos sistemas 1 (SIGCRF — cadastro) e 3 (SMRIP — modelação de risco) e <strong>informa</strong> o CDOS/AGIF e os corpos de bombeiros. O SAEIF é um sistema de informação e alerta — não emite ordens operacionais nem substitui os sistemas de comando e controlo institucionais.</p>
 
       <div class="arch-box">www.terradigital.net              ← Landing page (carousel + newsletter)
 │
@@ -979,7 +979,7 @@ score = (
       </div>
 
       <div class="alert alert-amber">
-        <strong>Limitação do PoC:</strong> Os pesos do score são provisórios e devem ser calibrados com dados históricos ICNF (área ardida real vs score calculado) numa fase posterior. O sistema não deve ser usado para decisões operacionais reais sem validação formal.
+        <strong>Nota de actualização do schema:</strong> A tabela <code>alertas</code> foi actualizada em Jun 2026 com as colunas <code>vegetacao_tipo VARCHAR(50)</code> (tipo de cobertura WorldCover), <code>effis_fwi</code>, <code>effis_ranking</code> e <code>effis_anomaly</code>. A tabela <code>areas_ardidas</code> foi criada em Jun 2026 com 5018 polígonos ICNF 2020–2025 e índice GIST.<br><br><strong>Limitação actual:</strong> Os pesos do score são provisórios. A calibração com dados históricos ICNF (área ardida real vs score calculado) está prevista para 2027, após acumulação de pelo menos uma época de incêndios completa com dados operacionais. O sistema não deve ser usado para decisões operacionais reais sem validação formal.
       </div>
     </div>
   </div>
@@ -1021,7 +1021,7 @@ score = (
       </div>
 
       <div class="alert alert-blue" style="margin-top: .5rem;">
-        <strong>Estado actual do PoC:</strong> As integrações com SIGCRF, SMRIP e SGIF são <em>futuras</em>. O PoC implementa apenas FIRMS + IPMA + fogos.pt, que são suficientes para demonstrar o fluxo operacional completo e validar a arquitectura.
+        <strong>Estado actual:</strong> As integrações com SIGCRF, SMRIP e SGIF são <em>futuras sem calendário definido</em>, dependentes de acordos institucionais com AGIF e ICNF. O sistema implementa actualmente FIRMS + IPMA + fogos.pt + EFFIS + ESA WorldCover + Copernicus DEM + Sentinel-2 NDVI + áreas ardidas ICNF, que são suficientes para demonstrar o fluxo operacional completo. A integração SGIF, em particular, requer acesso formal ao sistema operado pela AGIF — não há calendário previsto sem esse acordo.
       </div>
     </div>
   </div>
@@ -1168,9 +1168,9 @@ score = (
         <div class="phase">
           <div class="phase-num">4</div>
           <div class="phase-content">
-            <div class="phase-title">Fase 4 — Enriquecimento geoespacial</div>
+            <div class="phase-title">Fase 4 — Enriquecimento geoespacial <span style="color:var(--green);font-size:11px">(parcialmente concluída)</span></div>
             <div class="phase-desc">
-              Risco estrutural por ponto via CORINE Land Cover (raster lookup) · NDVI Sentinel-2 cacheado · Refinamento do score com pesos calibrados contra histórico ICNF · Propagação estimada simplificada (buffer direccionado pelo vento)
+              Risco estrutural WorldCover + NDVI Sentinel-2 + declive EU-DEM (✓ concluído Jun 2026) · Áreas ardidas ICNF 2020–2025 integradas no score (✓ concluído Jun 2026) · Propagação estimada via elipse de vento (✓ concluído) · Refinamento dos pesos com calibração contra histórico ICNF — previsto 2027, dependente de acumulação de dados operacionais · Integração SMRIP — dependente de acordo institucional AGIF
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Pendente</div>
@@ -1178,9 +1178,9 @@ score = (
         <div class="phase">
           <div class="phase-num">5</div>
           <div class="phase-content">
-            <div class="phase-title">Fase 5 — Artigo técnico + integrações futuras</div>
+            <div class="phase-title">Fase 5 — Artigo técnico + integrações futuras <span style="color:var(--green);font-size:11px">(parcialmente concluída)</span></div>
             <div class="phase-desc">
-              Paper técnico EN+PT para pedropestana.com · Integração SMRIP (quando disponível) · Integração SGIF · Notificações push via Firebase · Versão mobile React Native
+              Paper técnico EN+PT publicado em pedropestana.com em Jun 2026 (✓ concluído) · Integração SMRIP — dependente de acordo institucional AGIF, sem calendário · Integração SGIF — idem · Notificações push via Firebase — previstas · Versão mobile React Native — prevista
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Futuro</div>
@@ -1299,7 +1299,7 @@ fire_risk = (
       </div>
 
       <div class="alert alert-blue" style="margin-top: 1rem;">
-        <strong>Decisão de arquitectura para o PoC:</strong> Usar a <strong>Opção B</strong> (GeoJSON simplificado). Evita a complexidade de um container GeoServer adicional. O GeoJSON de risco é gerado uma vez pelo script <code>risk_raster.py</code> e servido como ficheiro estático ou endpoint FastAPI. A transição para WMS (Opção A) fica reservada para quando o SMRIP estiver disponível.
+        <strong>Decisão de arquitectura para o PoC:</strong> Usar a <strong>Opção B</strong> (GeoJSON simplificado). Evita a complexidade de um container GeoServer adicional. O GeoJSON de risco é gerado uma vez pelo script <code>risk_raster.py</code> e servido como ficheiro estático ou endpoint FastAPI. A transição para WMS (Opção A) fica reservada para quando o SMRIP estiver disponível — o que depende de acordo institucional com a AGIF, sem calendário definido.
       </div>
 
       <h3>Paleta de cores — 5 classes de risco</h3>
