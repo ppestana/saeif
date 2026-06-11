@@ -159,6 +159,22 @@ async def run_ingest_cycle():
         log.info(f"Dedup: {len(pares)} pares FIRMS x PROCIV")
         alertas_novos = await gerar_alertas(conn, pares, meteo)
         log.info(f"Alertas gerados: {len(alertas_novos)}")
+
+        # --- SENTINELA (camada leve) ---
+        # Se entrou matéria-prima significativa (hotspot FRP alto) mas
+        # nao saiu nenhum alerta, o ciclo e anomalo: regista 'warning'.
+        # Foi exactamente este o sintoma silencioso do bug do INSERT.
+        FRP_SENTINELA = 10.0
+        cycle_status = "ok"
+        if len(alertas_novos) == 0 and any(
+            (par.get("frp") or 0) >= FRP_SENTINELA for par in pares
+        ):
+            frp_max = max((par.get("frp") or 0) for par in pares)
+            cycle_status = "warning"
+            log.warning(
+                f"SENTINELA: {len(pares)} hotspots (FRP max {frp_max:.1f}) "
+                f"mas 0 alertas gerados — possivel falha silenciosa."
+            )
         if alertas_novos:
             await ws_manager.broadcast({
                 "type": "alertas_update",
@@ -168,8 +184,43 @@ async def run_ingest_cycle():
             })
         await conn.execute("""
             INSERT INTO ingest_log (source, started_at, ended_at, status, records_new)
-            VALUES ('CYCLE', $1, $2, 'ok', $3)
-        """, started, datetime.now(timezone.utc), len(alertas_novos))
+            VALUES ('CYCLE', $1, $2, $3, $4)
+        """, started, datetime.now(timezone.utc), cycle_status, len(alertas_novos))
+
+        # --- SENTINELA (camada robusta) ---
+        # Diagnostico transversal: conta fogos significativos (FRP alto) que
+        # ficaram SEM qualquer alerta nas ultimas horas. Varios orfaos =
+        # fuga sistemica (o sintoma acumulado do bug do INSERT). So regista.
+        SENT_JANELA_H = 6
+        SENT_FRP = 10.0
+        SENT_LIMIAR = 3
+        SENT_RAIO_M = 2000  # coerente com o raio de dedup (2km)
+        try:
+            # Orfao = hotspot FRP alto SEM nenhum alerta na vizinhanca (raio),
+            # nao "sem alerta com este hotspot_id exacto". Alinha com a dedup.
+            orfao = await conn.fetchrow("""
+                SELECT count(*) AS n, COALESCE(max(h.frp), 0) AS frp_max
+                FROM hotspots h
+                WHERE h.fetched_at > now() - ($1 || ' hours')::interval
+                  AND h.frp >= $2
+                  AND NOT EXISTS (
+                      SELECT 1 FROM alertas a
+                      WHERE a.criado_em > now() - ($1 || ' hours')::interval
+                        AND ST_DWithin(a.geom::geography, h.geom::geography, $3)
+                  )
+            """, str(SENT_JANELA_H), SENT_FRP, SENT_RAIO_M)
+            n_orfaos = orfao["n"] if orfao else 0
+            if n_orfaos >= SENT_LIMIAR:
+                msg = (f"{n_orfaos} hotspots FRP>={SENT_FRP:.0f} sem alerta na "
+                       f"vizinhanca (2km) nas ultimas {SENT_JANELA_H}h "
+                       f"(FRP max {orfao['frp_max']:.1f})")
+                log.error(f"SENTINELA ROBUSTA: {msg}")
+                await conn.execute("""
+                    INSERT INTO ingest_log (source, started_at, ended_at, status, error_msg)
+                    VALUES ('SENTINELA', $1, $2, 'warning', $3)
+                """, started, datetime.now(timezone.utc), msg)
+        except Exception as e:
+            log.error(f"Erro na sentinela robusta: {e}")
     except Exception as e:
         log.error(f"Erro no ciclo de ingest: {e}")
         await conn.execute("""

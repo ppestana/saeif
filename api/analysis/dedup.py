@@ -39,8 +39,7 @@ async def dedup_hotspots(conn):
             "prociv_distrito": prociv["distrito"] if prociv else None,
             "dist_prociv_m": float(prociv["dist_m"]) if prociv else None,
         })
-        await conn.execute(
-            "UPDATE hotspots SET processed = TRUE WHERE id = $1", h["id"]
-        )
+        # NOTA: processed=TRUE passou para gerar_alertas (apos sucesso).
+        # Marcar aqui causava perda permanente de hotspots se o INSERT falhasse.
     log.info(f"Dedup: {len(pares)} hotspots, {sum(1 for p in pares if p['prociv_confirmado'])} confirmados PROCIV")
     return pares

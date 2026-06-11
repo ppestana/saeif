@@ -1,3 +1,8 @@
 data/
 __pycache__/
-*.pyc
+**/*.pyc
+**/*.bak
+**/*.prebuild-*
+.git/
+.env
+*.md

@@ -9,6 +9,12 @@ log = logging.getLogger("saeif.alerts")
 
 async def gerar_alertas(conn, pares, meteo_data):
     alertas_gerados = []
+
+    async def _marcar_processed(hid):
+        if hid is not None:
+            await conn.execute(
+                "UPDATE hotspots SET processed = TRUE WHERE id = $1", hid
+            )
     for par in pares:
         hotspot_id = par.get("hotspot_id")
         lat = par.get("lat")
@@ -17,6 +23,7 @@ async def gerar_alertas(conn, pares, meteo_data):
             "SELECT id FROM alertas WHERE hotspot_id = $1", hotspot_id
         )
         if existing:
+            await _marcar_processed(hotspot_id)
             continue
         # Deduplicacao entre satélites: nao gerar alerta se ja existe um
         # para o mesmo foco (raio 2km) nas ultimas 2 horas
@@ -28,6 +35,7 @@ async def gerar_alertas(conn, pares, meteo_data):
         """, lon, lat)
         if nearby:
             log.info(f"Alerta duplicado ignorado (raio 2km): lat={lat:.3f} lon={lon:.3f}")
+            await _marcar_processed(hotspot_id)
             continue
         meteo = get_nearest_meteo(lat, lon, meteo_data) if meteo_data else {}
         area_factor = await get_area_ardida_factor(conn, lat, lon)
@@ -71,6 +79,7 @@ meteo.get("fwi"), risco_estrutural, vegetacao_tipo, localidade_estimada,
                 "risco_estrutural": risco_estrutural,
             })
             log.info(f"Alerta {alerta_id}: score={score} cat={categoria} lat={lat:.3f} lon={lon:.3f}")
+            await _marcar_processed(hotspot_id)
         except Exception as e:
             log.error(f"Erro a inserir alerta hotspot {hotspot_id}: {e}")
     return alertas_gerados

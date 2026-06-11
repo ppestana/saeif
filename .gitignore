@@ -6,3 +6,7 @@ __pycache__/
 .DS_Store
 api/data/*.tif
 api/data/*.geojson
+*.bak
+*.prebuild-*
+FETCH_HEAD
+data/
