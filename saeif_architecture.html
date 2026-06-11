@@ -1845,6 +1845,28 @@ SQL</code></pre>
     </ul>
     <p>Parâmetros actuais da sentinela (em <code>main.py</code>): <code>SENT_JANELA_H=6</code>, <code>SENT_FRP=10.0</code>, <code>SENT_LIMIAR=3</code>, <code>SENT_RAIO_M=2000</code>. Alterá-los exige <code>build</code> + <code>up</code> (ver 15.5).</p>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.9 — Verificação Rápida de Saúde do SAEIF</h3>
+    <p>Quando houver dúvida sobre se o SAEIF está a falhar fogos reais (ex.: discrepância com fogos.pt), seguir os três níveis por ordem.</p>
+    <p><strong>Nível 1 — A sentinela disparou?</strong> (consulta passiva; a sentinela regista sozinha)</p>
+    <pre><code>cd /srv/saeif
+docker compose exec -T db psql -U saeif -d saeif -c \
+"SELECT started_at, source, status, error_msg FROM ingest_log \
+WHERE status='warning' ORDER BY started_at DESC LIMIT 10;"</code></pre>
+    <p><strong>Nível 2 — Há hotspots FRP alto sem alerta?</strong> (teste directo; vazio = saudável)</p>
+    <pre><code>cd /srv/saeif
+docker compose exec -T db psql -U saeif -d saeif &lt;&lt; 'SQL'
+SELECT h.id, h.source, h.frp, h.acq_date, h.acq_time, h.processed,
+       ST_Y(h.geom) AS lat, ST_X(h.geom) AS lon
+FROM hotspots h
+LEFT JOIN alertas a ON a.hotspot_id = h.id
+WHERE a.id IS NULL
+  AND h.fetched_at &gt; now() - interval '24 hours'
+  AND h.frp &gt;= 10.0
+ORDER BY h.frp DESC;
+SQL</code></pre>
+    <p><strong>Nível 3 — Os órfãos são fuga real ou dedup legítima?</strong> Usar a query de calibração da secção 15.8 (coluna <code>alerta_ha_horas</code>).</p>
+    <p>Se o Nível 2 devolver órfãos confirmados como fuga real: reactivar com <code>UPDATE hotspots SET processed=FALSE WHERE id IN (...)</code> e disparar o ciclo (<code>curl -s -X POST http://127.0.0.1:8000/api/ingest/trigger</code>).</p>
+
   </div>
 </div><!-- /container -->
 </body>
