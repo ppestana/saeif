@@ -22,7 +22,7 @@ async def dedup_hotspots(conn):
                                ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS dist_m
             FROM ocorrencias_prociv
             WHERE geom IS NOT NULL
-              AND fetched_at > NOW() - INTERVAL '2 hours'
+              AND fetched_at > NOW() - INTERVAL '24 hours'
               AND ST_DWithin(geom::geography,
                              ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
             ORDER BY dist_m ASC LIMIT 1

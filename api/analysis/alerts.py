@@ -51,7 +51,7 @@ async def gerar_alertas(conn, pares, meteo_data):
                 )
                 VALUES (
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
                 )
                 RETURNING id
             """, lon, lat, hotspot_id, par.get("prociv_id"),
