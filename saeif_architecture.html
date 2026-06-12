@@ -1101,6 +1101,30 @@ score = (
       <div class="alert alert-green">
         <strong>Padrão de deployment:</strong> Segue o padrão estabelecido pelo CAL em <code>/srv/cal</code> — Dockerfile Python 3.12-slim, expose interno apenas, Nginx como reverse proxy. Distinção key: o SAEIF usa um único container (FastAPI serve tudo — API, WebSocket e frontend estático), enquanto o CAL usa dois (Streamlit separado). O suporte a WebSocket no bloco Nginx é obrigatório.
       </div>
+
+      <h3 style="margin-top:1.5rem">Mapa de portas PostgreSQL no servidor (88.198.95.103)</h3>
+      <p style="margin-bottom:.5rem">Vários serviços coabitam no servidor, cada um com a sua base de dados. Para evitar colisões ao expor portas ao host, regista-se a atribuição:</p>
+      <table>
+        <thead>
+          <tr><th>Porta (host)</th><th>Serviço</th><th>Base de dados</th><th>Notas</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>127.0.0.1:5432</code></td><td>EconoStats</td><td>PostgreSQL nativo</td><td>Não-Docker; instalado no host</td></tr>
+          <tr><td><code>127.0.0.1:5433</code></td><td>Ponte Digital</td><td><code>pd_db</code> (container)</td><td>docker-proxy</td></tr>
+          <tr><td><code>127.0.0.1:5434</code></td><td>SAEIF</td><td><code>saeif_db</code> (container)</td><td>Exposto só em localhost para permitir <code>pg_dump</code> de backup a partir do host</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:1.5rem">Sistema de backup da base de dados</h3>
+      <p style="margin-bottom:.5rem">Dois níveis independentes protegem os dados:</p>
+      <table>
+        <tbody>
+          <tr><td>Nível 1 — Hetzner</td><td>Backups automáticos do servidor (snapshots diários, retenção 7 dias). Recuperam a máquina completa, incluindo BD e imagens Docker. Geridos na consola Hetzner Cloud.</td></tr>
+          <tr><td>Nível 2 — pg_dump local</td><td>Script <code>scripts/backup_saeif.sh</code> (também em <code>/usr/local/bin/</code>). Dump comprimido <code>pg_dump | gzip</code> via TCP <code>127.0.0.1:5434</code> — <strong>independente do Docker CLI</strong>, por decisão deliberada (não usa <code>docker compose exec</code>, evitando depender do comportamento do Docker para a salvaguarda). Espelhado no padrão do EconoStats.</td></tr>
+          <tr><td>Agendamento</td><td>Cron diário às 02:30 (EconoStats às 02:00, sem colisão de I/O). Retenção 7 dias (<code>-mtime +7 -delete</code>).</td></tr>
+          <tr><td>Localização</td><td>Dumps em <code>/var/backups/saeif/</code>; log em <code>/var/log/saeif/backup.log</code>. Credenciais lidas do <code>.env</code> (não versionadas).</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -1664,6 +1688,12 @@ fire_risk = (
           <tr>
             <td><strong>Enriquecimento das ocorrências PROCIV</strong></td>
             <td>A ficha de ocorrência PROCIV passou a mostrar três secções: <strong>Meios no Terreno</strong> (operacionais, viaturas, meios aéreos/aquáticos), <strong>Caracterização</strong> (natureza, estado com cor, prioridade) e <strong>Contexto</strong> (freguesia, região, local, fonte do alerta, despacho). 13 colunas novas em <code>ocorrencias_prociv</code> (também adicionadas ao <code>CREATE TABLE</code> declarativo). O pipeline <code>fogos.py</code> passou de só-inserir para <strong>UPSERT</strong> (<code>ON CONFLICT (external_id) DO UPDATE</code>), o que capta agora as mudanças de estado das ocorrências (Despacho → Em Curso → Vigilância → Conclusão), antes ignoradas. Cada campo só aparece na ficha quando tem valor — ocorrências incompletas na fonte mostram menos. Ocorrências sem FRP por natureza (não vêm de satélite). Implementado em 12 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>12 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Backup automático da BD + limpeza de disco</strong></td>
+            <td>Sistema de backup da base de dados SAEIF espelhado no do EconoStats: <code>scripts/backup_saeif.sh</code> faz <code>pg_dump | gzip</code> diário (cron 02:30, retenção 7 dias) via TCP <code>127.0.0.1:5434</code>, <strong>independente do Docker CLI</strong>. Exigiu expor a BD em localhost (mapa de portas registado na secção 9). Limpeza de ~12 GB de cache de build e imagens Docker órfãs (de 28 GB para 16 GB usados). Confirmados os backups automáticos da Hetzner como nível adicional. Implementado em 12 Jun 2026.</td>
             <td><span class="badge badge-done">✓ Concluído</span></td>
             <td>12 Jun 2026</td>
           </tr>
