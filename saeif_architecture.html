@@ -641,6 +641,13 @@
             <td><span class="badge badge-fire">Primária</span></td>
           </tr>
           <tr>
+            <td><strong>NASA FIRMS</strong><br><span class="dimtext">MODIS / Terra + Aqua</span></td>
+            <td>Hotspots de calor satelitares MODIS (resolução 1km, vs 375m do VIIRS). Cobertura temporal complementar — passagens em horas distintas dos VIIRS. Terra e Aqua agrupados como source <code>MODIS</code>. Confidence numérico (0–100).</td>
+            <td><code>MODIS_NRT</code></td>
+            <td>5–15 min (Near Real-Time)</td>
+            <td><span class="badge badge-fire">Primária</span></td>
+          </tr>
+          <tr>
             <td><strong>IPMA</strong><br><span class="dimtext">API oficial</span></td>
             <td>Temperatura, humidade, vento (dir + vel), FWI distrital</td>
             <td><code>api.ipma.pt/open-data</code></td>
@@ -1631,6 +1638,12 @@ fire_risk = (
           <tr>
             <td><strong>Ir para coordenadas</strong></td>
             <td>Botão "📍 Ir para" no header que aceita coordenadas coladas (ex.: do CSV NASA FIRMS) e centra o mapa no local com marcador + popup. Parsing robusto a ponto OU vírgula decimal e a separadores vírgula, espaço ou ponto-e-vírgula. Validação de limites (lat ±90, lon ±180). Função <code>abrirIrCoords()</code> em <code>index.html</code>. Implementado em 12 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>12 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Ingestão MODIS + filtro de satélites</strong></td>
+            <td>Adicionado o produto <code>MODIS_NRT</code> ao pipeline FIRMS (<code>firms.py</code>), captando focos Terra/Aqua (agrupados como source <code>MODIS</code>) que escapavam entre passagens VIIRS. O parsing já era compatível (fallback <code>brightness</code>). Sub-toggles por constelação (VIIRS/SNPP, NOAA-20, NOAA-21, MODIS) na secção "Detecção Satelitária" do menu Camadas, com filtro em <code>renderMapHotspots</code> via <code>state.satFiltro</code>. Terra (NORAD 25994) e Aqua (27424) adicionados ao contador de próximas passagens (<code>satellite.py</code>). Implementado em 12 Jun 2026.</td>
             <td><span class="badge badge-done">✓ Concluído</span></td>
             <td>12 Jun 2026</td>
           </tr>
