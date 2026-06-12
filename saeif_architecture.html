@@ -1782,6 +1782,91 @@ asyncio.run(fetch_ndvi(None))
     <h3 style="color:var(--fire);margin:2rem 0 1rem">15.4 — Renovação do API Key Resend</h3>
     <p>A chave <code>RESEND_API_KEY</code> no <code>/srv/saeif/.env</code> pertence à conta <code>subs@terradigital.net</code> no <a href="https://resend.com">Resend</a>. O domínio <code>terradigital.net</code> está verificado com DKIM + SPF via Namecheap. Em caso de rotação da chave, actualizar o <code>.env</code> e fazer rebuild da API.</p>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.5 — Workflow de Deploy (CRÍTICO) e Armadilhas Docker</h3>
+    <p><strong style="color:var(--fire)">Regra fundamental:</strong> o código da API <strong>vive dentro da imagem Docker</strong> (o <code>Dockerfile</code> usa <code>COPY . .</code>), <strong>não</strong> num volume montado. O único volume é <code>/srv/saeif/data&nbsp;→&nbsp;/data</code>. Consequência: editar ficheiros <code>.py</code> em <code>/srv/saeif/api/</code> no host <strong>não tem qualquer efeito no contentor</strong> até a imagem ser reconstruída. Um <code>docker compose restart</code> recarrega a <em>mesma imagem antiga</em>.</p>
+    <p>O comando de deploy correcto, após qualquer alteração de código, é sempre:</p>
+    <pre><code># Servidor Hetzner — deploy de alteracoes de codigo
+cd /srv/saeif
+docker compose build api &amp;&amp; docker compose up -d api</code></pre>
+    <p>Verificar <em>sempre</em> que o código novo chegou ao contentor antes de assumir que o deploy funcionou (inspeccionar a imagem, não o host):</p>
+    <pre><code># Confirmar que uma alteracao esta DENTRO da imagem/contentor
+docker compose exec -T api grep -c "marca_da_alteracao" /app/main.py</code></pre>
+
+    <p style="margin-top:1.5rem"><strong>Três armadilhas de cache observadas (11 Jun 2026):</strong></p>
+    <ol style="line-height:1.7">
+      <li><strong>Bytecode <code>.pyc</code> obsoleto</strong> — o Python pode servir um <code>.pyc</code> em cache no <code>__pycache__</code> compilado de uma versão anterior do <code>.py</code>. Sintoma: o <code>.py</code> em disco está correcto mas o comportamento é o antigo. Mitigação: <code>docker compose exec -T api find /app -name __pycache__ -type d -exec rm -rf {} +</code> antes do restart (ou, melhor, fazer <code>build</code>, que recria tudo de raiz).</li>
+      <li><strong>Cache da layer <code>COPY . .</code></strong> — o Docker pode reutilizar a layer de cópia antiga e ignorar alterações ao <code>.dockerignore</code>. Mitigação quando o <code>.dockerignore</code> muda: <code>docker compose build --no-cache api</code>, ou confirmar pela dimensão do <em>build context</em> que o conteúdo mudou.</li>
+      <li><strong>Padrões <code>.dockerignore</code> não-recursivos</strong> — um padrão como <code>*.bak</code> só casa ficheiros na <em>raiz</em> do contexto, <strong>não</strong> em subdirectórios. Para excluir em qualquer nível (ex.: <code>api/analysis/*.bak</code>) é obrigatório o prefixo <code>**/</code>: <code>**/*.bak</code>, <code>**/*.prebuild-*</code>.</li>
+    </ol>
+
+    <p style="margin-top:1.5rem"><strong>Fonte da verdade do Git:</strong> o repositório tem clones no Mac (<code>~/Downloads/saeif</code>) e no servidor (<code>/srv/saeif</code>). Fluxo normal: editar no Mac → <code>push</code> → no servidor <code>git pull</code> + <code>build</code>. Em <em>hotfix</em> de emergência editado directamente no servidor, comitar e fazer <code>push</code> daí e sincronizar o Mac com <code>git pull</code> a seguir, para evitar divergência.</p>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.6 — Sentinelas de Detecção de Falha Silenciosa</h3>
+    <p>Após um incidente em que um <code>INSERT</code> partido fez o sistema deixar de gerar alertas durante dias <em>sem qualquer erro visível</em> (o ciclo registava <code>status=ok</code> no <code>ingest_log</code>), foram adicionadas duas sentinelas em <code>main.py</code>, no fim de cada ciclo de ingestão. Parâmetros: <code>FRP&nbsp;≥&nbsp;10</code>, raio <code>2&nbsp;km</code> (coerente com a deduplicação), janela <code>6&nbsp;h</code>, limiar <code>≥&nbsp;3</code> órfãos.</p>
+    <ul style="line-height:1.7">
+      <li><strong>Camada leve</strong> (em memória, corre sempre): se o ciclo processou <code>pares&nbsp;&gt;&nbsp;0</code> mas gerou <code>0</code> alertas <em>e</em> havia pelo menos um hotspot de <code>FRP&nbsp;≥&nbsp;10</code>, regista <code>status='warning'</code> no <code>ingest_log</code> (em vez de <code>'ok'</code>).</li>
+      <li><strong>Camada robusta</strong> (query espacial): conta hotspots de <code>FRP&nbsp;≥&nbsp;10</code> das últimas 6h que <strong>não têm nenhum alerta na vizinhança de 2&nbsp;km</strong> (via <code>NOT EXISTS</code> + <code>ST_DWithin</code>). A verificação por <em>proximidade</em> — e não por <code>hotspot_id</code> exacto — é deliberada: alinha a sentinela com a deduplicação, evitando contar como «fuga» um hotspot legitimamente consolidado num alerta vizinho. Se a contagem <code>≥&nbsp;3</code>, escreve entrada <code>source='SENTINELA'</code>, <code>status='warning'</code> no <code>ingest_log</code>. Envolvida no seu próprio <code>try/except</code> para nunca derrubar o ciclo principal.</li>
+    </ul>
+    <p>Um <code>warning</code> da sentinela robusta significa <em>fogos significativos detectados sem alerta correspondente</em> — investigar de imediato. Diagnóstico habitual: hotspots marcados <code>processed=TRUE</code> mas sem alerta; reactivar com <code>UPDATE hotspots SET processed=FALSE</code> (FRP≥10, janela curta) para o ciclo corrigido os reprocessar.</p>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.7 — Regra do <code>processed</code> (não reintroduzir o bug)</h3>
+    <p>Um hotspot só deve ser marcado <code>processed=TRUE</code> <strong>após</strong> o seu destino estar selado com sucesso — alerta gerado, ou descartado legitimamente (duplicado / já existente). A marcação acontece em <code>alerts.py</code> (helper <code>_marcar_processed</code>), nos três pontos de saída, <strong>dentro</strong> do <code>try</code> do <code>INSERT</code> mas antes do <code>except</code>. Se o <code>INSERT</code> falhar, o hotspot fica <code>processed=FALSE</code> e volta ao ciclo seguinte. <strong>Nunca</strong> marcar <code>processed</code> em <code>dedup.py</code> (antes de o alerta existir): foi precisamente essa ordem que transformou uma falha de <code>INSERT</code> em perda permanente de dados.</p>
+    <p style="background:rgba(63,185,80,.08);border-left:3px solid var(--green);padding:.8rem 1rem;margin-top:1rem"><strong style="color:var(--green)">Validação empírica (11 Jun 2026):</strong> teste isolado em autocommit (com <em>savepoint</em>) confirmou que um <code>INSERT</code> falhado deixa o hotspot <code>processed=FALSE</code> e que <code>_marcar_processed</code> não corre. A regra está provada, não apenas assumida.</p>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.8 — Diagnóstico e Calibração da Sentinela (janela temporal)</h3>
+    <p>A sentinela robusta usa uma janela de <strong>6h</strong> tanto para hotspots como para alertas de cobertura. Questão em aberto, a validar com dados reais ao longo da época de incêndios: <em>um incêndio que dure mais de 6h pode gerar falso positivo</em>, se o alerta que o cobre tiver sido criado há mais de 6h (sai da janela) mas o fogo continuar a ser detectado. Quando a sentinela registar um <code>warning</code> em <code>ingest_log</code>, correr o diagnóstico abaixo <strong>antes</strong> de assumir fuga real:</p>
+    <pre><code># Servidor Hetzner — diagnostico da sentinela apos um warning
+cd /srv/saeif
+docker compose exec -T db psql -U saeif -d saeif &lt;&lt; 'SQL'
+SELECT h.id, h.frp, h.acq_time,
+       ROUND(EXTRACT(EPOCH FROM (now() - a_near.criado_em))/3600, 1) AS alerta_ha_horas,
+       ROUND(a_near.dist_m) AS alerta_dist_m
+FROM hotspots h
+LEFT JOIN LATERAL (
+    SELECT a.criado_em,
+           ST_Distance(a.geom::geography, h.geom::geography) AS dist_m
+    FROM alertas a
+    WHERE ST_DWithin(a.geom::geography, h.geom::geography, 5000)
+    ORDER BY a.criado_em DESC LIMIT 1
+) a_near ON true
+WHERE h.fetched_at &gt; now() - interval '6 hours'
+  AND h.frp &gt;= 10
+  AND NOT EXISTS (
+      SELECT 1 FROM alertas a
+      WHERE a.criado_em &gt; now() - interval '6 hours'
+        AND ST_DWithin(a.geom::geography, h.geom::geography, 2000)
+  )
+ORDER BY h.frp DESC;
+SQL</code></pre>
+    <p><strong>Critério de decisão</strong> a partir da coluna <code>alerta_ha_horas</code>:</p>
+    <ul style="line-height:1.7">
+      <li><strong>Nulo</strong> (não há alerta perto, mesmo no raio alargado de 5km) → <span style="color:var(--fire)">fuga real</span>: a sentinela está correcta, investigar o fogo.</li>
+      <li><strong>Entre ~6h e ~12h</strong> (existe alerta próximo no espaço, mas fora da janela de 6h) → <span style="color:var(--amber)">falso positivo por incêndio prolongado</span>: considerar alargar a janela de alertas da sentinela robusta (<code>SENT_JANELA_H</code> aplicado ao <code>NOT EXISTS</code> dos alertas) para 9–12h, mantendo a janela de hotspots em 6h.</li>
+    </ul>
+    <p>Parâmetros actuais da sentinela (em <code>main.py</code>): <code>SENT_JANELA_H=6</code>, <code>SENT_FRP=10.0</code>, <code>SENT_LIMIAR=3</code>, <code>SENT_RAIO_M=2000</code>. Alterá-los exige <code>build</code> + <code>up</code> (ver 15.5).</p>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.9 — Verificação Rápida de Saúde do SAEIF</h3>
+    <p>Quando houver dúvida sobre se o SAEIF está a falhar fogos reais (ex.: discrepância com fogos.pt), seguir os três níveis por ordem.</p>
+    <p><strong>Nível 1 — A sentinela disparou?</strong> (consulta passiva; a sentinela regista sozinha)</p>
+    <pre><code>cd /srv/saeif
+docker compose exec -T db psql -U saeif -d saeif -c \
+"SELECT started_at, source, status, error_msg FROM ingest_log \
+WHERE status='warning' ORDER BY started_at DESC LIMIT 10;"</code></pre>
+    <p><strong>Nível 2 — Há hotspots FRP alto sem alerta?</strong> (teste directo; vazio = saudável)</p>
+    <pre><code>cd /srv/saeif
+docker compose exec -T db psql -U saeif -d saeif &lt;&lt; 'SQL'
+SELECT h.id, h.source, h.frp, h.acq_date, h.acq_time, h.processed,
+       ST_Y(h.geom) AS lat, ST_X(h.geom) AS lon
+FROM hotspots h
+LEFT JOIN alertas a ON a.hotspot_id = h.id
+WHERE a.id IS NULL
+  AND h.fetched_at &gt; now() - interval '24 hours'
+  AND h.frp &gt;= 10.0
+ORDER BY h.frp DESC;
+SQL</code></pre>
+    <p><strong>Nível 3 — Os órfãos são fuga real ou dedup legítima?</strong> Usar a query de calibração da secção 15.8 (coluna <code>alerta_ha_horas</code>).</p>
+    <p>Se o Nível 2 devolver órfãos confirmados como fuga real: reactivar com <code>UPDATE hotspots SET processed=FALSE WHERE id IN (...)</code> e disparar o ciclo (<code>curl -s -X POST http://127.0.0.1:8000/api/ingest/trigger</code>).</p>
+
   </div>
 </div><!-- /container -->
 </body>
