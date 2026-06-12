@@ -353,6 +353,7 @@
         <span class="sat-name" id="satName">--</span>
         <span class="sat-time" id="satCountdown">--:--:--</span>
       </div>
+      <button class="btn-refresh" onclick="abrirIrCoords()" title="Ir para coordenadas" style="background:#1a2433;border-color:var(--blue);color:var(--blue)">📍 Ir para</button>
       <button class="btn-refresh" onclick="openHistoricoModal()" title="Exploração histórica" style="background:#1a1a2e;border-color:#8b949e;color:#8b949e">🕐 Histórico</button>
       <button class="btn-refresh" onclick="openExportModal()" title="Exportar dados CSV" style="background:#1a2e1a;border-color:var(--amber);color:var(--amber)">⬇ CSV</button>
       <button class="layers-btn" onclick="toggleLayersPanel()" title="Camadas">&#9741; Camadas</button>
@@ -512,6 +513,37 @@
 <script>
 const state={alertas:[],hotspots:[],status:null,activeTab:'alertas',activeFilter:null,ws:null,wsRetries:0,demo:false};
 
+let coordMarker=null;
+function abrirIrCoords(){
+  const txt = prompt("Colar coordenadas (lat, lon) do CSV FIRMS:\nEx: 41.66684, -8.21520");
+  if(!txt) return;
+  // Estrategia: extrair os dois numeros decimais, robusto a virgula OU ponto.
+  // FIRMS NASA usa ponto (-8.215); export SAEIF usa virgula (41,792).
+  let s = txt.trim().replace(/;/g, ' ');
+  let partes;
+  // Se houver virgulas decimais (digito,digito), converter para ponto primeiro
+  if(/\d,\d/.test(s.replace(/,\s/g,' '))){
+    // separador entre coords e' espaco ou virgula-espaco; decimal e' virgula
+    s = s.replace(/,\s+/g, ' ');           // virgula-separadora -> espaco
+    partes = s.split(/\s+/).filter(Boolean).map(x=>parseFloat(x.replace(',','.')));
+  } else {
+    // decimal e' ponto; separador pode ser virgula ou espaco
+    partes = s.replace(/,/g,' ').split(/\s+/).filter(Boolean).map(x=>parseFloat(x));
+  }
+  if(partes.length<2 || isNaN(partes[0]) || isNaN(partes[1])){
+    alert("Formato inválido. Use: latitude, longitude\nEx: 41.66684, -8.21520");
+    return;
+  }
+  const [lat, lon] = partes;
+  if(lat<-90||lat>90||lon<-180||lon>180){
+    alert("Coordenadas fora dos limites válidos.");
+    return;
+  }
+  if(coordMarker) map.removeLayer(coordMarker);
+  coordMarker = L.marker([lat,lon]).addTo(map)
+    .bindPopup(`📍 <b>${lat.toFixed(5)}, ${lon.toFixed(5)}</b>`).openPopup();
+  map.flyTo([lat,lon], 13, {duration:1});
+}
 const map=L.map('map',{center:[39.5,-8.0],zoom:7});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(map);
 map.zoomControl.setPosition('bottomright');
@@ -832,6 +864,7 @@ function buildPopup(a){
       <div class="popup-row"><span class="popup-label">Score</span><span class="popup-val" style="color:${c};font-size:14px;font-weight:600">${a.score?.toFixed(1)||'--'}</span></div>
       <div class="popup-row"><span class="popup-label">Hora</span><span class="popup-val">${hora}</span></div>
       <div class="popup-row"><span class="popup-label">Satélite</span><span class="popup-val">${sat}</span></div>
+      ${a.hotspot_frp!=null?`<div class="popup-row"><span class="popup-label">FRP</span><span class="popup-val">${a.hotspot_frp.toFixed(1)} MW</span></div>`:''}
       <div class="popup-row"><span class="popup-label">PROCIV</span><span class="popup-val">${procivStr}</span></div>
       ${local}
     </div>
@@ -913,6 +946,7 @@ async function loadAlertas(){
       localidade_estimada:f.properties.localidade_estimada,
       effis:f.properties.effis,
       hotspot_source:f.properties.hotspot_source,
+      hotspot_frp:f.properties.hotspot_frp,
     }));
     renderAlertas();
     renderMapAlertas();

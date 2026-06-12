@@ -278,6 +278,7 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                    a.temp, a.humidade, a.vento_vel, a.vento_dir, a.fwi,
                    a.risco_estrutural, a.criado_em,
                    h.source AS hotspot_source,
+                   h.frp AS hotspot_frp,
                    p.id IS NOT NULL AS prociv_confirmado,
                    p.localidade AS prociv_localidade,
                    a.localidade_estimada,
@@ -297,6 +298,7 @@ async def get_alertas(categoria: Optional[str] = None, limit: int = 50):
                     "id": r["id"], "score": float(r["score"]),
                     "categoria": r["categoria"], "source_tag": r["source_tag"],
                     "hotspot_source": r["hotspot_source"],
+                    "hotspot_frp": float(r["hotspot_frp"]) if r["hotspot_frp"] is not None else None,
                     "prociv_confirmado": bool(r["prociv_confirmado"]),
                     "localidade_estimada": r["localidade_estimada"] if r.get("localidade_estimada") else None,
                     "meteo": {
@@ -368,6 +370,7 @@ async def get_alertas_historico(
                    a.risco_estrutural, a.criado_em,
                    a.vegetacao_tipo,
                    h.source AS hotspot_source,
+                   h.frp AS hotspot_frp,
                    p.id IS NOT NULL AS prociv_confirmado,
                    a.localidade_estimada,
                    a.effis_fwi, a.effis_ranking, a.effis_anomaly
@@ -387,6 +390,7 @@ async def get_alertas_historico(
                     "id": r["id"], "score": float(r["score"]),
                     "categoria": r["categoria"], "source_tag": r["source_tag"],
                     "hotspot_source": r["hotspot_source"],
+                    "hotspot_frp": float(r["hotspot_frp"]) if r["hotspot_frp"] is not None else None,
                     "prociv_confirmado": bool(r["prociv_confirmado"]),
                     "localidade_estimada": r.get("localidade_estimada"),
                     "vegetacao_tipo": r.get("vegetacao_tipo"),
