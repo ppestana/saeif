@@ -394,7 +394,11 @@
       <label class="layer-item"><input type="checkbox" id="lAlertas" checked onchange="toggleLayer('alertas',this.checked)"><div class="layer-dot" style="background:#f85149"></div>Alertas (score + risco)</label>
       <label class="layer-item"><input type="checkbox" id="lPropag" checked onchange="toggleLayer('propag',this.checked)"><div class="layer-dot" style="background:#e3b341"></div>Propagação estimada</label>
       <div class="layers-section">Detecção Satelitária</div>
-      <label class="layer-item"><input type="checkbox" id="lHotspots" checked onchange="toggleLayer('hotspots',this.checked)"><div class="layer-dot" style="background:#f85149;opacity:.6"></div>Hotspots FIRMS (VIIRS)</label>
+      <label class="layer-item"><input type="checkbox" id="lHotspots" checked onchange="toggleLayer('hotspots',this.checked)"><div class="layer-dot" style="background:#f85149;opacity:.6"></div>Hotspots FIRMS (VIIRS + MODIS)</label>
+      <label class="layer-item" style="padding-left:1.5rem;font-size:11px;opacity:.9"><input type="checkbox" id="satSNPP" checked onchange="toggleSat('SNPP',this.checked)">VIIRS / Suomi-NPP</label>
+      <label class="layer-item" style="padding-left:1.5rem;font-size:11px;opacity:.9"><input type="checkbox" id="satNOAA20" checked onchange="toggleSat('NOAA20',this.checked)">VIIRS / NOAA-20</label>
+      <label class="layer-item" style="padding-left:1.5rem;font-size:11px;opacity:.9"><input type="checkbox" id="satNOAA21" checked onchange="toggleSat('NOAA21',this.checked)">VIIRS / NOAA-21</label>
+      <label class="layer-item" style="padding-left:1.5rem;font-size:11px;opacity:.9"><input type="checkbox" id="satMODIS" checked onchange="toggleSat('MODIS',this.checked)">MODIS / Terra-Aqua</label>
       <div class="layers-section">Ocorrências PROCIV</div>
       <label class="layer-item"><input type="checkbox" id="lProciv" onchange="toggleLayer('prociv',this.checked)"><div class="layer-dot" style="background:#1c2128;border:2px solid #58a6ff"></div>Ocorrências sem alerta</label>
       <div class="layers-section">Risco Estrutural</div>
@@ -511,7 +515,7 @@
 <div id="toast"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const state={alertas:[],hotspots:[],status:null,activeTab:'alertas',activeFilter:null,ws:null,wsRetries:0,demo:false};
+const state={alertas:[],hotspots:[],status:null,activeTab:'alertas',activeFilter:null,ws:null,wsRetries:0,demo:false,satFiltro:{SNPP:true,NOAA20:true,NOAA21:true,MODIS:true}};
 
 let coordMarker=null;
 function abrirIrCoords(){
@@ -1042,10 +1046,16 @@ function renderMapAlertas(){
   });
 }
 
+function toggleSat(sat, visible){
+  state.satFiltro[sat] = visible;
+  renderMapHotspots();
+}
 function renderMapHotspots(){
   hotspotLayer.clearLayers();
   state.hotspots.forEach(f=>{
     const [lon,lat]=f.geometry.coordinates;const p=f.properties;
+    // Filtro por satelite (sub-toggles em Deteccao Satelitaria)
+    if(state.satFiltro && state.satFiltro[p.source]===false) return;
     const m=L.marker([lat,lon],{icon:hotspotIcon()});
     m.bindPopup(`<div class="popup-title" style="margin-bottom:.4rem">Hotspot ${sateliteLabel(p.source)}</div>
       <div class="popup-row"><span class="popup-label">FRP</span><span class="popup-val">${p.frp?p.frp.toFixed(1)+' MW':'--'}</span></div>

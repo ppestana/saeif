@@ -8,7 +8,7 @@ FIRMS_KEY = os.getenv("FIRMS_MAP_KEY", "")
 FIRMS_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 BBOX      = "-9.50,36.96,-6.19,42.15"
 DAYS      = 1
-PRODUCTS  = ["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT"]
+PRODUCTS  = ["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "MODIS_NRT"]
 
 DEMO_HOTSPOTS = [
     {"lat": 39.60, "lon": -8.20, "brightness": 340.5, "frp": 12.3, "confidence": "nominal", "acq_time": "1300"},
