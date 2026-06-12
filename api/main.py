@@ -58,16 +58,30 @@ async def init_db():
             CREATE INDEX IF NOT EXISTS idx_hotspots_geom ON hotspots USING GIST (geom);
             CREATE INDEX IF NOT EXISTS idx_hotspots_date ON hotspots (acq_date, processed);
             CREATE TABLE IF NOT EXISTS ocorrencias_prociv (
-                id          SERIAL PRIMARY KEY,
-                external_id VARCHAR(50) UNIQUE,
-                geom        GEOMETRY(POINT, 4326),
-                localidade  VARCHAR(200),
-                distrito    VARCHAR(100),
-                concelho    VARCHAR(100),
-                estado      VARCHAR(50),
-                data_hora   TIMESTAMPTZ,
-                source_tag  VARCHAR(10) NOT NULL DEFAULT 'SYS',
-                fetched_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                id              SERIAL PRIMARY KEY,
+                external_id     VARCHAR(50) UNIQUE,
+                geom            GEOMETRY(POINT, 4326),
+                localidade      VARCHAR(200),
+                distrito        VARCHAR(100),
+                concelho        VARCHAR(100),
+                estado          VARCHAR(50),
+                data_hora       TIMESTAMPTZ,
+                source_tag      VARCHAR(10) NOT NULL DEFAULT 'SYS',
+                fetched_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                -- Campos enriquecidos (fogos.pt) — 12 Jun 2026
+                man             INTEGER,
+                terrain         INTEGER,
+                aerial          INTEGER,
+                meios_aquaticos INTEGER,
+                natureza        VARCHAR(100),
+                status          VARCHAR(50),
+                status_color    VARCHAR(10),
+                important       BOOLEAN,
+                freguesia       VARCHAR(150),
+                regiao          VARCHAR(100),
+                sub_regiao      VARCHAR(100),
+                detail_location VARCHAR(300),
+                fonte_alerta    VARCHAR(100)
             );
             CREATE INDEX IF NOT EXISTS idx_prociv_geom ON ocorrencias_prociv USING GIST (geom);
             CREATE TABLE IF NOT EXISTS alertas (
@@ -643,7 +657,10 @@ async def get_prociv(limit: int = 200):
     conn = await get_db()
     rows = await conn.fetch(f"""
             SELECT p.id, ST_X(p.geom) AS lon, ST_Y(p.geom) AS lat,
-                   p.localidade, p.distrito, p.estado, p.fetched_at
+                   p.localidade, p.distrito, p.concelho, p.estado, p.fetched_at, p.data_hora,
+                   p.natureza, p.status, p.status_color, p.important,
+                   p.man, p.terrain, p.aerial, p.meios_aquaticos,
+                   p.freguesia, p.regiao, p.sub_regiao, p.detail_location, p.fonte_alerta
             FROM ocorrencias_prociv p
             WHERE p.fetched_at > NOW() - INTERVAL '24 hours'
               AND NOT EXISTS (
@@ -662,7 +679,22 @@ async def get_prociv(limit: int = 200):
                 "id": r["id"],
                 "localidade": r["localidade"],
                 "distrito": r["distrito"],
+                "concelho": r["concelho"],
+                "freguesia": r["freguesia"],
                 "estado": r["estado"],
+                "natureza": r["natureza"],
+                "status": r["status"],
+                "status_color": r["status_color"],
+                "important": r["important"],
+                "man": r["man"],
+                "terrain": r["terrain"],
+                "aerial": r["aerial"],
+                "meios_aquaticos": r["meios_aquaticos"],
+                "regiao": r["regiao"],
+                "sub_regiao": r["sub_regiao"],
+                "detail_location": r["detail_location"],
+                "fonte_alerta": r["fonte_alerta"],
+                "data_hora": r["data_hora"].isoformat() if r["data_hora"] else None,
                 "criado_em": r["fetched_at"].isoformat() if r["fetched_at"] else None,
             }
         })

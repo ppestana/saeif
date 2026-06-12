@@ -673,11 +673,30 @@ async function loadProcivLayer(){
         className:'', iconSize:[20,20], iconAnchor:[10,10]
       });
       const m = L.marker([lat,lon],{icon, zIndexOffset:-100});
+      const row=(lbl,val)=> (val!=null && val!=='' ) ? `<div class="popup-row"><span class="popup-label">${lbl}</span><span class="popup-val">${val}</span></div>` : '';
+      const meios = [];
+      if(p.man!=null) meios.push(`${p.man} operacionais`);
+      if(p.terrain!=null) meios.push(`${p.terrain} viaturas`);
+      if(p.aerial!=null && p.aerial>0) meios.push(`${p.aerial} meios aéreos`);
+      if(p.meios_aquaticos!=null && p.meios_aquaticos>0) meios.push(`${p.meios_aquaticos} meios aquáticos`);
+      const dataFmt = p.data_hora ? new Date(p.data_hora).toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : null;
       m.bindPopup(`
         <div class="popup-title" style="margin-bottom:.4rem">Ocorrência PROCIV</div>
-        <div class="popup-row"><span class="popup-label">Localidade</span><span class="popup-val">${p.localidade||'--'}</span></div>
-        <div class="popup-row"><span class="popup-label">Estado</span><span class="popup-val">${p.estado||'--'}</span></div>
-        <div class="popup-row"><span class="popup-label">Distrito</span><span class="popup-val">${p.distrito||'--'}</span></div>
+        ${row('Localidade', p.localidade)}
+        ${row('Concelho', p.concelho)}
+        ${row('Distrito', p.distrito)}
+        ${(p.natureza||p.status||p.important) ? '<div class="popup-section-title" style="margin-top:.5rem">Caracterização</div>' : ''}
+        ${row('Natureza', p.natureza)}
+        ${p.status ? `<div class="popup-row"><span class="popup-label">Estado</span><span class="popup-val" style="${p.status_color?`color:#${p.status_color}`:''}">${p.status}</span></div>` : ''}
+        ${p.important ? `<div class="popup-row"><span class="popup-label">Prioridade</span><span class="popup-val" style="color:#f85149">Importante</span></div>` : ''}
+        ${meios.length ? '<div class="popup-section-title" style="margin-top:.5rem">Meios no Terreno</div>' : ''}
+        ${meios.length ? `<div class="popup-row"><span class="popup-val" style="text-align:left">${meios.join(' · ')}</span></div>` : ''}
+        ${(p.freguesia||p.regiao||p.detail_location||p.fonte_alerta||dataFmt) ? '<div class="popup-section-title" style="margin-top:.5rem">Contexto</div>' : ''}
+        ${row('Freguesia', p.freguesia)}
+        ${row('Região', p.regiao && p.sub_regiao ? `${p.regiao} · ${p.sub_regiao}` : (p.regiao||p.sub_regiao))}
+        ${row('Local', p.detail_location)}
+        ${row('Fonte do alerta', p.fonte_alerta)}
+        ${row('Despacho', dataFmt)}
         <div style="font-size:10px;color:var(--dim);margin-top:.4rem">Sem confirmação satelitária FIRMS</div>
       `);
       procivLayer.addLayer(m);

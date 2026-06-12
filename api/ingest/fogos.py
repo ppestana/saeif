@@ -17,6 +17,7 @@ async def fetch_fogos(conn):
             await _log(conn, started, "ok", 0, 0)
             return 0
         new_count = 0
+        upd_count = 0
         for inc in incidents:
             if not isinstance(inc, dict):
                 continue
@@ -40,33 +41,74 @@ async def fetch_fogos(conn):
                         data_hora = datetime.fromtimestamp(int(sec), tz=timezone.utc)
                     except Exception:
                         pass
-                exists = await conn.fetchval(
-                    "SELECT id FROM ocorrencias_prociv WHERE external_id = $1::varchar",
-                    external_id
-                )
-                if exists:
-                    continue
+                # Campos enriquecidos (fogos.pt)
+                def _int(v):
+                    try: return int(v)
+                    except (TypeError, ValueError): return None
+                man             = _int(inc.get("man"))
+                terrain         = _int(inc.get("terrain"))
+                aerial          = _int(inc.get("aerial"))
+                meios_aquaticos = _int(inc.get("meios_aquaticos"))
+                natureza        = str(inc.get("natureza") or "") or None
+                status          = str(inc.get("status") or "") or None
+                status_color    = str(inc.get("statusColor") or "") or None
+                important       = bool(inc.get("important")) if inc.get("important") is not None else None
+                freguesia       = str(inc.get("freguesia") or "") or None
+                regiao          = str(inc.get("regiao") or "") or None
+                sub_regiao      = str(inc.get("sub_regiao") or "") or None
+                detail_location = str(inc.get("detailLocation") or "") or None
+                fonte_alerta    = str(((inc.get("icnf") or {}).get("fontealerta")) or "") or None
+                # estado: usar o status legivel (corrige a mistura natureza/status anterior)
+                estado = status or estado
                 if lat and lon:
                     result = await conn.fetchval("""
                         INSERT INTO ocorrencias_prociv
-                            (external_id, geom, localidade, distrito, concelho, estado, data_hora, source_tag)
+                            (external_id, geom, localidade, distrito, concelho, estado, data_hora, source_tag,
+                             man, terrain, aerial, meios_aquaticos, natureza, status, status_color,
+                             important, freguesia, regiao, sub_regiao, detail_location, fonte_alerta)
                         VALUES ($1::varchar, ST_SetSRID(ST_MakePoint($2, $3), 4326),
-                                $4::varchar, $5::varchar, $6::varchar, $7::varchar, $8, 'SYS')
-                        RETURNING id
-                    """, external_id, lon, lat, localidade, distrito, concelho, estado, data_hora)
+                                $4::varchar, $5::varchar, $6::varchar, $7::varchar, $8, 'SYS',
+                                $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+                        ON CONFLICT (external_id) DO UPDATE SET
+                            geom=EXCLUDED.geom, localidade=EXCLUDED.localidade, distrito=EXCLUDED.distrito,
+                            concelho=EXCLUDED.concelho, estado=EXCLUDED.estado, data_hora=EXCLUDED.data_hora,
+                            man=EXCLUDED.man, terrain=EXCLUDED.terrain, aerial=EXCLUDED.aerial,
+                            meios_aquaticos=EXCLUDED.meios_aquaticos, natureza=EXCLUDED.natureza,
+                            status=EXCLUDED.status, status_color=EXCLUDED.status_color, important=EXCLUDED.important,
+                            freguesia=EXCLUDED.freguesia, regiao=EXCLUDED.regiao, sub_regiao=EXCLUDED.sub_regiao,
+                            detail_location=EXCLUDED.detail_location, fonte_alerta=EXCLUDED.fonte_alerta
+                        RETURNING (xmax = 0) AS inserted
+                    """, external_id, lon, lat, localidade, distrito, concelho, estado, data_hora,
+                        man, terrain, aerial, meios_aquaticos, natureza, status, status_color,
+                        important, freguesia, regiao, sub_regiao, detail_location, fonte_alerta)
                 else:
                     result = await conn.fetchval("""
                         INSERT INTO ocorrencias_prociv
-                            (external_id, localidade, distrito, concelho, estado, data_hora, source_tag)
-                        VALUES ($1::varchar, $2::varchar, $3::varchar, $4::varchar, $5::varchar, $6, 'SYS')
-                        RETURNING id
-                    """, external_id, localidade, distrito, concelho, estado, data_hora)
-                if result:
+                            (external_id, localidade, distrito, concelho, estado, data_hora, source_tag,
+                             man, terrain, aerial, meios_aquaticos, natureza, status, status_color,
+                             important, freguesia, regiao, sub_regiao, detail_location, fonte_alerta)
+                        VALUES ($1::varchar, $2::varchar, $3::varchar, $4::varchar, $5::varchar, $6, 'SYS',
+                                $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                        ON CONFLICT (external_id) DO UPDATE SET
+                            localidade=EXCLUDED.localidade, distrito=EXCLUDED.distrito, concelho=EXCLUDED.concelho,
+                            estado=EXCLUDED.estado, data_hora=EXCLUDED.data_hora,
+                            man=EXCLUDED.man, terrain=EXCLUDED.terrain, aerial=EXCLUDED.aerial,
+                            meios_aquaticos=EXCLUDED.meios_aquaticos, natureza=EXCLUDED.natureza,
+                            status=EXCLUDED.status, status_color=EXCLUDED.status_color, important=EXCLUDED.important,
+                            freguesia=EXCLUDED.freguesia, regiao=EXCLUDED.regiao, sub_regiao=EXCLUDED.sub_regiao,
+                            detail_location=EXCLUDED.detail_location, fonte_alerta=EXCLUDED.fonte_alerta
+                        RETURNING (xmax = 0) AS inserted
+                    """, external_id, localidade, distrito, concelho, estado, data_hora,
+                        man, terrain, aerial, meios_aquaticos, natureza, status, status_color,
+                        important, freguesia, regiao, sub_regiao, detail_location, fonte_alerta)
+                if result is True:
                     new_count += 1
+                elif result is False:
+                    upd_count += 1
             except Exception as e:
                 log.warning(f"Erro PROCIV inc: {e}")
         await _log(conn, started, "ok", len(incidents), new_count)
-        log.info(f"fogos.pt: {new_count} novas de {len(incidents)} ocorrencias")
+        log.info(f"fogos.pt: {new_count} novas, {upd_count} actualizadas de {len(incidents)} ocorrencias")
         return new_count
     except Exception as e:
         log.error(f"Erro fogos.pt: {e}")
