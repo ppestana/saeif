@@ -1622,6 +1622,18 @@ fire_risk = (
             <td><span class="badge badge-blue">Futura</span></td>
             <td>Depende de SMRIP</td>
           </tr>
+          <tr>
+            <td><strong>FRP na ficha de alerta</strong></td>
+            <td>Fire Radiative Power (potência radiativa do fogo, em MW) passou a ser exposto pelos endpoints <code>/api/alertas</code> e <code>/api/alertas/historico</code> (campo <code>hotspot_frp</code>, via JOIN com <code>hotspots</code>) e apresentado na secção "Detecção" da ficha do alerta, entre Satélite e PROCIV. Só visível quando há hotspot associado. Glossário actualizado com as entradas FRP e Sentinela. Implementado em 12 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>12 Jun 2026</td>
+          </tr>
+          <tr>
+            <td><strong>Ir para coordenadas</strong></td>
+            <td>Botão "📍 Ir para" no header que aceita coordenadas coladas (ex.: do CSV NASA FIRMS) e centra o mapa no local com marcador + popup. Parsing robusto a ponto OU vírgula decimal e a separadores vírgula, espaço ou ponto-e-vírgula. Validação de limites (lat ±90, lon ±180). Função <code>abrirIrCoords()</code> em <code>index.html</code>. Implementado em 12 Jun 2026.</td>
+            <td><span class="badge badge-done">✓ Concluído</span></td>
+            <td>12 Jun 2026</td>
+          </tr>
         </tbody>
       </table>
     </div>
