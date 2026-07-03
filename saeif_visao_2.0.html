@@ -110,6 +110,7 @@
   <a href="#roteiro">Roteiro de Fatores</a>
   <a href="#investigacoes">Investigações Abertas</a>
   <a href="#principios">Princípios</a>
+  <a href="#bibliografia">Bibliografia</a>
 </nav>
 
 <div class="container">
@@ -274,6 +275,35 @@ PRODUTOR de inteligencia          CONSUMIDOR que valoriza</div>
       <div class="two-col" style="margin-top:1.5rem">
         <div class="card"><div class="card-label">Frase de retoma (para colar num novo chat)</div><div class="card-sub" style="color:var(--text)">"Retomar o SAEIF pela visão, não pelo código: ver saeif_visao_2.0.html. Corrigir a Frente B (emparelhamento alerta-PROCIV), depois construir o declive. Regra de ouro: a página nunca promete o que o sistema ainda não faz."</div></div>
         <div class="card"><div class="card-label">Documentos-fonte a guardar</div><div class="card-sub" style="color:var(--text)">Análise do consultor (posicionamento); colectânea histórica (fogo social); RISCOS 2014 (método vulnerabilidade); Cadernos Geografia 32/2013 (fórmula suscetibilidade R²=0.925).</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="bibliografia">
+    <div class="section-header"><span class="section-num">09</span><span class="section-title">Bibliografia — fundamentação documental</span></div>
+    <div class="section-body">
+      <p>As publicações consultadas que fundamentam a tese do SAEIF 2.0. O repositório é público, pelo que se guardam as referências e identificadores (DOI/ISBN) em vez dos PDFs — permitindo reencontrar as fontes originais sem questões de licença. Os números entre parênteses remetem para a secção 04 (Fundamentação).</p>
+
+      <h3>Enquadramento — o fogo como fenómeno social <span class="badge badge-purple">4.1</span></h3>
+      <p class="dimtext">Alves, A. A. M., Devy-Vareta, N., Oliveira, Â. C. &amp; Pereira, J. S. (2006). "A Floresta e o Fogo Através dos Tempos" (Capítulo 1). In J. S. Pereira, J. M. C. Pereira, F. C. Rego, J. M. N. Silva &amp; T. P. Silva (Coord.), <em>Incêndios Florestais em Portugal: Caracterização, Impactes e Prevenção</em>. Lisboa: ISAPress. ISBN: 972-8669-17-8.</p>
+
+      <h3>Método — índice composto de vulnerabilidade <span class="badge badge-blue">4.2</span></h3>
+      <p class="dimtext">Bento-Gonçalves, A., Vieira, A., Nunes, A., Lourenço, L., Oliveira, S. &amp; Félix, F. (2014). "Análise de Vulnerabilidade a Incêndios Florestais na Região do Minho, Portugal" (Cap. 3.6). In <em>Multidimensão e Territórios de Risco</em> (III Congresso Internacional, I Simpósio Ibero-Americano, VIII Encontro Nacional de Riscos), pp. 721-724. Guimarães: RISCOS — Associação Portuguesa de Riscos, Prevenção e Segurança / Imprensa da Universidade de Coimbra. ISBN: 978-989-96253-3-4. DOI: <code>10.14195/978-989-96253-3-4_126</code>.</p>
+
+      <h3>Fórmula — suscetibilidade à ignição (R²=0.925) <span class="badge badge-green">4.3</span></h3>
+      <p class="dimtext">Nunes, A., Lourenço, L., Bento-Gonçalves, A. &amp; Vieira, A. (2013). "Três décadas de incêndios florestais em Portugal: incidência regional e principais fatores responsáveis". <em>Cadernos de Geografia</em>, nº 32, pp. 133-143. Coimbra: FLUC. <span class="dimtext">Modelo de regressão múltipla para a densidade de ocorrências (Quadro III): DO = -14.915 + 0.035·densidade_populacional + 0.020·precipitação_média_anual.</span></p>
+
+      <h3>Fontes de dados institucionais <span class="badge badge-gray">operacionais</span></h3>
+      <ul>
+        <li><strong>ICNF</strong> — áreas ardidas oficiais (fogos &gt;40ha, pós-evento). WFS: <code>si.icnf.pt</code>; MapServer REST: <code>sigservices.icnf.pt/server/rest/services/BDG/areas_ardidas</code>. Ref. open-source: "ICNF Fire Data Retriever" (Sérgio Nunes), dados.gov.pt.</li>
+        <li><strong>fogos.pt</strong> — agregador operacional (ANEPC, IPMA, LSA-SAF FRP, NASA FIRMS, plataforma Gaia). Fonte da <code>ocorrencias_prociv</code> e da timeline de estados.</li>
+        <li><strong>NASA FIRMS</strong> — hotspots térmicos VIIRS (SNPP, NOAA-20, NOAA-21) e MODIS (Terra, Aqua).</li>
+        <li><strong>Copernicus / CDSE</strong> — Sentinel-2 (evolução do coberto vegetal) e DEM (declive). Credenciais no <code>.env</code>.</li>
+        <li><strong>Censos (INE)</strong> e <strong>IPMA</strong> — densidade populacional e precipitação, para a regressão de suscetibilidade.</li>
+      </ul>
+
+      <div class="alert alert-blue">
+        <strong>Nota sobre acesso.</strong> Os PDFs das três publicações académicas não são versionados no repositório público por questões de licença; guardam-se aqui as referências completas com DOI/ISBN. Pedro mantém cópias pessoais dos PDFs. Para citação formal ou releitura, usar os identificadores acima.
       </div>
     </div>
   </div>
