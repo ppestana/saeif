@@ -60,6 +60,18 @@ async def fetch_fogos(conn):
                 fonte_alerta    = str(((inc.get("icnf") or {}).get("fontealerta")) or "") or None
                 # estado: usar o status legivel (corrige a mistura natureza/status anterior)
                 estado = status or estado
+                # Capturar transicao de estado ANTES do UPSERT (que sobrepoe o valor).
+                # Le o estado atual na BD; se mudou, grava a transicao no historico.
+                estado_bd = await conn.fetchval(
+                    "SELECT status FROM ocorrencias_prociv WHERE external_id = $1::varchar",
+                    external_id
+                )
+                if estado_bd is not None and status is not None and estado_bd != status:
+                    await conn.execute(
+                        "INSERT INTO prociv_estado_historico "
+                        "(external_id, estado_anterior, estado_novo) VALUES ($1, $2, $3)",
+                        external_id, estado_bd, status
+                    )
                 if lat and lon:
                     result = await conn.fetchval("""
                         INSERT INTO ocorrencias_prociv
