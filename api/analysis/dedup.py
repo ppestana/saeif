@@ -2,7 +2,10 @@ import logging
 import asyncpg
 
 log = logging.getLogger("saeif.dedup")
-PROXIMITY_M = 40000
+PROXIMITY_M = 5000  # Frente B (4 Jul 2026): 40km->5km. Raio de 40km gerava 71% de
+                    # emparelhamentos falsos (pares a dezenas de km). 5km e' defensavel
+                    # para fogos portugueses. Bug de escolha (PROCIV<2km nao escolhido)
+                    # fica para correcao separada (Correcao B).
 
 async def dedup_hotspots(conn):
     pares = []
