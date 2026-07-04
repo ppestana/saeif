@@ -278,6 +278,19 @@ PRODUTOR de inteligencia          CONSUMIDOR que valoriza</div>
         <li><strong>Search Console:</strong> os "problemas" reportados (1×404, 5-6 rastreadas-não-indexadas) NÃO são problema real — o <code>/robots.txt</code> e <code>/sitemap.xml</code> (gerados pelo FastAPI) estão corretos; a página principal está indexada; o resto é ruído esperado de uma SPA. Não mexer.</li>
         <li><strong>Padrão temporal / causa intencional:</strong> fogos a arrancar de madrugada (3h) em condições adversas (humidade alta, sem atividade humana diurna) elevam a probabilidade relativa de causa intencional. Suspeição fundamentada, não prova — a causa vem da investigação PJ/ICNF. Vigiar como sinal, nunca afirmar.</li>
       </ul>
+
+      <h3>7.6 — Conceito de "evento de incêndio" (agregação) <span class="badge badge-fire">limitação estrutural</span></h3>
+      <p>Descoberto ao procurar o megaincêndio de Vouzela (início 02/07/2026 ~03:04 local, 40.6805, -8.1521). <strong>O fogo está no SAEIF</strong> — ocorrência PROCIV #20965, <strong>164 hotspots</strong> ao longo de vários dias, e <strong>23 alertas</strong> — mas <em>não como uma entidade única</em>. O SAEIF vê deteções e alertas individuais, não "eventos". Consequências observadas:</p>
+      <ul>
+        <li><strong>Megaincêndio invisível como tal.</strong> O alerta inicial (#326) é categoria <strong>MÉDIO</strong> — porque o score assenta na intensidade do <em>hotspot no momento da deteção</em> (FRP 11 MW às 04:36, fogo ainda no início), não na dimensão que o fogo viria a atingir. Um dos maiores fogos do ano aparece como um alerta MÉDIO de 2 Jul, difícil de distinguir na lista.</li>
+        <li><strong>Fogo espalhado por 23 alertas.</strong> A deduplicação (janela 2h) absorveu 141 dos 164 hotspots sem gerar alerta, mas frentes distintas / reacendimentos fora da janela geraram 23 alertas separados. Não há nada que diga "estes 23 são o mesmo incêndio".</li>
+        <li><strong>Sem noção de dimensão/duração acumulada.</strong> O sistema não consegue afirmar "isto é um incêndio de 164 deteções ao longo de 4 dias" — a informação que um humano realmente quer.</li>
+      </ul>
+      <p><strong>Direção (a explorar):</strong> uma camada de <em>agregação em eventos</em> — distinta da deduplicação — que reúna os hotspots/alertas dispersos de um mesmo fogo numa entidade "evento de incêndio", com evolução, duração, dimensão e intensidade máxima (não só inicial). Liga-se a 7.3b (controlo temporal de propagação) e à captura de trajetória (7.3). <strong>Nota para a comunicação (regra de ouro):</strong> enquanto o score refletir só a intensidade inicial, o SAEIF <em>subvaloriza fogos que crescem após a deteção</em> — para um sistema operacional seria defeito grave; para o previsional é menos crítico, mas a mensagem não deve sugerir que o SAEIF avalia a gravidade final de um incêndio em curso.</p>
+
+      <div class="alert alert-blue">
+        <strong>Nota — exclusivos e jurisdição (do caso Badajoz).</strong> A métrica futura de "detecções exclusivas SAEIF" ("ver o que a PROCIV não vê") terá de distinguir fogos remotos <em>portugueses</em> (valor real) de fogos <em>espanhóis</em> (exclusivos apenas por a PROCIV portuguesa não cobrir Espanha — a Proteção Civil espanhola vê-os). Não inflar a métrica com exclusividade que é acidente de jurisdição, não mérito de deteção.
+      </div>
     </div>
   </div>
 
