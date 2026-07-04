@@ -291,6 +291,16 @@ PRODUTOR de inteligencia          CONSUMIDOR que valoriza</div>
       <div class="alert alert-blue">
         <strong>Nota — exclusivos e jurisdição (do caso Badajoz).</strong> A métrica futura de "detecções exclusivas SAEIF" ("ver o que a PROCIV não vê") terá de distinguir fogos remotos <em>portugueses</em> (valor real) de fogos <em>espanhóis</em> (exclusivos apenas por a PROCIV portuguesa não cobrir Espanha — a Proteção Civil espanhola vê-os). Não inflar a métrica com exclusividade que é acidente de jurisdição, não mérito de deteção.
       </div>
+
+      <h3>7.7 — Modelo de notificação por email <span class="badge badge-amber">a repensar</span></h3>
+      <p>Descoberto ao investigar porque Pedro não recebeu alerta de um fogo real a 3.3km de casa (alerta #562, MÉDIO). <strong>Não era bug:</strong> a subscrição tem <code>categoria_min = ALTO</code>, e o alerta era MÉDIO — o sistema respeitou a configuração. Mas o caso expõe uma falha de design do <em>eixo do filtro</em>.</p>
+      <p><strong>O problema:</strong> filtrar por "categoria mínima" pressupõe que a categoria é um preditor fiável de gravidade — e <strong>não é</strong> (ver 7.6: o score congela na intensidade do hotspot inicial). Um fogo MÉDIO a 3km pode tornar-se um megaincêndio (Vouzela também era MÉDIO). Deixar o utilizador filtrar por ALTO dá-lhe falsa proteção: julga estar coberto para "o que importa", mas pode estar a filtrar para fora o fogo que lhe vai bater à porta.</p>
+      <p><strong>Duas hipóteses de correção (decidir ao construir):</strong></p>
+      <ul>
+        <li><strong>H1 — Notificar tudo dentro do raio</strong> (remover o filtro de categoria). Honesto (não pede ao utilizador que confie numa categoria que não é fiável), mas arrisca <strong>fadiga de alertas</strong>: numa época com centenas de ocorrências, dezenas de emails/dia de fogos BAIXO (queimadas, matos dominados em minutos) → o utilizador ignora tudo → quando vem o fogo que importa, já não presta atenção. "Quando tudo notifica, nada é notícia" — falha conhecida em proteção civil.</li>
+        <li><strong>H2 — Proximidade + escalamento por evento.</strong> Notificar tudo o que está <em>muito perto</em> (ex. ≤5km), mas só ALTO/CRÍTICO mais longe; e <strong>re-notificar quando um fogo escala</strong> (MÉDIO→ALTO, crescimento de área). Resolve o problema real (ser avisado quando algo perto <em>piora</em>), sem a fadiga do H1. <strong>Depende do "conceito de evento" (7.6)</strong> — sem noção de evento e de escalamento, o sistema não sabe re-notificar.</li>
+      </ul>
+      <p><strong>Decisão (4 Jul):</strong> registar ambas, decidir ao construir. A H2 é conceptualmente mais forte mas depende de 7.6; a H1 é imediata mas arrisca fadiga. Provável caminho: começar por proximidade (perto = tudo, sem filtro de categoria) e adicionar escalamento quando o conceito de evento existir. <strong>Ação pessoal imediata (à parte do design):</strong> Pedro pode baixar a sua subscrição para incluir MÉDIO, para não voltar a perder um fogo próximo enquanto o modelo não é repensado.</p>
     </div>
   </div>
 
