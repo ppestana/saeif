@@ -588,7 +588,7 @@
           <div class="flow-step-num">04</div>
           <div class="flow-step-content">
             <h4>Cálculo do score de risco e geração de ficha</h4>
-            <p>Score composto (0–100) calculado a partir de: risco estrutural da paisagem (coberto WorldCover), condições meteorológicas actuais (FWI, vento), tipo de combustível, e área ardida histórica (ICNF). A ficha de alerta inclui mapa de propagação estimada, e dados meteorológicos e EFFIS. <strong>Nota (Jul 2026) — a esclarecer:</strong> o componente <code>risco_estrutural</code> do score inclui, segundo o pipeline documentado (Secção 12), um factor de declive via <code>fire_risk.tif</code> (EU-DEM). Em paralelo, foi construída em Jul 2026 uma <em>camada</em> de declive independente e mais recente (Copernicus DEM GLO-30, piloto Viseu, servida por <code>/api/layers</code> — ver Roadmap) como visualização, ainda <strong>não</strong> ligada ao score. <em>Fica por auditar contra o código se o declive do <code>fire_risk.tif</code> está de facto activo no cálculo, e como reconciliar as duas fontes de declive.</em></p>
+            <p>Score composto (0–100) calculado a partir de: risco estrutural da paisagem, condições meteorológicas (FWI, vento) e confirmação PROCIV. Ver a fórmula real (verificada no código) abaixo. <strong>Nota factual (Jul 2026, auditado contra <code>score.py</code>):</strong> o risco estrutural combina <em>WorldCover</em> (50%), <em>NDVI</em> Sentinel-2 (30%) e <em>declive</em> (20%, do <code>slope_norm.tif</code>), mais um factor de <em>área ardida</em> histórica. Ou seja, o <strong>declive já está integrado no score desde Jun 2026</strong> — via Copernicus DEM GLO-30 obtido pela Sentinel Hub API, cobrindo a Península Ibérica. A camada de declive construída em Jul 2026 (piloto Viseu, ver Roadmap) é o <em>mesmo dado</em> (Copernicus DEM) por outra via (bucket AWS + GDAL), servida como <em>visualização</em> no mapa. Não são fontes distintas — são duas representações do mesmo DEM: uma para cálculo (Ibéria, no score), outra para visualização (piloto, no mapa). A <em>conectividade da paisagem</em> (fire spread nodes) referida noutras secções é horizonte futuro, não capacidade actual.</p>
           </div>
         </div>
         <div class="flow-step">
@@ -674,16 +674,16 @@
             <td><span class="badge badge-purple">Geocodificação</span></td>
           </tr>
           <tr>
-            <td><strong>CORINE Land Cover</strong><br><span class="dimtext">Copernicus · v2018</span></td>
-            <td>Tipologia de uso do solo — base para reclassificação em valor de combustível (0.0–1.0)</td>
-            <td>GeoTIFF local (cacheado em <code>/data/corine.tif</code>)</td>
-            <td>Estático (actualização 6 anos)</td>
+            <td><strong>ESA WorldCover</strong><br><span class="dimtext">ESA · 2021 · 10m</span></td>
+            <td>Tipologia de uso do solo — componente do risco estrutural (50%). Classes 10-100 (ver secção Mapas de Risco)</td>
+            <td>GeoTIFF local (<code>/data/fire_risk.tif</code>, <code>wc_2km.tif</code> e tiles <code>wc_*.tif</code>)</td>
+            <td>Estático (base 2021, sem versões ESA posteriores)</td>
             <td><span class="badge badge-fire">Risco estrutural</span></td>
           </tr>
           <tr>
-            <td><strong>EU-DEM / Copernicus DEM</strong><br><span class="dimtext">ESA · 25m</span></td>
-            <td>Modelo digital de elevação — cálculo de declive normalizado por ponto de ignição</td>
-            <td>GeoTIFF local (cacheado em <code>/data/dem.tif</code>)</td>
+            <td><strong>Copernicus DEM GLO-30</strong><br><span class="dimtext">ESA · 30m</span></td>
+            <td>Modelo digital de elevação — declive normalizado por ponto (20% do risco estrutural). Obtido via Sentinel Hub Process API (cobertura Ibéria)</td>
+            <td>GeoTIFF local (<code>/data/dem_iberia.tif</code> → <code>/data/slope_norm.tif</code>)</td>
             <td>Estático</td>
             <td><span class="badge badge-fire">Risco estrutural</span></td>
           </tr>
@@ -847,7 +847,7 @@ CREATE INDEX ON ocorrencias_prociv USING GIST (geom);
     vento_vel       NUMERIC(5,1),                <span class="c">-- IPMA: vento (km/h)</span>
     vento_dir       NUMERIC(5,1),                <span class="c">-- IPMA: direcção (graus)</span>
     fwi             NUMERIC(6,2),                <span class="c">-- Fire Weather Index</span>
-    risco_estrutural NUMERIC(5,2),               <span class="c">-- CORINE/NDVI risco (0–1)</span>
+    risco_estrutural NUMERIC(5,2),               <span class="c">-- WorldCover+NDVI+declive risco (0–1)</span>
     criado_em       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     notificado      BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -968,18 +968,31 @@ CREATE INDEX ON alertas (criado_em, categoria);
       <p>O score composto (0–100) é calculado em tempo real para cada ignição detectada, combinando componentes estruturais (estáticos, obtidos por lookup nos rasters locais) e meteorológicos (dinâmicos, via IPMA). Ver Secção 12 para a arquitectura completa dos mapas de risco.</p>
 
       <h3>Fórmula de cálculo (PoC)</h3>
-      <pre><span class="c"># Componentes e pesos no PoC</span>
-<span class="c"># risco_estrutural: lookup geoespacial em fire_risk.tif (ver Secção 12)</span>
+      <pre><span class="c"># Fórmula real (analysis/score.py, verificada Jul 2026)</span>
+<span class="c"># --- 1. Risco estrutural (get_structural_risk) ---</span>
+<span class="c"># quando NDVI e declive disponíveis:</span>
+risco_estrutural = 0.5 * wc_risk       <span class="c"># WorldCover (uso do solo) — NÃO CORINE</span>
+                 + 0.3 * ndvi_factor   <span class="c"># NDVI Sentinel-2 (estado da vegetação)</span>
+                 + 0.2 * slope_factor  <span class="c"># declive (Copernicus DEM GLO-30 → slope_norm.tif)</span>
+<span class="c"># (sem NDVI/declive: fallback 0.6*wc + 0.4*ndvi, ou só wc_risk)</span>
+
+<span class="c"># + factor de área ardida (get_area_ardida_factor, raio 5km):</span>
+<span class="c">#   ardeu há ≤2 anos: +0.25 · 2-4 anos: +0.15 · 4-6 anos: +0.05</span>
+risco_estrutural = min(1.0, risco_estrutural + area_ardida_factor)
+
+<span class="c"># --- 2. Score final (calcular_score) ---</span>
 score = (
-    0.35 * risco_estrutural_normalizado    <span class="c"># raster lookup: CORINE + declive + NDVI (0–1)</span>
-  + 0.30 * fwi_normalizado                <span class="c"># Fire Weather Index IPMA (0–1)</span>
-  + 0.20 * vento_factor                   <span class="c"># vel > 50km/h → 1.0, < 10km/h → 0.1</span>
-  + 0.15 * confirmacao_prociv             <span class="c"># confirmado por PROCIV: +15 pts</span>
+    0.35 * risco_estrutural   <span class="c"># WorldCover + NDVI + declive + área ardida</span>
+  + 0.30 * fwi_norm           <span class="c"># FWI IPMA / 80 (0–1)</span>
+  + 0.20 * vento_factor       <span class="c"># ≥50:1.0 · ≥30:0.7 · ≥15:0.4 · ≥5:0.2 · &lt;5:0.1</span>
+  + 0.15 * prociv_factor      <span class="c"># confirmado por PROCIV: 1.0 senão 0.0</span>
 ) * 100
 
-<span class="c"># Ajustamentos contextuais</span>
-<span class="k">if</span> hotspot.confidence == <span class="s">'low'</span>:   score *= 0.7
-<span class="k">if</span> hotspot.frp > 100:             score = min(score * 1.2, 100)  <span class="c"># FRP elevado</span></pre>
+<span class="c"># --- 3. Ajustamentos contextuais ---</span>
+<span class="k">if</span> confidence == <span class="s">'low'</span>:   score *= 0.70
+<span class="k">elif</span> confidence == <span class="s">'high'</span>: score *= 1.05
+<span class="k">if</span> frp > 100:   score = min(100, score * 1.20)
+<span class="k">elif</span> frp > 50:  score = min(100, score * 1.10)</pre>
 
       <div class="score-row">
         <div class="score-cell score-baixo">
@@ -1220,7 +1233,7 @@ score = (
           <div class="phase-content">
             <div class="phase-title">Fase 4 — Enriquecimento geoespacial <span style="color:var(--green);font-size:11px">(parcialmente concluída)</span></div>
             <div class="phase-desc">
-              Risco estrutural WorldCover + NDVI Sentinel-2 (✓ concluído Jun 2026) · Áreas ardidas ICNF 2020–2025 integradas no score (✓ concluído Jun 2026) · Propagação estimada via elipse de vento (✓ concluído) · <strong>Declive: camada de suscetibilidade construída como piloto (Viseu, Copernicus DEM GLO-30, ✓ Jul 2026) — camada visual, por ligar ao score e por escalar a Portugal inteiro; a reconciliar com o factor de declive do fire_risk.tif (EU-DEM), a auditar</strong> · Frente B (emparelhamento alerta↔PROCIV) corrigida e re-emparelhamento retroativo aplicado (✓ Jul 2026) · Refinamento dos pesos com calibração contra histórico ICNF — previsto 2027 · Integração SMRIP — dependente de acordo institucional AGIF
+              Risco estrutural WorldCover + NDVI Sentinel-2 (✓ concluído Jun 2026) · Áreas ardidas ICNF 2020–2025 integradas no score (✓ concluído Jun 2026) · Propagação estimada via elipse de vento (✓ concluído) · <strong>Declive: já integrado no score desde Jun 2026 (20% do risco estrutural, via Copernicus DEM GLO-30 → slope_norm.tif, cobertura Ibéria). Camada visual de declive adicionada Jul 2026 (piloto Viseu, mesmo DEM por outra via) — por escalar a visualização a Portugal inteiro</strong> · Frente B (emparelhamento alerta↔PROCIV) corrigida e re-emparelhamento retroativo aplicado (✓ Jul 2026) · Refinamento dos pesos com calibração contra histórico ICNF — previsto 2027 · Integração SMRIP — dependente de acordo institucional AGIF
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Pendente</div>
@@ -1260,41 +1273,33 @@ score = (
         <strong>Princípio fundamental:</strong> O mapa de risco não é decorativo — é o componente com peso 0.35 no score de cada alerta. Um hotspot numa zona de risco estrutural elevado (floresta de resinosas densa, declive acentuado, vegetação seca) gera um score significativamente mais alto do que o mesmo hotspot numa zona agrícola ou urbana.
       </div>
 
-      <h3>Pipeline de geração do raster de risco estrutural</h3>
-      <p>O raster <code>fire_risk.tif</code> é calculado por um script Python (<code>analysis/risk_raster.py</code>) que combina três camadas de input, todas reprojectadas para EPSG:3763 (PT-TM06) a 100m de resolução:</p>
+      <h3>Como o risco estrutural é realmente calculado</h3>
+      <p>Auditoria ao código (Jul 2026) esclareceu a arquitectura real, que difere da versão inicialmente planeada: o risco estrutural <strong>não</strong> é um único raster pré-combinado. O <code>fire_risk.tif</code> contém a componente <strong>WorldCover</strong> (uso do solo); o NDVI e o declive são lidos de rasters próprios e combinados <em>em tempo de lookup</em>, ponto a ponto, pela função <code>get_structural_risk</code> (<code>analysis/score.py</code>):</p>
 
-      <pre><span class="c"># analysis/risk_raster.py — pipeline de geração de fire_risk.tif</span>
-<span class="k">import</span> rasterio, numpy <span class="k">as</span> np
-<span class="k">from</span> rasterio.warp <span class="k">import</span> reproject, Resampling
+      <pre><span class="c"># analysis/score.py — fusão em tempo de lookup (não pré-combinado)</span>
+<span class="c"># Fonte de coberto: ESA WorldCover (NÃO CORINE — o plano inicial mudou)</span>
+<span class="c"># classes: 10=Tree cover, 20=Shrubland, 30=Grassland, 40=Cropland,</span>
+<span class="c">#          50=Built-up, 60=Bare, 80=Water, 90=Wetland ...</span>
 
-<span class="c"># 1. CORINE Land Cover → valor de combustível (fuel)</span>
-corine_to_fuel = {
-    <span class="c"># Florestas</span>
-    311: 1.0, 312: 1.0, 313: 0.95,    <span class="c"># folhosas / resinosas / mista</span>
-    324: 0.85,                          <span class="c"># vegetação arbustiva em transição</span>
-    322: 0.80, 323: 0.75,              <span class="c"># matos / charneca</span>
-    <span class="c"># Agricultura</span>
-    243: 0.35, 211: 0.15, 231: 0.20,
-    <span class="c"># Urbano / água / artificial</span>
-    111: 0.0, 112: 0.0, 511: 0.0, 512: 0.0
-}
+wc_risk      = lookup(<span class="s">"fire_risk.tif"</span>, lat, lon)    <span class="c"># WorldCover → risco (0–1)</span>
+ndvi_factor  = get_ndvi_factor(lat, lon)         <span class="c"># ingest/ndvi.py → ndvi_latest.tif</span>
+slope_factor = get_slope_factor(lat, lon)        <span class="c"># ingest/dem.py → slope_norm.tif</span>
 
-<span class="c"># 2. EU-DEM → declive normalizado (slope_norm)</span>
-<span class="c"># gdal.DEMProcessing(slope.tif) → normalizar para 0–1 (0°=0, ≥45°=1)</span>
+<span class="c"># declive: Copernicus DEM GLO-30 (NÃO EU-DEM), obtido via Sentinel Hub</span>
+<span class="c"># Process API, BBOX Península Ibérica [-9.5,36.9,-6.1,42.2], estático</span>
 
-<span class="c"># 3. Sentinel-2 NDVI → estado da vegetação</span>
-<span class="c"># ndvi_risk = 1 - ndvi_norm  (vegetação seca = risco alto)</span>
+<span class="k">if</span> ndvi_factor <span class="k">and</span> slope_factor:
+    risco = 0.5*wc_risk + 0.3*ndvi_factor + 0.2*slope_factor
+<span class="k">elif</span> ndvi_factor:
+    risco = 0.6*wc_risk + 0.4*ndvi_factor
+<span class="k">else</span>:
+    risco = wc_risk
 
-<span class="c"># 4. Raster Calculator — pesos PoC</span>
-fire_risk = (
-    0.50 * fuel_norm       <span class="c"># tipo de combustível: peso dominante</span>
-  + 0.30 * slope_norm      <span class="c"># declive: propagação acelerada em encosta</span>
-  + 0.20 * ndvi_risk       <span class="c"># estado da vegetação: seca = risco</span>
-)
-
-<span class="c"># Output: fire_risk.tif — resolução 100m, EPSG:3763, valores 0.0–1.0</span>
-<span class="c"># Guardado em: /srv/saeif/api/data/fire_risk.tif</span>
-<span class="c"># Actualização: mensal (novo NDVI Sentinel-2)</span></pre>
+<span class="c"># + factor área ardida (áreas ardidas ICNF 2020-2025, raio 5km)</span>
+risco = min(1.0, risco + area_ardida_factor)</pre><span class="c"># 4. Raster Calculator — pesos PoC</span>
+<span class="c"># Output real: componente WorldCover pré-calculada em fire_risk.tif</span>
+<span class="c"># (NDVI e declive fundidos em tempo de lookup, ver score.py acima).</span>
+<span class="c"># Actualização mensal via cron (novo NDVI Sentinel-2).</span></pre>
 
       <h3>Lookup geoespacial no pipeline de alertas</h3>
       <p>Para cada hotspot detectado, o módulo <code>analysis/score.py</code> extrai o valor do raster no ponto de ignição via <code>rasterio</code>:</p>
@@ -1316,21 +1321,24 @@ fire_risk = (
 <span class="c"># Retorna valor normalizado 0.0 (risco nulo) → 1.0 (risco máximo)</span>
 <span class="c"># Valor é o risco_estrutural_normalizado usado no score composto</span></pre>
 
-      <h3>Reclassificação CORINE → combustível (tabela completa)</h3>
+      <h3>Classes ESA WorldCover (usadas no código real)</h3>
+      <p>O sistema usa <strong>ESA WorldCover</strong> (não CORINE). As classes abaixo são as reconhecidas em <code>score.py</code> (função <code>get_vegetacao_tipo</code>). O WorldCover base é de 2021 (estático — a ESA não publicou versões posteriores).</p>
       <table>
         <thead>
-          <tr><th>Código CORINE</th><th>Classe de uso do solo</th><th>Valor combustível</th><th>Justificação</th></tr>
+          <tr><th>Código WorldCover</th><th>Classe</th><th>Risco relativo</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>311–313</code></td><td>Floresta folhosas / resinosas / mista</td><td><span class="badge badge-fire">0.95–1.0</span></td><td>Combustível contínuo de alta densidade</td></tr>
-          <tr><td><code>324</code></td><td>Vegetação arbustiva em transição</td><td><span class="badge badge-fire">0.85</span></td><td>Pós-incêndio, regeneração densa e seca</td></tr>
-          <tr><td><code>322–323</code></td><td>Matos / charneca</td><td><span class="badge badge-amber">0.75–0.80</span></td><td>Combustível fino, propagação rápida</td></tr>
-          <tr><td><code>243</code></td><td>Agricultura com vegetação natural</td><td><span class="badge badge-amber">0.35</span></td><td>Mosaico com descontinuidades</td></tr>
-          <tr><td><code>211, 231</code></td><td>Culturas anuais / pastagens</td><td><span class="badge badge-gray">0.15–0.20</span></td><td>Baixa carga de combustível</td></tr>
-          <tr><td><code>111–142</code></td><td>Urbano / industrial / artificial</td><td><span class="badge badge-green">0.0</span></td><td>Não combustível</td></tr>
-          <tr><td><code>511–523</code></td><td>Água (rios, lagos, mar)</td><td><span class="badge badge-green">0.0</span></td><td>Barreira natural</td></tr>
+          <tr><td><code>10</code></td><td>Floresta densa (tree cover)</td><td><span class="badge badge-fire">alto</span></td></tr>
+          <tr><td><code>20</code></td><td>Arbustivo (shrubland)</td><td><span class="badge badge-fire">alto</span></td></tr>
+          <tr><td><code>30</code></td><td>Pastagem (grassland)</td><td><span class="badge badge-amber">médio</span></td></tr>
+          <tr><td><code>40</code></td><td>Cultura agrícola (cropland)</td><td><span class="badge badge-amber">médio-baixo</span></td></tr>
+          <tr><td><code>50</code></td><td>Urbano/edificado (built-up)</td><td><span class="badge badge-green">nulo</span></td></tr>
+          <tr><td><code>60</code></td><td>Solo nu (bare)</td><td><span class="badge badge-gray">baixo</span></td></tr>
+          <tr><td><code>80</code></td><td>Água</td><td><span class="badge badge-green">nulo</span></td></tr>
+          <tr><td><code>90</code></td><td>Zonas húmidas (wetland)</td><td><span class="badge badge-green">baixo</span></td></tr>
         </tbody>
       </table>
+      <p class="dimtext">Nota: o mapeamento exacto código→valor de risco vive no <code>fire_risk.tif</code> (componente WorldCover). Para o detalhe fino da reclassificação, consultar o script que gera esse raster (a auditar numa próxima passagem — este documento foi verificado ao nível de <code>score.py</code> e <code>dem.py</code>).</p>
 
       <h3>Camada visual no frontend Leaflet</h3>
       <p>O raster <code>fire_risk.tif</code> é exposto no frontend de duas formas complementares:</p>
@@ -1404,7 +1412,7 @@ fire_risk = (
       <table>
         <thead><tr><th>Dataset</th><th>Fonte</th><th>URL / Download</th><th>Formato</th></tr></thead>
         <tbody>
-          <tr><td>CORINE Land Cover 2018</td><td>Copernicus Land</td><td><code>land.copernicus.eu/pan-european/corine-land-cover</code></td><td>GeoTIFF 100m</td></tr>
+          <tr><td>ESA WorldCover 2021</td><td>ESA / Copernicus</td><td><code>esa-worldcover.org</code></td><td>GeoTIFF 10m</td></tr>
           <tr><td>Copernicus DEM 25m</td><td>ESA / AWS Open Data</td><td><code>registry.opendata.aws/copernicus-dem</code></td><td>GeoTIFF 25m</td></tr>
           <tr><td>Sentinel-2 NDVI</td><td>Copernicus Browser / GEE</td><td><code>browser.dataspace.copernicus.eu</code></td><td>GeoTIFF 10m</td></tr>
         </tbody>
@@ -1655,7 +1663,7 @@ fire_risk = (
             <td>2 Jun 2026</td>
           </tr>
           <tr>
-            <td><strong>EU-DEM / declive</strong></td>
+            <td><strong>Declive (Copernicus DEM GLO-30)</strong></td>
             <td>Módulo <code>ingest/dem.py</code> que descarrega Copernicus DEM GLO-30 via Sentinel Hub Process API e calcula declive normalizado (0°=0.0, 45°=1.0) via gradiente numpy. Raster <code>slope_norm.tif</code> 340×532px para a Península Ibérica. Integrado no <code>get_structural_risk()</code>: 50% WorldCover + 30% NDVI + 20% slope. O declive amplifica o risco em zonas serranas — um fogo numa encosta a 30° propaga-se 3–4× mais rápido. Ficheiro estático (declive não muda); actualização manual via <code>fetch_dem()</code>. Implementado em 2 Jun 2026.</td>
             <td><span class="badge badge-done">✓ Concluído</span></td>
             <td>2 Jun 2026</td>
@@ -1668,7 +1676,7 @@ fire_risk = (
           </tr>
           <tr>
             <td><strong>Integração SMRIP</strong></td>
-            <td>Substituição do raster CORINE local pelo risco estrutural do SMRIP quando disponível.</td>
+            <td>Substituição do raster WorldCover local pelo risco estrutural do SMRIP quando disponível.</td>
             <td><span class="badge badge-blue">Futura</span></td>
             <td>Depende de SMRIP</td>
           </tr>
