@@ -747,6 +747,18 @@ async def get_effis_risk(day: int = 0):
 
     return {"type": "FeatureCollection", "features": results}
 
+@app.get("/api/layers/{nome}")
+async def get_layer_png(nome: str):
+    """Serve camadas raster (PNG) de /data/layers/. Ex.: declive piloto."""
+    from fastapi.responses import FileResponse
+    # Seguranca: so nomes simples, so .png, sem travessia de diretorio
+    if not nome.replace("_", "").replace("-", "").isalnum() or len(nome) > 60:
+        raise HTTPException(status_code=400, detail="Nome invalido")
+    caminho = f"/data/layers/{nome}.png"
+    if not os.path.exists(caminho):
+        raise HTTPException(status_code=404, detail="Camada nao encontrada")
+    return FileResponse(caminho, media_type="image/png")
+
 @app.get("/api/risk/map")
 async def get_risk_map():
     """GeoJSON de risco estrutural para overlay no Leaflet."""

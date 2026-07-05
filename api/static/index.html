@@ -405,6 +405,7 @@
       <label class="layer-item"><input type="checkbox" id="lRisco" checked onchange="toggleLayer('risco',this.checked)"><div class="layer-dot" style="background:linear-gradient(to right,#3fb950,#f85149)"></div>Risco por distrito</label>
       <div class="layers-section">Perigo de Incêndio EFFIS</div>
       <label class="layer-item"><input type="checkbox" id="lEffis" onchange="toggleLayer('effis',this.checked)"><div class="layer-dot" style="background:linear-gradient(to right,#e3b341,#f85149)"></div>FWI por distrito</label>
+      <label class="layer-item"><input type="checkbox" id="lDeclive" onchange="toggleLayer('declive',this.checked)"><div class="layer-dot" style="background:linear-gradient(to right,#1a9850,#a80000)"></div>Declive · piloto Viseu</label>
       <div style="display:flex;gap:.35rem;margin-top:.4rem;margin-left:1.5rem;" id="effisTimeSelector" style="display:none">
         <button class="filter-btn active-ALTO" id="effisD0" onclick="setEffisDay(0)">Hoje</button>
         <button class="filter-btn" id="effisD1" onclick="setEffisDay(1)">Amanhã</button>
@@ -428,6 +429,15 @@
       <div class="legend-item"><div class="legend-swatch" style="background:#e3b341"></div>Moderado (FWI 10–25)</div>
       <div class="legend-item"><div class="legend-swatch" style="background:#3fb950"></div>Reduzido (FWI &lt; 10)</div>
       <div style="font-size:10px;color:var(--dim);margin-top:.3rem">EFFIS/Copernicus · MeteoFrance</div>
+    </div>
+
+    <div class="map-legend" id="decliveLegend" style="display:none">
+      <div class="legend-title">Declive · risco de propagação</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#c0392b"></div>Muito íngreme (&gt; 25°)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#e67e22"></div>Acentuado (15–25°)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f1c40f"></div>Moderado (5–15°)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#2ecc71"></div>Suave (&lt; 5°)</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:.3rem">Copernicus DEM GLO-30 · piloto Viseu</div>
     </div>
 
     <!-- Painel de ajuda -->
@@ -556,6 +566,7 @@ const alertaLayer=L.layerGroup().addTo(map);
 const riskLayer=L.layerGroup().addTo(map);
 const procivLayer=L.layerGroup(); // não adicionado por defeito
 const effisLayer=L.layerGroup();  // camada EFFIS dinâmica
+const decliveLayer=L.layerGroup();  // declive piloto (Viseu) - camada raster
 
 // Cores FWI: 0=verde, 1=amarelo, 2=laranja, 3=vermelho, 4=vermelho escuro
 const fwiColors={0:'#3fb950',1:'#e3b341',2:'#f0a060',3:'#f85149',4:'#b22020'};
@@ -606,8 +617,15 @@ function toggleLayer(layer, visible){
   const layers = {
     alertas: alertaLayer, propag: propagLayer,
     hotspots: hotspotLayer, prociv: procivLayer,
-    risco: riskLayer, effis: effisLayer
+    risco: riskLayer, effis: effisLayer, declive: decliveLayer
   };
+  if(layer==='declive' && visible && decliveLayer.getLayers().length===0){
+    L.imageOverlay('/api/layers/viseu_slope_web', [[40.0,-9.0],[41.0,-8.0]], {opacity:0.75}).addTo(decliveLayer);
+  }
+  if(layer==='declive'){
+    document.getElementById('decliveLegend').style.display = visible ? 'block' : 'none';
+    updateLegendPositions();
+  }
   if(visible) layers[layer].addTo(map);
   else map.removeLayer(layers[layer]);
   if(layer==='prociv' && visible && procivLayer.getLayers().length===0){
