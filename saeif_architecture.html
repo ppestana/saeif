@@ -994,6 +994,27 @@ score = (
 <span class="k">if</span> frp > 100:   score = min(100, score * 1.20)
 <span class="k">elif</span> frp > 50:  score = min(100, score * 1.10)</pre>
 
+      <h3>Inventário dos factores estruturais (auditado no código, 5 Jul 2026)</h3>
+      <p>Verificação directa de <code>score.py</code>, <code>update_risk.py</code>, <code>dem.py</code> e <code>ndvi.py</code>. Distingue o que <em>já existe</em> no cálculo do risco estrutural, a sua fonte real, se é dinâmico, e como é (re)gerado — para não reconstruir capacidades existentes.</p>
+      <table>
+        <thead>
+          <tr><th>Factor</th><th>Peso</th><th>Fonte real</th><th>Dinâmico?</th><th>Geração</th><th>Estado</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Coberto</strong> (WorldCover)</td><td>50%</td><td>ESA WorldCover 2021 (10m)</td><td>Não — estático</td><td><code>fire_risk.tif</code> — <strong>sem script</strong>, criado uma vez com GDAL (não reproduzível por código)</td><td><span class="badge badge-green">no score</span></td></tr>
+          <tr><td><strong>NDVI</strong> (vegetação)</td><td>30%</td><td>Sentinel-2 via CDSE</td><td><strong>Sim — cada 10 dias</strong></td><td><code>ingest/ndvi.py</code> → <code>ndvi_latest.tif</code> (com máscara de nuvens SCL)</td><td><span class="badge badge-green">no score</span></td></tr>
+          <tr><td><strong>Declive</strong></td><td>20%</td><td>Copernicus DEM GLO-30</td><td>Não — estático</td><td><code>ingest/dem.py</code> → <code>slope_norm.tif</code> (via Sentinel Hub, cobertura Ibéria)</td><td><span class="badge badge-green">no score + camada visual (piloto Viseu)</span></td></tr>
+          <tr><td><strong>Área ardida</strong></td><td>bónus +0.25/+0.15/+0.05</td><td>ICNF 2020-2025 (5018 polígonos)</td><td>Não — estático</td><td>Tabela <code>areas_ardidas</code> — <strong>carregada uma vez</strong>, sem ingest recorrente</td><td><span class="badge badge-green">no score</span></td></tr>
+        </tbody>
+      </table>
+      <p>A reclassificação WorldCover→combustível (<code>FUEL_MAP</code> em <code>update_risk.py</code>): Floresta arbórea 1.00 · Arbustivo 0.85 · Musgos/líquenes 0.20 · Cultura 0.15 · Zona húmida 0.10 · Solo nu/mangal 0.05 · Pastagem 0.30 · Urbano/água/neve 0.00.</p>
+      <div class="alert alert-amber">
+        <strong>Distinção importante (dois "riscos estruturais").</strong> (1) <code>update_risk.py</code> gera <code>fire_risk.<strong>geojson</strong></code> — risco WorldCover médio <em>por distrito</em>, mensal, para a camada visual "Risco por distrito". (2) <code>score.py</code> lê <code>fire_risk.<strong>tif</strong></code> — risco WorldCover <em>por ponto</em>, combinado em tempo de lookup com NDVI e declive, para o score de cada alerta. São artefactos distintos com nomes parecidos; o <code>.geojson</code> é visualização, o <code>.tif</code> é cálculo.
+      </div>
+      <div class="alert alert-fire">
+        <strong>Fragilidade a registar.</strong> O <code>fire_risk.tif</code> (raster central do score) e a tabela <code>areas_ardidas</code> são estáticos e <strong>não têm script de regeneração</strong>. Atualizar o WorldCover ou as áreas ardidas exige recriá-los manualmente com GDAL/import. Candidato a script reproduzível (à imagem de <code>scripts/gerar_declive.sh</code>).
+      </div>
+
       <div class="score-row">
         <div class="score-cell score-baixo">
           <div class="score-num">0–25</div>
