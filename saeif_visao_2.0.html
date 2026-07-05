@@ -199,6 +199,24 @@
       </div>
       <h3>4.4 — Geografia de risco convergente <span class="badge badge-gray">validação cruzada</span></h3>
       <p class="dimtext">As três fontes independentes (histórico secular, modelo de vulnerabilidade 2014, regressão de três décadas) convergem na mesma geografia: <strong>Norte interior</strong> (Guarda, Viseu, Vila Real, Castelo Branco) como zona de maior área ardida. O episódio de Julho 2026 (Vouzela = Viseu) confirma-o em tempo real. Esta convergência é a "assinatura estrutural" do risco em Portugal — candidata a <em>prior</em> geográfico do SAEIF.</p>
+
+      <h3>4.5 — Modelação geoespacial: variáveis, ML e conectividade <span class="badge badge-blue">método avançado</span></h3>
+      <p class="dimtext">Pestana, P. M. (2025), "Fragmentação Fundiária, Incêndios Florestais e Soluções Sistémicas" — artigo próprio, destilado de investigação com consultor especialista em QGIS/análise de IF. Duas metades: (A) institucional/jurídica (cadastro, fragmentação fundiária — contexto do <em>porquê</em>, mas fora da ação do SAEIF); (B) modelação geoespacial — diretamente acionável. Aportes de B:</p>
+      <ul>
+        <li><strong>Concentração do risco (número-âncora):</strong> 10-15% do território é responsável por &gt;60% da área ardida. É a justificação empírica central da tese previsional: mapear essa fração identificável <em>é</em> o produto do SAEIF 2.0. E &gt;90% das ignições são humanas, distribuídas homogeneamente — logo o que faz o megaincêndio é a <em>estrutura da paisagem</em>, não a frequência de ignição (confirma 4.3: prever gravidade ≠ prever ignição).</li>
+        <li><strong>Quatro categorias de variáveis (esqueleto do índice, com fontes):</strong> (1) <em>combustível</em> — CORINE, Copernicus Land, NDVI/EVI Sentinel-2; (2) <em>topografia</em> — DEM SRTM/EU-DEM/Copernicus (declive determinante); (3) <em>clima</em> — ERA5, IPMA, WorldClim; (4) <em>pressão humana</em> — distância a estradas/povoações, densidade pop., GHSL, OpenStreetMap. Refina e completa o roteiro da secção 6.</li>
+        <li><strong>Método do índice — decisão em aberto.</strong> Duas vias: <em>(a)</em> índice composto <strong>aditivo</strong> (pesos fixados à mão, transparente, auditável — à la RISCOS 2014); <em>(b)</em> <strong>machine learning</strong> (Random Forest / XGBoost treinado sobre ignições históricas ICNF — aprende os pesos, mais preciso, mas "caixa-preta" e exige cuidado com overfitting espacial). Variáveis de maior poder preditivo na literatura PT: combustível, declive, continuidade florestal, distância a áreas agrícolas. <strong>Decidir ao construir</strong> — a transparência (a) serve a auditabilidade que é princípio do projeto; a precisão (b) serve o resultado. Possível: começar aditivo, evoluir para ML.</li>
+      </ul>
+
+      <h3>4.6 — Conectividade da paisagem e nós críticos <span class="badge badge-purple">horizonte distante</span></h3>
+      <p class="dimtext">A capacidade mais diferenciadora e mais ambiciosa do artigo — território de investigação de ponta (Benali, Sá, Pereira, CEF/ISA). <strong>Não é próximo passo; é horizonte.</strong></p>
+      <ul>
+        <li><strong>Grafo de propagação + nós críticos.</strong> Modelar a paisagem como grafo (nós = manchas de vegetação, arestas = probabilidade de propagação). Via simulação de milhares de ignições (Minimum Travel Time / FARSITE) e <em>betweenness centrality</em>, emergem os <strong>fire spread nodes</strong>: pontos onde os corredores de propagação convergem, e onde a gestão de combustível tem o maior impacto regional. Índices: burn probability, fire potential index, DIWC. <strong>É o valor estratégico puro</strong> ("intervir <em>aqui</em> protege toda a região") — nem fogos.pt nem IPMA o dão.</li>
+        <li><strong>Corredores de fogo (acionável já com dados na BD).</strong> Getis-Ord Gi* (hotspot analysis) sobre <code>areas_ardidas</code> (já na BD) agregada em grelha 5-10km² identifica os corredores: Pinhal Interior (Coimbra-Lousã-Pedrógão-Castanheira de Pera), Beira Interior (Fundão-Covilhã-Guarda), Trás-os-Montes (Valpaços-Vila Pouca-Montalegre). Alinham com vales que canalizam vento de NE + continuidade de eucalipto/pinheiro + abandono rural.</li>
+        <li><strong>Dimensão fractal + Self-Organized Criticality (enquadramento teórico).</strong> A área ardida em PT segue lei de potência P(A) ∝ A^−α (α≈1.3-1.6): megaincêndios raros mas estatisticamente inevitáveis. A acumulação de combustível leva o sistema ao estado crítico; a fragmentação por mosaico agrícola é o regulador natural. Dimensão fractal da mancha (box-counting): próxima de 2 = contínua e propagadora; mais baixa = fragmentada e resistente. Correlaciona com área ardida histórica. <em>Fundamenta teoricamente</em> porque a conectividade importa — mas é enquadramento, não funcionalidade imediata.</li>
+      </ul>
+      <div class="alert alert-amber">
+        <strong>Aviso de âmbito.</strong> Este artigo é muito ambicioso (ML, grafos de propagação, teoria fractal, SOC). O risco é querer fazer tudo e não fazer nada bem. A regra <strong>"um fator de cada vez"</strong> (secção 6) é a defesa. Ordem realista: primeiro os fatores estruturais simples (declive → recorrência via Getis-Ord sobre <code>areas_ardidas</code> → suscetibilidade), <em>depois</em> o índice (aditivo ou ML), e só num horizonte distante a conectividade/nós críticos. O artigo é o <em>mapa do destino</em>, não o itinerário do próximo passo.
     </div>
   </div>
 
@@ -342,6 +360,17 @@ PRODUTOR de inteligencia          CONSUMIDOR que valoriza</div>
 
       <h3>Fórmula — suscetibilidade à ignição (R²=0.925) <span class="badge badge-green">4.3</span></h3>
       <p class="dimtext">Nunes, A., Lourenço, L., Bento-Gonçalves, A. &amp; Vieira, A. (2013). "Três décadas de incêndios florestais em Portugal: incidência regional e principais fatores responsáveis". <em>Cadernos de Geografia</em>, nº 32, pp. 133-143. Coimbra: FLUC. <span class="dimtext">Modelo de regressão múltipla para a densidade de ocorrências (Quadro III): DO = -14.915 + 0.035·densidade_populacional + 0.020·precipitação_média_anual.</span></p>
+
+      <h3>Modelação geoespacial avançada — variáveis, ML, conectividade <span class="badge badge-blue">4.5 / 4.6</span></h3>
+      <p class="dimtext"><strong>Pestana, P. M. (2025).</strong> "Fragmentação Fundiária, Incêndios Florestais e Soluções Sistémicas: Uma Análise Comparativa Internacional e Abordagens de Modelação Geoespacial para Portugal" (artigo próprio, destilado de investigação com consultor especialista em QGIS). Sintetiza as referências geoespaciais-chave abaixo.</p>
+      <p class="dimtext">Referências geoespaciais fundamentais citadas:</p>
+      <ul>
+        <li><strong>Benali, A., Sá, A. C. L., Pinho, J., Fernandes, P. M. &amp; Pereira, J. M. C. (2022).</strong> "Fire spread patterns and connectivity in mainland Portugal under climate change scenarios". <em>Natural Hazards and Earth System Sciences</em>, 22(12), 3917-3938. DOI: <code>10.5194/nhess-22-3917-2022</code>. <span class="dimtext">(Conectividade, fire spread nodes, MTT.)</span></li>
+        <li><strong>Sá, A. C. L., Benali, A., Fernandes, P. M., et al. (2020).</strong> "Evaluating fire growth simulations using satellite active fire data". <em>Remote Sensing of Environment</em>, 198, 302-317. <span class="dimtext">(Corredores de fogo, validação com dados de satélite.)</span></li>
+        <li><strong>Pereira, J. M. C., Catry, F. X., Moreira, F. &amp; Silva, J. S. (2019).</strong> "Forest fires in Portugal: Dynamics, causes and policies". In Viegas, D. X. (Ed.), <em>Advances in Forest Fire Research</em>. Imprensa da Universidade de Coimbra. <span class="dimtext">(Concentração 10-15%/60%, lei de potência.)</span></li>
+        <li><strong>Jaafari, A., Zenner, E. K., Panahi, M. &amp; Shahabi, H. (2019).</strong> "Hybrid artificial intelligence models... for spatial prediction of wildfire probability". <em>Agricultural and Forest Meteorology</em>, 266-267, 198-207. <span class="dimtext">(Random Forest / ML aplicado a risco de incêndio.)</span></li>
+        <li><strong>Outras:</strong> Bak, Tang &amp; Wiesenfeld (1987) — Self-Organized Criticality; Moritz et al. (2005) — lei de potência em incêndios; Turcotte (1997) — dimensão fractal; OECD (2023) — <em>Taming Wildfires</em>. Lista completa nas referências do artigo Pestana (2025).</li>
+      </ul>
 
       <h3>Fontes de dados institucionais <span class="badge badge-gray">operacionais</span></h3>
       <ul>
