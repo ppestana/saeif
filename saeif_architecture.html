@@ -465,8 +465,8 @@
   <div class="header-left">
     <div class="project-badge">TerraDigital · Projecto 02</div>
     <h1><span>SAEIF</span> — Arquitectura do Sistema</h1>
-    <div class="header-sub">Sistema de Alerta e Encaminhamento Imediato em Incêndios Florestais<br>
-      <em>"Forest fire alerts, before the smoke clears"</em>
+    <div class="header-sub">Sistema de Alerta de Incêndios Florestais — arquitectura técnica<br>
+      <em>De detecção operacional a inteligência territorial para prevenção · "Antecipar para Planear"</em>
     </div>
   </div>
   <div class="header-meta">
@@ -474,6 +474,7 @@
     <span><a href="https://saeif.terradigital.net" style="color:var(--fire);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:11px;">saeif.terradigital.net</a></span>
     <span>Hetzner VPS · 88.198.95.103</span>
     <span>Em produção: 30 Mai 2026</span>
+    <span style="color:var(--amber)">Arquitectura revista: 5 Jul 2026</span>
   </div>
 </div>
 
@@ -505,10 +506,14 @@
       <span class="section-title">Visão Geral e Objectivo</span>
     </div>
     <div class="section-body">
-      <p>O SAEIF é um sistema de alerta em tempo real para incêndios florestais em Portugal Continental, desenvolvido como proof-of-concept pela TerraDigital. O seu propósito central é fornecer, nos primeiros minutos após a detecção de uma ignição, uma avaliação automática do potencial de crescimento do incêndio — cruzando dados satelitares, meteorológicos e de protecção civil — para apoio à decisão de mobilização.</p>
+      <p>O SAEIF é um sistema de <strong>inteligência territorial para a prevenção de incêndios florestais</strong> em Portugal Continental, desenvolvido pela TerraDigital. Nasceu (v1, Maio 2026) como sistema de detecção e alerta em tempo real — cruzando hotspots satelitares (NASA FIRMS), ocorrências da Protecção Civil e dados meteorológicos. Essa capacidade mantém-se e funciona. Mas uma auditoria honesta dos KPIs de detecção precoce mostrou que, nos fogos vistos por ambas as fontes, a Protecção Civil chega primeiro na esmagadora maioria dos casos — competir na detecção operacional é jogar no campo do fogos.pt, onde o SAEIF não vence. <strong>O valor distintivo do SAEIF está noutra dimensão: a leitura estrutural do território</strong> — que encostas, que combustível acumulado, que recorrência histórica tornam uma paisagem mais vulnerável, e o que fazer <em>antes</em> da próxima época. Tese: <em>"Antecipar para Planear"</em>.</p>
+
+      <div class="alert alert-purple">
+        <strong>Nota de leitura.</strong> Este documento descreve a <strong>arquitectura técnica</strong> do sistema tal como está (tabelas, endpoints, pipeline, deploy). Para o <strong>posicionamento estratégico, a fundamentação teórica e o roteiro de construção do SAEIF 2.0</strong> (a viragem para inteligência territorial), ver o documento companion <code>saeif_visao_2.0.html</code>, que é a fonte autoritativa da direção do projecto. Quando os dois divergirem, a visão manda na estratégia; este manda nos factos técnicos.
+      </div>
 
       <div class="alert alert-fire">
-        <strong>Contexto operacional:</strong> Portugal perdeu mais de 500.000 hectares de floresta entre 2010 e 2023. A maioria dos grandes incêndios foi precedida por ignições aparentemente menores para as quais a mobilização inicial foi insuficiente. O SAEIF endereça directamente esta lacuna de avaliação precoce.
+        <strong>Contexto.</strong> Portugal perdeu mais de 500.000 hectares de floresta entre 2010 e 2023. A literatura (e a análise dos próprios dados do SAEIF) mostra que 10-15% do território concentra mais de 60% da área ardida — uma fracção pequena e <em>identificável</em>. Mapear essa fracção é o produto do SAEIF 2.0.
       </div>
 
       <div class="cards">
@@ -529,13 +534,13 @@
         </div>
         <div class="card">
           <div class="card-label">Regra de cruzamento</div>
-          <div class="card-value">40 km</div>
-          <div class="card-sub">Raio de proximidade para cruzamento FIRMS × PROCIV</div>
+          <div class="card-value">5 km</div>
+          <div class="card-sub">Raio de proximidade para emparelhamento FIRMS × PROCIV (corrigido de 40km em Jul 2026 — ver Frente B)</div>
         </div>
       </div>
 
       <h3>Posicionamento no ecossistema de sistemas</h3>
-      <p>O SAEIF é o Sistema 4 num conjunto de 5 sistemas complementares para a prevenção e combate a incêndios florestais. Na arquitectura de integração global, é o sistema de saída operacional: recebe dados processados dos sistemas 1 (SIGCRF — cadastro) e 3 (SMRIP — modelação de risco) e <strong>informa</strong> o CDOS/AGIF e os corpos de bombeiros. O SAEIF é um sistema de informação e alerta — não emite ordens operacionais nem substitui os sistemas de comando e controlo institucionais.</p>
+      <p>O SAEIF integra um conjunto de sistemas complementares para a prevenção de incêndios florestais. Na viragem 2.0, o seu papel é o de <strong>produtor de inteligência de vulnerabilidade territorial</strong>: processa dados estruturais (topografia, recorrência de área ardida, coberto, pressão humana) num índice de suscetibilidade, dirigido a quem decide <em>prevenção</em> — municípios, ICNF, baldios, associações florestais, seguradoras. A vista operacional em tempo real (v1) mantém-se como camada subordinada e mecanismo de validação (cada fogo real que cai numa zona marcada como suscetível valida o modelo previsional). O SAEIF é um sistema de informação — não emite ordens operacionais nem substitui os sistemas de comando e controlo institucionais. Uma API poderá, no futuro, servir a inteligência de vulnerabilidade a outros sistemas (ex. EconoStats, para valorização económica do impacto na fileira florestal).</p>
 
       <div class="arch-box">www.terradigital.net              ← Landing page (carousel + newsletter)
 │
@@ -569,7 +574,7 @@
           <div class="flow-step-num">02</div>
           <div class="flow-step-content">
             <h4>Deduplicação e geocodificação</h4>
-            <p>Cruzamento FIRMS × PROCIV por proximidade geográfica de <strong>40 km</strong>. Hotspots FIRMS já geocodificados por coordenada. Ocorrências PROCIV geocodificadas por nome de localidade (OSM Nominatim + fallback manual). Deduplicação por janela temporal de 30 minutos + raio de 2 km.</p>
+            <p>Emparelhamento FIRMS × PROCIV por proximidade geográfica de <strong>5 km</strong> (corrigido de 40km em Jul 2026 — a Frente B) e janela temporal de <strong>72h sobre <code>data_hora</code></strong> (a hora do evento, não a de ingestão). Hotspots FIRMS já geocodificados por coordenada. Ocorrências PROCIV geocodificadas por nome de localidade (OSM Nominatim + fallback manual). Deduplicação inter-satélite por janela de 2h + raio de 2 km. <em>Ver secção "Frente B" nas melhorias para o diagnóstico completo e a fundamentação empírica destes limiares.</em></p>
           </div>
         </div>
         <div class="flow-step">
@@ -583,7 +588,7 @@
           <div class="flow-step-num">04</div>
           <div class="flow-step-content">
             <h4>Cálculo do score de risco e geração de ficha</h4>
-            <p>Score composto (0–100) calculado a partir de: risco estrutural da paisagem, condições meteorológicas actuais (FWI, vento), tipo de combustível, declive, e índice de conectividade da paisagem. A ficha de alerta inclui mapa de propagação estimada a 6h/12h/24h, recomendação de mobilização, e identificação de infraestruturas em risco.</p>
+            <p>Score composto (0–100) calculado a partir de: risco estrutural da paisagem (coberto WorldCover), condições meteorológicas actuais (FWI, vento), tipo de combustível, e área ardida histórica (ICNF). A ficha de alerta inclui mapa de propagação estimada, e dados meteorológicos e EFFIS. <strong>Nota (Jul 2026) — a esclarecer:</strong> o componente <code>risco_estrutural</code> do score inclui, segundo o pipeline documentado (Secção 12), um factor de declive via <code>fire_risk.tif</code> (EU-DEM). Em paralelo, foi construída em Jul 2026 uma <em>camada</em> de declive independente e mais recente (Copernicus DEM GLO-30, piloto Viseu, servida por <code>/api/layers</code> — ver Roadmap) como visualização, ainda <strong>não</strong> ligada ao score. <em>Fica por auditar contra o código se o declive do <code>fire_risk.tif</code> está de facto activo no cálculo, e como reconciliar as duas fontes de declive.</em></p>
           </div>
         </div>
         <div class="flow-step">
@@ -762,7 +767,7 @@
 │   │   ├── fogos.py              ← fogos.pt scraping
 │   │   └── ipma.py               ← IPMA meteorologia
 │   ├── analysis/
-│   │   ├── dedup.py              ← Deduplicação hotspots (raio 40 km)
+│   │   ├── dedup.py              ← Emparelhamento hotspots↔PROCIV (raio 5 km, janela 72h data_hora)
 │   │   ├── score.py              ← Cálculo score de risco
 │   │   └── alerts.py             ← Geração de alertas SYS
 │   ├── static/
@@ -941,7 +946,7 @@ CREATE INDEX ON alertas (criado_em, categoria);
     <span class="s">"hotspot_source"</span>: <span class="s">"NOAA20"</span>,
     <span class="s">"prociv_confirmado"</span>: <span class="k">true</span>,
     <span class="s">"prociv_localidade"</span>: <span class="s">"Lisboa, Sintra, Terrugem"</span>,
-    <span class="s">"criado_em"</span>: <span class="s">"2026-07-15T14:32:00Z"</span>,
+    <span class="s">"criado_em"</span>: <span class="s">"2026-07-02T06:54:00Z"</span>,
     <span class="s">"meteo"</span>: {
       <span class="s">"temp"</span>: 38.2, <span class="s">"humidade"</span>: 18, <span class="s">"vento_vel"</span>: 45.0, <span class="s">"vento_dir"</span>: 220, <span class="s">"fwi"</span>: 68.4
     },
@@ -1185,7 +1190,7 @@ score = (
           <div class="phase-content">
             <div class="phase-title">Fase 1 — Core pipeline funcional</div>
             <div class="phase-desc">
-              Schema PostgreSQL + PostGIS · Ingest FIRMS (GeoJSON) · Ingest fogos.pt (scraping) · Ingest IPMA (temperatura, vento, FWI) · Deduplicação por proximidade 40 km · <strong>Pipeline raster de risco</strong> (CORINE + EU-DEM + NDVI → <code>fire_risk.tif</code>) · Lookup geoespacial por ponto de ignição · Cálculo de score · Tabela de alertas · Log de ingest · WebSocket server (<code>/ws</code>)
+              Schema PostgreSQL + PostGIS · Ingest FIRMS (GeoJSON) · Ingest fogos.pt (scraping) · Ingest IPMA (temperatura, vento, FWI) · Emparelhamento hotspot↔PROCIV por proximidade 5 km + janela 72h · <strong>Pipeline raster de risco</strong> (WorldCover + NDVI → <code>fire_risk</code>) · Camada de declive (Copernicus DEM GLO-30 → GDAL → PNG, piloto Viseu, servida por <code>/api/layers</code>) · Lookup geoespacial por ponto de ignição · Cálculo de score · Tabela de alertas · Log de ingest · WebSocket server (<code>/ws</code>)
             </div>
           </div>
           <div class="phase-badge badge-done">✓ Concluída</div>
@@ -1215,7 +1220,7 @@ score = (
           <div class="phase-content">
             <div class="phase-title">Fase 4 — Enriquecimento geoespacial <span style="color:var(--green);font-size:11px">(parcialmente concluída)</span></div>
             <div class="phase-desc">
-              Risco estrutural WorldCover + NDVI Sentinel-2 + declive EU-DEM (✓ concluído Jun 2026) · Áreas ardidas ICNF 2020–2025 integradas no score (✓ concluído Jun 2026) · Propagação estimada via elipse de vento (✓ concluído) · Refinamento dos pesos com calibração contra histórico ICNF — previsto 2027, dependente de acumulação de dados operacionais · Integração SMRIP — dependente de acordo institucional AGIF
+              Risco estrutural WorldCover + NDVI Sentinel-2 (✓ concluído Jun 2026) · Áreas ardidas ICNF 2020–2025 integradas no score (✓ concluído Jun 2026) · Propagação estimada via elipse de vento (✓ concluído) · <strong>Declive: camada de suscetibilidade construída como piloto (Viseu, Copernicus DEM GLO-30, ✓ Jul 2026) — camada visual, por ligar ao score e por escalar a Portugal inteiro; a reconciliar com o factor de declive do fire_risk.tif (EU-DEM), a auditar</strong> · Frente B (emparelhamento alerta↔PROCIV) corrigida e re-emparelhamento retroativo aplicado (✓ Jul 2026) · Refinamento dos pesos com calibração contra histórico ICNF — previsto 2027 · Integração SMRIP — dependente de acordo institucional AGIF
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Pendente</div>
