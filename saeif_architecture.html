@@ -1021,6 +1021,22 @@ score = (
         Nota: nenhum índice novo entra no score final até ser validado isoladamente contra dados reais. A fórmula actual (documentada acima) mantém-se em produção como está; a reorganização é incremental.
       </div>
 
+      <h3>Decisão de arquitetura: modelo espacial contínuo (grelha 250 m)</h3>
+      <p>Decisão estrutural (6 Jul 2026, com consultoria SIG florestal). Os três índices <strong>não</strong> são calculados por unidade administrativa (distrito/concelho/freguesia). São calculados numa <strong>grelha regular contínua</strong>; as divisões administrativas passam a ser apenas <em>lentes de agregação e apresentação</em>, nunca a unidade fundamental de cálculo. Fundamento: a agregação (fino→grosso) é estatisticamente válida; a desagregação (repartir uma média distrital pelos concelhos) inventa informação inexistente — é a <em>falácia ecológica</em> e o <em>problema da unidade de área modificável (MAUP)</em>. Ao nascer contínuo, o modelo evita ambos e pode ser agregado a qualquer geometria (freguesia, concelho, NUTS) sem alterar o cálculo.</p>
+
+      <div class="alert alert-blue">
+        <strong>Dois níveis de resolução, sempre distintos.</strong>
+        <ul>
+          <li><strong>Resolução de armazenamento (nativa):</strong> cada variável mantém-se na resolução original — "a verdade", nunca degradada. NDVI 10 m · declive/DEM 30 m · WorldCover 10 m · precipitação ~1 km · população subsecção estatística/grelha INE.</li>
+          <li><strong>Resolução operacional (250 m):</strong> só no <em>momento de calcular</em> os índices I/P/V é que todas as camadas são reamostradas para uma grelha comum de 250 m.</li>
+        </ul>
+        <strong>Porquê 250 m — o princípio da variável limitante:</strong> a resolução operacional não deve ser mais fina que a da variável <em>menos</em> precisa. A limitante não é o declive nem o NDVI (finos) — é a <strong>população e a precipitação</strong> (~1 km / subsecção). Descer abaixo de 250 m seria <em>falsa precisão</em>. E o critério decisivo não é o armazenamento (a 250 m são ~1,4 M células para PT continental, dezenas de MB — irrelevante), mas o <strong>tempo de recálculo diário</strong>: a operação futura (NDVI, FWI, humidade, vento, cenários horários) tem de correr todos os dias; a 250 m fica confortável, a 100 m tornar-se-ia estrangulamento à medida que as variáveis crescem.
+      </div>
+
+      <div class="alert alert-amber">
+        <strong>Parâmetro configurável, não gravado.</strong> A resolução vive como <code>GRID_RESOLUTION = 250</code> (metros), não embutida na lógica. Evoluir para 100 m no futuro é mudar um parâmetro, não redesenhar o sistema — os dados nativos finos permanecem intactos no armazenamento. A arquitetura é multi-resolução: dados originais → reamostragem automática → grelha operacional → índices I/P/V → risco final.
+      </div>
+
       <div class="alert alert-amber">
         <strong>Distinção importante (dois "riscos estruturais").</strong> (1) <code>update_risk.py</code> gera <code>fire_risk.<strong>geojson</strong></code> — risco WorldCover médio <em>por distrito</em>, mensal, para a camada visual "Risco por distrito". (2) <code>score.py</code> lê <code>fire_risk.<strong>tif</strong></code> — risco WorldCover <em>por ponto</em>, combinado em tempo de lookup com NDVI e declive, para o score de cada alerta. São artefactos distintos com nomes parecidos; o <code>.geojson</code> é visualização, o <code>.tif</code> é cálculo.
       </div>
