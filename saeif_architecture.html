@@ -475,6 +475,7 @@
     <span>Hetzner VPS · 88.198.95.103</span>
     <span>Em produção: 30 Mai 2026</span>
     <span style="color:var(--amber)">Arquitectura revista: 5 Jul 2026</span>
+    <span style="color:var(--blue)">Enquadramento 3 índices: 6 Jul 2026</span>
   </div>
 </div>
 
@@ -508,7 +509,7 @@
     <div class="section-body">
       <p>O SAEIF é um sistema de <strong>inteligência territorial para a prevenção de incêndios florestais</strong> em Portugal Continental, desenvolvido pela TerraDigital. Nasceu (v1, Maio 2026) como sistema de detecção e alerta em tempo real — cruzando hotspots satelitares (NASA FIRMS), ocorrências da Protecção Civil e dados meteorológicos. Essa capacidade mantém-se e funciona. Mas uma auditoria honesta dos KPIs de detecção precoce mostrou que, nos fogos vistos por ambas as fontes, a Protecção Civil chega primeiro na esmagadora maioria dos casos — competir na detecção operacional é jogar no campo do fogos.pt, onde o SAEIF não vence. <strong>O valor distintivo do SAEIF está noutra dimensão: a leitura estrutural do território</strong> — que encostas, que combustível acumulado, que recorrência histórica tornam uma paisagem mais vulnerável, e o que fazer <em>antes</em> da próxima época. Tese: <em>"Antecipar para Planear"</em>.</p>
 
-      <div class="alert alert-purple">
+      <div class="alert alert-blue">
         <strong>Nota de leitura.</strong> Este documento descreve a <strong>arquitectura técnica</strong> do sistema tal como está (tabelas, endpoints, pipeline, deploy). Para o <strong>posicionamento estratégico, a fundamentação teórica e o roteiro de construção do SAEIF 2.0</strong> (a viragem para inteligência territorial), ver o documento companion <code>saeif_visao_2.0.html</code>, que é a fonte autoritativa da direção do projecto. Quando os dois divergirem, a visão manda na estratégia; este manda nos factos técnicos.
       </div>
 
@@ -1008,6 +1009,18 @@ score = (
         </tbody>
       </table>
       <p>A reclassificação WorldCover→combustível (<code>FUEL_MAP</code> em <code>update_risk.py</code>): Floresta arbórea 1.00 · Arbustivo 0.85 · Musgos/líquenes 0.20 · Cultura 0.15 · Zona húmida 0.10 · Solo nu/mangal 0.05 · Pastagem 0.30 · Urbano/água/neve 0.00.</p>
+
+      <div class="alert alert-blue">
+        <strong>Enquadramento na arquitetura-alvo de três índices (6 Jul 2026).</strong> A visão do SAEIF 2.0 (ver <code>saeif_visao_2.0.html</code> §6) reorganiza a leitura estrutural em três índices independentes que respondem a fenómenos distintos, modulados por meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>. Situando o código actual nesse mapa:
+        <ul>
+          <li><strong>Índice P — Propagação:</strong> é <em>exactamente</em> o <code>risco_estrutural</code> que <code>score.py</code> já calcula (WorldCover + NDVI + declive + bónus área ardida). Ou seja, o SAEIF <strong>já tem o Índice P implementado</strong> — falta destilá-lo como produto explícito e autónomo.</li>
+          <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <em>não existe</em> no código. É o próximo a construir — camada por distrito, baseada na densidade de ocorrências observada (Nunes et al. 2013), separada do score.</li>
+          <li><strong>Índice V — Vulnerabilidade:</strong> <em>não existe</em>. Horizonte (modelo PREFER, Bento-Gonçalves et al. 2014).</li>
+          <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
+        </ul>
+        Nota: nenhum índice novo entra no score final até ser validado isoladamente contra dados reais. A fórmula actual (documentada acima) mantém-se em produção como está; a reorganização é incremental.
+      </div>
+
       <div class="alert alert-amber">
         <strong>Distinção importante (dois "riscos estruturais").</strong> (1) <code>update_risk.py</code> gera <code>fire_risk.<strong>geojson</strong></code> — risco WorldCover médio <em>por distrito</em>, mensal, para a camada visual "Risco por distrito". (2) <code>score.py</code> lê <code>fire_risk.<strong>tif</strong></code> — risco WorldCover <em>por ponto</em>, combinado em tempo de lookup com NDVI e declive, para o score de cada alerta. São artefactos distintos com nomes parecidos; o <code>.geojson</code> é visualização, o <code>.tif</code> é cálculo.
       </div>
