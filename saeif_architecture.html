@@ -1037,6 +1037,20 @@ score = (
         <strong>Parâmetro configurável, não gravado.</strong> A resolução vive como <code>GRID_RESOLUTION = 250</code> (metros), não embutida na lógica. Evoluir para 100 m no futuro é mudar um parâmetro, não redesenhar o sistema — os dados nativos finos permanecem intactos no armazenamento. A arquitetura é multi-resolução: dados originais → reamostragem automática → grelha operacional → índices I/P/V → risco final.
       </div>
 
+      <h3>Arquitetura temporal — o que se recalcula e quando</h3>
+      <p>A grelha resolve a dimensão <em>espacial</em>; a arquitetura temporal resolve <em>a que ritmo cada camada muda</em> — decisão de desenho do motor e do scheduler, com impacto directo no custo de processamento. As camadas do SAEIF vivem em escalas temporais muito diferentes, e recalculá-las todas ao mesmo ritmo seria desperdício:</p>
+      <table>
+        <thead><tr><th>Escala</th><th>Camadas</th><th>Ritmo de recálculo</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Anos</strong></td><td>Fatores estruturais: topografia (declive), coberto base (WorldCover)</td><td>Praticamente nunca (regenerar só quando a fonte muda)</td></tr>
+          <tr><td><strong>Meses</strong></td><td>Vegetação (NDVI, cada 10 dias), risco por distrito (mensal)</td><td>Agendado, infrequente</td></tr>
+          <tr><td><strong>Dias</strong></td><td>Meteorologia (camada M): FWI, vento, temperatura, humidade</td><td>Diário</td></tr>
+          <tr><td><strong>Horas</strong></td><td>Deteção de hotspots (passagens de satélite VIIRS/MODIS)</td><td>A cada ciclo de ingestão</td></tr>
+          <tr><td><strong>Minutos</strong></td><td>Geração e envio de alertas</td><td>Em tempo real</td></tr>
+        </tbody>
+      </table>
+      <p>Consequência prática para o motor: os <strong>índices estruturais I/P/V</strong> (anos/meses) são pré-calculados e cacheados — não se recalculam por alerta. A <strong>camada M</strong> (dias) é o único componente do risco estrutural-modulado que corre num ciclo diário. A operação de <strong>deteção/alerta</strong> (horas/minutos) consulta os índices já calculados, sem os recomputar. É isto que torna viável uma grelha contínua de 250 m: o custo pesado (os índices) paga-se raramente; o ciclo frequente (alertas) só faz lookups. Esta separação é o que evita que a grelha contínua sobrecarregue a operação em tempo real.</p>
+
       <div class="alert alert-amber">
         <strong>Distinção importante (dois "riscos estruturais").</strong> (1) <code>update_risk.py</code> gera <code>fire_risk.<strong>geojson</strong></code> — risco WorldCover médio <em>por distrito</em>, mensal, para a camada visual "Risco por distrito". (2) <code>score.py</code> lê <code>fire_risk.<strong>tif</strong></code> — risco WorldCover <em>por ponto</em>, combinado em tempo de lookup com NDVI e declive, para o score de cada alerta. São artefactos distintos com nomes parecidos; o <code>.geojson</code> é visualização, o <code>.tif</code> é cálculo.
       </div>
@@ -1297,6 +1311,16 @@ score = (
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Futuro</div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">6</div>
+          <div class="phase-content">
+            <div class="phase-title">Fase 6 — SAEIF 2.0: arquitetura de índices <span style="color:var(--amber);font-size:11px">(em curso, desde Jul 2026)</span></div>
+            <div class="phase-desc">
+              A viragem de "detecção operacional" para "inteligência territorial de suscetibilidade" (ver <code>saeif_visao_2.0.html</code>). Reorganiza a leitura estrutural em três índices independentes + meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>, sobre um <strong>modelo espacial contínuo (grelha 250 m)</strong>, com divisões administrativas apenas como agregação. Estado por componente: <strong>Índice P (Propagação)</strong> — já existe implícito no score (WorldCover + NDVI + declive + área ardida), a destilar como produto explícito · <strong>Índice I (Suscetibilidade de Ignição)</strong> — próximo a construir, como superfície contínua (KDE) das ignições georreferenciadas, a partir de <code>areas_ardidas</code> · <strong>Índice V (Vulnerabilidade)</strong> — horizonte (modelo PREFER) · <strong>Camada M (Meteorologia)</strong> — já existe (FWI/vento), a separar dos índices estruturais · <strong>Grelha 250 m</strong> — decisão de arquitetura tomada (princípio da variável limitante; <code>GRID_RESOLUTION</code> configurável), por implementar. Princípio: cada índice validado isoladamente contra dados reais antes de qualquer combinação; um de cada vez. <strong>Estrutura científica</strong> (hipóteses H1-H4, maturidade por componente, arquitetura temporal, método de validação com ROC/recall/RMSE) documentada em <code>saeif_visao_2.0.html</code> §07.
+            </div>
+          </div>
+          <div class="phase-badge badge-pending">⏳ Em curso</div>
         </div>
       </div>
 

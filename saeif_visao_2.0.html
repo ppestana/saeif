@@ -98,7 +98,7 @@
     <span><a href="https://saeif.terradigital.net" style="color:var(--fire);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:11px;">saeif.terradigital.net</a></span>
     <span>Companion de saeif_architecture.html</span>
     <span>Redigido: 3 Jul 2026</span>
-    <span style="color:var(--amber)">Arquitetura de 3 índices: 6 Jul 2026</span>
+    <span style="color:var(--amber)">Arquitetura de 3 índices + estrutura científica: 6 Jul 2026</span>
   </div>
 </div>
 
@@ -108,7 +108,8 @@
   <a href="#mercado">Mercado</a>
   <a href="#fundamentacao">Fundamentação</a>
   <a href="#ecossistema">Ecossistema</a>
-  <a href="#roteiro">Roteiro de Fatores</a>
+  <a href="#roteiro">Arquitetura de Índices</a>
+  <a href="#ciencia">Estrutura Científica</a>
   <a href="#investigacoes">Investigações Abertas</a>
   <a href="#principios">Princípios</a>
   <a href="#bibliografia">Bibliografia</a>
@@ -129,7 +130,10 @@
       </div>
       <p>O SAEIF 2.0 assume por isso uma <strong>categoria diferente</strong>: não responde a "onde está a arder agora?" (operacional), mas a <strong>"onde estão reunidas as condições para o território ser mais vulnerável ao fogo, e o que fazer antes da próxima época?"</strong> (estratégico/preventivo).</p>
       <div class="slogan"><div class="big">Antecipar para Planear</div><div class="sub">Inteligência territorial para a prevenção dos incêndios florestais</div></div>
-      <p class="dimtext">Nota de origem do lema: a formulação inicial foi "Prever para Planear". Refinou-se para "Antecipar" porque "prever" sugere adivinhação — e o SAEIF prevê <em>suscetibilidade estrutural</em> (a paisagem está pronta a arder), não <em>ocorrência</em> (vai arder aqui, neste dia). A distinção é a regra de ouro de todo o projeto (ver secção 08).</p>
+      <p class="dimtext">Nota de origem do lema: a formulação inicial foi "Prever para Planear". Refinou-se para "Antecipar" porque "prever" sugere adivinhação — e o SAEIF prevê <em>suscetibilidade estrutural</em> (a paisagem está pronta a arder), não <em>ocorrência</em> (vai arder aqui, neste dia). A distinção é a regra de ouro de todo o projeto (ver secção 09).</p>
+      <div class="alert alert-blue">
+        <strong>Norte estratégico — de diagnóstico a instrumento de decisão.</strong> Um mapa de risco responde a "onde há maior risco?" (diagnóstico). Mas o decisor municipal ou o ICNF precisam de responder a uma pergunta diferente: <strong>"onde devo investir primeiro para reduzir o risco?"</strong> (instrumento de decisão). A evolução mais ambiciosa do SAEIF é, a partir dos índices estruturais, sugerir <em>prioridades de intervenção</em>: onde a redução de combustível traz maior benefício, onde reforçar vigilância, onde a vulnerabilidade humana exige intervenção preventiva. Deixa de descrever o território e passa a apoiar decisões concretas de ordenamento. É o horizonte do projeto — requer os três índices construídos primeiro.
+      </div>
     </div>
   </div>
 
@@ -267,8 +271,62 @@ PRODUTOR de inteligencia          CONSUMIDOR que valoriza</div>
     </div>
   </div>
 
+  <div class="section" id="ciencia">
+    <div class="section-header"><span class="section-num">07</span><span class="section-title">Estrutura científica — hipóteses, maturidade, validação</span></div>
+    <div class="section-body">
+      <p>O SAEIF 2.0 não é um conjunto de funcionalidades: é uma plataforma científica de apoio à decisão territorial. Como tal, assenta em hipóteses explícitas, tem componentes em estados de maturidade distintos, e cada índice deve ser validável contra dados reais. Esta secção torna isso explícito (sugestão de consultoria SIG, 6 Jul 2026).</p>
+
+      <h3>7.1 — Hipóteses científicas</h3>
+      <p>Todo o modelo assenta em hipóteses testáveis. Torná-las explícitas é o que separa um índice defensável de um número arbitrário:</p>
+      <ul>
+        <li><strong>H1 (Ignição):</strong> maior pressão humana aumenta a suscetibilidade de ignição. <span class="dimtext">Fundamento: Nunes et al. 2013 — a presença humana é a principal causa da desigual distribuição regional dos focos.</span></li>
+        <li><strong>H2 (Propagação):</strong> maior continuidade e carga de combustível, e maior declive, aumentam o potencial de propagação. <span class="dimtext">Fundamento: física do fogo; WorldCover + NDVI + declive já no Índice P.</span></li>
+        <li><strong>H3 (Recorrência):</strong> a recorrência histórica de área ardida contém informação preditiva sobre suscetibilidade futura. <span class="dimtext">"Onde ardeu, arde." Fundamento: bónus de área ardida no score.</span></li>
+        <li><strong>H4 (Modulação):</strong> a meteorologia atua como modulador dinâmico dos índices estruturais, não como fator estrutural. <span class="dimtext">Justifica separar M dos índices I/P/V.</span></li>
+      </ul>
+
+      <h3>7.2 — Maturidade dos componentes</h3>
+      <p>Estados honestos, para evitar ambiguidade entre o que está em produção e o que é aspiração:</p>
+      <table>
+        <thead><tr><th>Componente</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td>Deteção (hotspots, alertas)</td><td><span class="badge badge-green">Produção</span></td></tr>
+          <tr><td>Índice P — Propagação</td><td><span class="badge badge-green">Produção</span> (implícito no score; a destilar como produto)</td></tr>
+          <tr><td>Camada M — Meteorologia</td><td><span class="badge badge-green">Produção</span> (a separar dos índices estruturais)</td></tr>
+          <tr><td>Índice I — Suscetibilidade de Ignição</td><td><span class="badge badge-amber">Investigação</span> (próximo a construir)</td></tr>
+          <tr><td>Índice V — Vulnerabilidade</td><td><span class="badge badge-gray">Investigação</span> (horizonte)</td></tr>
+          <tr><td>Modelo integrado Risco = f(I,P,V,M)</td><td><span class="badge badge-gray">Futuro</span></td></tr>
+          <tr><td>Grelha contínua 250 m</td><td><span class="badge badge-amber">Investigação</span> (decisão de arquitetura tomada; por implementar)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>7.3 — Arquitetura temporal</h3>
+      <p>A decisão da grelha resolve a dimensão <em>espacial</em>. Mas há uma dimensão <em>temporal</em> igualmente importante: as camadas mudam a ritmos muito diferentes, e isso explica o que se recalcula e quando.</p>
+      <ul>
+        <li><strong>Anos</strong> — fatores estruturais (topografia, coberto base). Praticamente imutáveis.</li>
+        <li><strong>Meses</strong> — vegetação (NDVI a cada 10 dias), risco por distrito (mensal).</li>
+        <li><strong>Dias</strong> — meteorologia (FWI, vento, temperatura, humidade).</li>
+        <li><strong>Horas</strong> — deteção de hotspots (passagens de satélite).</li>
+        <li><strong>Minutos</strong> — geração e envio de alertas.</li>
+      </ul>
+      <p>Os índices estruturais I/P/V vivem no topo (anos/meses); a camada M vive nos dias; a operação de deteção/alerta vive nas horas/minutos. Um índice estrutural não precisa de recálculo diário — a meteorologia sim. Isto informa o desenho do motor e o custo de processamento.</p>
+
+      <h3>7.4 — Método de validação</h3>
+      <p>Pergunta central: <em>como sabemos que o SAEIF funciona?</em> Cada índice é validável isoladamente <strong>antes</strong> de qualquer combinação — princípio já adotado, aqui detalhado no método. <em>Nota honesta: ainda não há resultados de validação; o que segue é o método planeado, não medições feitas.</em></p>
+      <ul>
+        <li><strong>Índice I</strong> — comparar a suscetibilidade de ignição prevista com as ignições <em>observadas</em> (densidade histórica ICNF). Se o índice é bom, as zonas de alta suscetibilidade concentram as ignições reais.</li>
+        <li><strong>Índice P</strong> — comparar o potencial de propagação com a <em>área ardida</em> observada e a severidade dos fogos.</li>
+        <li><strong>Índice V</strong> — comparar a vulnerabilidade estimada com os <em>impactos</em> registados (perdas, danos).</li>
+        <li><strong>Métricas</strong> — para modelos de classificação: curva ROC, AUC, precisão, sensibilidade (recall). Para estimativas contínuas: RMSE, correlação. A escolha depende de cada índice ser tratado como classificador ou como estimador contínuo.</li>
+      </ul>
+      <div class="alert alert-amber">
+        <strong>Princípio de honestidade metodológica.</strong> Mostrar <em>como</em> os índices serão validados — mesmo antes de haver resultados — é o que transmite rigor. Um índice sem plano de validação é uma opinião; com plano de validação, é uma hipótese testável. Nenhum índice deve ser apresentado como "funciona" sem esta comparação contra dados reais.
+      </div>
+    </div>
+  </div>
+
   <div class="section" id="investigacoes">
-    <div class="section-header"><span class="section-num">07</span><span class="section-title">Investigações em aberto e dívida técnica</span></div>
+    <div class="section-header"><span class="section-num">08</span><span class="section-title">Investigações em aberto e dívida técnica</span></div>
     <div class="section-body">
       <h3>7.1 — Frente B: emparelhamento alerta-PROCIV <span class="badge badge-green">RESOLVIDA (4 Jul 2026)</span></h3>
       <p>O emparelhamento hotspot↔PROCIV é feito em <code>analysis/dedup.py</code>: para cada hotspot, escolhe a ocorrência PROCIV mais próxima (<code>ORDER BY dist ASC LIMIT 1</code>) dentro de um raio e de uma janela temporal. A auditoria revelou dois problemas <em>distintos e sobrepostos</em>, ambos agora corrigidos:</p>
@@ -337,7 +395,7 @@ PRODUTOR de inteligencia          CONSUMIDOR que valoriza</div>
   </div>
 
   <div class="section" id="principios">
-    <div class="section-header"><span class="section-num">08</span><span class="section-title">Princípios de execução</span></div>
+    <div class="section-header"><span class="section-num">09</span><span class="section-title">Princípios de execução</span></div>
     <div class="section-body">
       <div class="alert alert-fire">
         <strong>Regra de ouro.</strong> A comunicação do SAEIF nunca promete o que o sistema ainda não faz. A página não corre à frente do produto. Cada evolução da mensagem é <em>merecida</em> por uma capacidade real que entrou no sistema, fator a fator. Prever suscetibilidade (defensável) nunca escorrega para prometer ocorrência (não demonstrável).
@@ -362,7 +420,7 @@ PRODUTOR de inteligencia          CONSUMIDOR que valoriza</div>
   </div>
 
   <div class="section" id="bibliografia">
-    <div class="section-header"><span class="section-num">09</span><span class="section-title">Bibliografia — fundamentação documental</span></div>
+    <div class="section-header"><span class="section-num">10</span><span class="section-title">Bibliografia — fundamentação documental</span></div>
     <div class="section-body">
       <p>As publicações consultadas que fundamentam a tese do SAEIF 2.0. O repositório é público, pelo que se guardam as referências e identificadores (DOI/ISBN) em vez dos PDFs — permitindo reencontrar as fontes originais sem questões de licença. Os números entre parênteses remetem para a secção 04 (Fundamentação).</p>
 
