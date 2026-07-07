@@ -2150,7 +2150,18 @@ docker compose exec -T -e DB_HOST=db -e DB_PORT=5432 api python3 teste_funcional
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (7 Jul 2026)</strong><br>
-      <strong>Índice P destilado e validado funcionalmente.</strong> <code>get_indice_p()</code> em produção, campo <code>indice_p</code> a gravar correctamente (confirmado por teste funcional controlado, dados reais). <strong>Pendente:</strong> confirmação com um alerta gerado pelo ciclo automático real (FIRMS×PROCIV) — não bloqueante, só uma questão de calendário de incêndios; análise multitemporal do NDVI; Getis-Ord Gi* para corredores de fogo; escalar visualização do declive a Portugal; expor Índice P como camada própria via <code>/api/layers</code>.
+      <strong>Índice P destilado, validado e confirmado em produção real.</strong> <code>get_indice_p()</code> em produção, campo <code>indice_p</code> a gravar correctamente — confirmado primeiro por teste funcional controlado (dados reais, ponto de área ardida 2025), e depois pelo <strong>próprio ciclo automático real</strong> (16h25-16h40, 7 Jul 2026): 5 alertas gerados por coincidências FIRMS×PROCIV genuínas, todos com <code>indice_p</code> preenchido e <code>indice_p &gt; risco_estrutural</code> em todos os casos (bónus de área ardida consistentemente ~0,25, coerente com zonas ardidas há &lt;2 anos — ver tabela). Nenhuma intervenção manual, nenhum dado sintético — o pipeline completo (FIRMS → dedup → meteo → score → BD) validou-se sozinho.
+    <table>
+      <thead><tr><th>id</th><th>criado_em</th><th>score</th><th>categoria</th><th>risco_estrutural</th><th>indice_p</th><th>bónus implícito</th></tr></thead>
+      <tbody>
+        <tr><td>644</td><td>16:40:29</td><td>56.39</td><td>ALTO</td><td>0.23</td><td>0.479</td><td>+0.249</td></tr>
+        <tr><td>643</td><td>16:40:28</td><td>56.46</td><td>ALTO</td><td>0.23</td><td>0.481</td><td>+0.251</td></tr>
+        <tr><td>642</td><td>16:40:27</td><td>47.45</td><td>MÉDIO</td><td>0.19</td><td>0.436</td><td>+0.246</td></tr>
+        <tr><td>641</td><td>16:40:26</td><td>55.09</td><td>ALTO</td><td>0.38</td><td>0.633</td><td>+0.253</td></tr>
+        <tr><td>640</td><td>16:25:25</td><td>53.23</td><td>ALTO</td><td>0.30</td><td>0.553</td><td>+0.253</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Pendente</strong> (nenhum bloqueante): análise multitemporal do NDVI; Getis-Ord Gi* para corredores de fogo; escalar visualização do declive a Portugal; expor Índice P como camada própria via <code>/api/layers</code>.</p>
     </div>
 
   </div>
