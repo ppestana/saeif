@@ -477,6 +477,7 @@
     <span style="color:var(--amber)">Arquitectura revista: 5 Jul 2026</span>
     <span style="color:var(--blue)">Enquadramento 3 índices: 6 Jul 2026</span>
     <span style="color:var(--green)">Índice I v1 (KDE, bw=3500m): 7 Jul 2026</span>
+    <span style="color:var(--green)">Índice P destilado (get_indice_p): 7 Jul 2026</span>
   </div>
 </div>
 
@@ -1014,7 +1015,7 @@ score = (
       <div class="alert alert-blue">
         <strong>Enquadramento na arquitetura-alvo de três índices (6 Jul 2026).</strong> A visão do SAEIF 2.0 (ver <code>saeif_visao_2.0.html</code> §6) reorganiza a leitura estrutural em três índices independentes que respondem a fenómenos distintos, modulados por meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>. Situando o código actual nesse mapa:
         <ul>
-          <li><strong>Índice P — Propagação:</strong> é <em>exactamente</em> o <code>risco_estrutural</code> que <code>score.py</code> já calcula (WorldCover + NDVI + declive + bónus área ardida). Ou seja, o SAEIF <strong>já tem o Índice P implementado</strong> — falta destilá-lo como produto explícito e autónomo.</li>
+          <li><strong>Índice P — Propagação:</strong> <strong>destilado (7 Jul 2026)</strong> — era o <code>risco_estrutural</code> calculado inline dentro de <code>calcular_score()</code> (WorldCover + NDVI + declive + bónus área ardida); extraído como função explícita <code>get_indice_p()</code> em <code>score.py</code>, agora também gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>. Ver secção 15.11 para o procedimento e a inconsistência histórica identificada e corrigida.</li>
           <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>validado (AUC 0,86; 7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out, e testado por holdout temporal (treino 2020-2023, teste 2024-2025) com AUC de curva de concentração de 0,86. Ver secção 15.10 para o procedimento completo e a fundamentação de cada decisão.</li>
           <li><strong>Índice V — Vulnerabilidade:</strong> <em>não existe</em>. Horizonte (modelo PREFER, Bento-Gonçalves et al. 2014).</li>
           <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
@@ -1318,7 +1319,7 @@ score = (
           <div class="phase-content">
             <div class="phase-title">Fase 6 — SAEIF 2.0: arquitetura de índices <span style="color:var(--amber);font-size:11px">(em curso, desde Jul 2026)</span></div>
             <div class="phase-desc">
-              A viragem de "detecção operacional" para "inteligência territorial de suscetibilidade" (ver <code>saeif_visao_2.0.html</code>). Reorganiza a leitura estrutural em três índices independentes + meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>, sobre um <strong>modelo espacial contínuo (grelha 250 m)</strong>, com divisões administrativas apenas como agregação. Estado por componente: <strong>Índice P (Propagação)</strong> — já existe implícito no score (WorldCover + NDVI + declive + área ardida), a destilar como produto explícito · <strong>Índice I (Suscetibilidade de Ignição)</strong> — <strong>validado (7 Jul 2026)</strong>: KDE sobre 4747 centroides de <code>areas_ardidas</code>, grelha 250m/EPSG:3763, bandwidth 3500m por validação cruzada leave-one-out, testado por holdout temporal (treino até 2023, teste 2024-2025) com <strong>AUC 0,86</strong> (ver secção 15.10) · <strong>Índice V (Vulnerabilidade)</strong> — horizonte (modelo PREFER) · <strong>Camada M (Meteorologia)</strong> — já existe (FWI/vento), a separar dos índices estruturais · <strong>Grelha 250 m</strong> — implementada e em uso pelo Índice I (<code>config/grid_spec.py</code>, EPSG:3763, extensão ibérica; <code>GRID_RESOLUTION</code> configurável), pendente aplicar às restantes camadas. Princípio: cada índice validado isoladamente contra dados reais antes de qualquer combinação; um de cada vez. <strong>Estrutura científica</strong> (hipóteses H1-H4, maturidade por componente, arquitetura temporal, método de validação com ROC/recall/RMSE) documentada em <code>saeif_visao_2.0.html</code> §07.
+              A viragem de "detecção operacional" para "inteligência territorial de suscetibilidade" (ver <code>saeif_visao_2.0.html</code>). Reorganiza a leitura estrutural em três índices independentes + meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>, sobre um <strong>modelo espacial contínuo (grelha 250 m)</strong>, com divisões administrativas apenas como agregação. Estado por componente: <strong>Índice P (Propagação)</strong> — <strong>destilado (7 Jul 2026)</strong>: extraído do score como função explícita <code>get_indice_p()</code>, gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>, inconsistência histórica identificada e corrigida (ver secção 15.11) · <strong>Índice I (Suscetibilidade de Ignição)</strong> — <strong>validado (7 Jul 2026)</strong>: KDE sobre 4747 centroides de <code>areas_ardidas</code>, grelha 250m/EPSG:3763, bandwidth 3500m por validação cruzada leave-one-out, testado por holdout temporal (treino até 2023, teste 2024-2025) com <strong>AUC 0,86</strong> (ver secção 15.10) · <strong>Índice V (Vulnerabilidade)</strong> — horizonte (modelo PREFER) · <strong>Camada M (Meteorologia)</strong> — já existe (FWI/vento), a separar dos índices estruturais · <strong>Grelha 250 m</strong> — implementada e em uso pelo Índice I (<code>config/grid_spec.py</code>, EPSG:3763, extensão ibérica; <code>GRID_RESOLUTION</code> configurável), pendente aplicar às restantes camadas. Princípio: cada índice validado isoladamente contra dados reais antes de qualquer combinação; um de cada vez. <strong>Estrutura científica</strong> (hipóteses H1-H4, maturidade por componente, arquitetura temporal, método de validação com ROC/recall/RMSE) documentada em <code>saeif_visao_2.0.html</code> §07.
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Em curso</div>
@@ -2105,7 +2106,51 @@ python3 scripts/validar_holdout_temporal.py data/ignicoes_treino_2020_2023.geojs
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (7 Jul 2026)</strong><br>
-      <strong>Índice I validado.</strong> Raster de produção gerado: <code>data/indice_i/indice_i_kde_producao_bw3500m.tif</code> (4747 pontos, soma preservada 4746.99, grelha 1213×2359 células). Validação holdout temporal: AUC 0,8623 (treino 2020-2023, teste 2024-2025). Rasters exploratórios (bandwidth 1000/2000/3000m) mantidos em <code>data/indice_i/</code> como material de comparação. <strong>Pendente:</strong> avaliar <code>causa_tipo</code> como possível ponderação futura (não usado em v1); expor via endpoint <code>/api/layers</code> quando integrado ao frontend; destilar o Índice P como próximo produto explícito.
+      <strong>Índice I validado.</strong> Raster de produção gerado: <code>data/indice_i/indice_i_kde_producao_bw3500m.tif</code> (4747 pontos, soma preservada 4746.99, grelha 1213×2359 células). Validação holdout temporal: AUC 0,8623 (treino 2020-2023, teste 2024-2025). Rasters exploratórios (bandwidth 1000/2000/3000m) mantidos em <code>data/indice_i/</code> como material de comparação. <strong>Pendente:</strong> avaliar <code>causa_tipo</code> como possível ponderação futura (não usado em v1); expor via endpoint <code>/api/layers</code> quando integrado ao frontend. Índice P destilado em 7 Jul 2026 — ver secção 15.11.
+    </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.11 — Índice P: destilação como produto explícito</h3>
+    <p>Até 7 Jul 2026, o Índice P (Potencial de Propagação) existia só implícito dentro de <code>calcular_score()</code> em <code>api/analysis/score.py</code> — misturado, no mesmo score final, com meteorologia (FWI, vento) e uma camada de confiança de deteção (confirmação PROCIV, FRP, confiança da fonte) que não pertence a um índice espacial estrutural. Esta secção documenta a destilação: extração como função própria, correção de uma inconsistência histórica encontrada no processo, e o novo campo explícito na BD.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Inconsistência histórica encontrada e corrigida</h4>
+    <p><code>api/analysis/alerts.py</code> chamava <code>get_structural_risk(lat, lon)</code> <strong>duas vezes</strong>, de forma independente: uma vez dentro de <code>calcular_score()</code> (com o bónus de área ardida somado), outra vez em separado (sem o bónus), para gravar no campo <code>risco_estrutural</code> da tabela <code>alertas</code>. Isto significava que o valor gravado na BD para cada alerta não era o mesmo valor que efectivamente entrou no cálculo do seu score.</p>
+    <p><strong>Investigação via <code>git log -p --follow</code>:</strong> a linha <code>risco_estrutural = get_structural_risk(lat, lon)</code> existe, inalterada, desde o primeiro commit de <code>alerts.py</code> (30 Mai 2026) — nessa altura, <code>calcular_score()</code> nem sequer recebia <code>area_ardida_factor</code> como argumento, pelo que as duas chamadas eram genuinamente equivalentes. O bónus de área ardida foi introduzido em <code>calcular_score()</code> num commit posterior, mas a chamada separada em <code>alerts.py</code> nunca foi actualizada para acompanhar essa mudança. <strong>Conclusão:</strong> deriva não intencional durante desenvolvimento incremental, não uma decisão deliberada — confirmado pela evidência histórica, não por memória.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão de resolução</h4>
+    <p>Em vez de simplesmente corrigir o valor de <code>risco_estrutural</code> (o que quebraria a comparabilidade com o histórico já gravado), optou-se por: <strong>manter <code>risco_estrutural</code> como está</strong> (combustível/vegetação puro, sem bónus — agora documentado explicitamente como sub-componente, não o valor completo), e <strong>criar <code>indice_p</code> como novo campo canónico</strong>, sem ambiguidade de nome, igual ao valor completo que entra no score. Resolve a tarefa (Índice P como produto explícito) e a inconsistência ao mesmo tempo, sem reprocessar nem alterar histórico.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Implementação</h4>
+    <p>Nova função em <code>api/analysis/score.py</code>:</p>
+    <pre><code>def get_indice_p(lat, lon, area_ardida_factor=0.0):
+    """
+    Indice P (Potencial de Propagacao) explicito: combustivel/vegetacao
+    (WorldCover+NDVI+declive, via get_structural_risk) + bonus de area
+    ardida, capado a 1.0. E o valor completo usado no score.
+    """
+    return min(1.0, get_structural_risk(lat, lon) + area_ardida_factor)</code></pre>
+    <p><code>calcular_score()</code> refactorado para usar <code>get_indice_p()</code> internamente — comportamento idêntico, só reorganização; o score de produção não muda. <code>api/analysis/alerts.py</code> passou a importar e chamar <code>get_indice_p()</code> a par da chamada existente a <code>get_structural_risk()</code>, e a gravar o resultado no novo campo.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Migração (aditiva, não retroactiva)</h4>
+    <pre><code>-- migrations/003_indice_p.sql
+ALTER TABLE alertas ADD COLUMN IF NOT EXISTS indice_p NUMERIC(4,3);
+COMMENT ON COLUMN alertas.indice_p IS
+    'Índice P (Potencial de Propagação) explícito: get_structural_risk() + area_ardida_factor, capado a 1.0.';
+COMMENT ON COLUMN alertas.risco_estrutural IS
+    'Componente de combustível/vegetação, SEM o bónus de área ardida. Sub-componente do Índice P.';</code></pre>
+    <p>Alertas gerados antes do deploy ficam com <code>indice_p</code> a <code>NULL</code> — esperado, coluna nova, sem reprocessamento retroactivo.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Metodologia de edição segura (ficheiros de produção)</h4>
+    <p>Por serem ficheiros Python em produção activa (não documentos), a edição de <code>score.py</code> e <code>alerts.py</code> foi feita com scripts de edição com âncoras (texto exacto a substituir, com <code>assert</code> de ocorrência única), backup automático (<code>.bak_indice_p</code>) e validação <code>ast.parse()</code> antes de escrever — mesmo princípio do método <code>python3 &lt;&lt; PYEOF</code> já usado no projecto, mas com verificação de sintaxe explícita antes de qualquer escrita em disco. Testado primeiro contra cópias locais do conteúdo real antes de ser entregue para execução no servidor.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Validação funcional (sem esperar por alerta real)</h4>
+    <p>Em vez de esperar por uma coincidência real FIRMS×PROCIV para gerar um alerta novo, testou-se o caminho de código directamente — com um ponto real (centroide de <code>areas_ardidas</code>, ano 2025), dentro do container <code>api</code> (mesmo ambiente de produção, incluindo <code>rasterio</code> e o raster real <code>fire_risk.tif</code>, não o fallback por zona):</p>
+    <pre><code>docker compose cp teste_funcional_indice_p.py api:/app/teste_funcional_indice_p.py
+docker compose exec -T -e DB_HOST=db -e DB_PORT=5432 api python3 teste_funcional_indice_p.py</code></pre>
+    <p><strong>Resultado (7 Jul 2026):</strong> ponto lat=41.3758, lon=-8.1366 (ardeu em 2025). <code>get_area_ardida_factor</code>=0.25 (correcto, &lt;2 anos) · <code>get_structural_risk</code>=0.512 (valor de raster real, não redondo — confirma leitura de <code>fire_risk.tif</code>, não fallback) · <code>get_indice_p</code>=0.762 (=0.512+0.25, capado a 1.0, aritmética confirmada) · <code>calcular_score</code>=49.67 (MÉDIO). Confirmado: <code>indice_p</code> é exactamente o valor usado dentro de <code>calcular_score()</code>, e é sempre ≥ <code>risco_estrutural</code> (o bónus só soma).</p>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (7 Jul 2026)</strong><br>
+      <strong>Índice P destilado e validado funcionalmente.</strong> <code>get_indice_p()</code> em produção, campo <code>indice_p</code> a gravar correctamente (confirmado por teste funcional controlado, dados reais). <strong>Pendente:</strong> confirmação com um alerta gerado pelo ciclo automático real (FIRMS×PROCIV) — não bloqueante, só uma questão de calendário de incêndios; análise multitemporal do NDVI; Getis-Ord Gi* para corredores de fogo; escalar visualização do declive a Portugal; expor Índice P como camada própria via <code>/api/layers</code>.
     </div>
 
   </div>
