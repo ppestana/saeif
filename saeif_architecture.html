@@ -476,6 +476,7 @@
     <span>Em produção: 30 Mai 2026</span>
     <span style="color:var(--amber)">Arquitectura revista: 5 Jul 2026</span>
     <span style="color:var(--blue)">Enquadramento 3 índices: 6 Jul 2026</span>
+    <span style="color:var(--green)">Índice I v1 (KDE, bw=3500m): 7 Jul 2026</span>
   </div>
 </div>
 
@@ -1014,7 +1015,7 @@ score = (
         <strong>Enquadramento na arquitetura-alvo de três índices (6 Jul 2026).</strong> A visão do SAEIF 2.0 (ver <code>saeif_visao_2.0.html</code> §6) reorganiza a leitura estrutural em três índices independentes que respondem a fenómenos distintos, modulados por meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>. Situando o código actual nesse mapa:
         <ul>
           <li><strong>Índice P — Propagação:</strong> é <em>exactamente</em> o <code>risco_estrutural</code> que <code>score.py</code> já calcula (WorldCover + NDVI + declive + bónus área ardida). Ou seja, o SAEIF <strong>já tem o Índice P implementado</strong> — falta destilá-lo como produto explícito e autónomo.</li>
-          <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <em>não existe</em> no código. É o próximo a construir — camada por distrito, baseada na densidade de ocorrências observada (Nunes et al. 2013), separada do score.</li>
+          <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>piloto v1 construído (7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out. Ver secção 15.10 para o procedimento completo e a fundamentação de cada decisão.</li>
           <li><strong>Índice V — Vulnerabilidade:</strong> <em>não existe</em>. Horizonte (modelo PREFER, Bento-Gonçalves et al. 2014).</li>
           <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
         </ul>
@@ -1317,7 +1318,7 @@ score = (
           <div class="phase-content">
             <div class="phase-title">Fase 6 — SAEIF 2.0: arquitetura de índices <span style="color:var(--amber);font-size:11px">(em curso, desde Jul 2026)</span></div>
             <div class="phase-desc">
-              A viragem de "detecção operacional" para "inteligência territorial de suscetibilidade" (ver <code>saeif_visao_2.0.html</code>). Reorganiza a leitura estrutural em três índices independentes + meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>, sobre um <strong>modelo espacial contínuo (grelha 250 m)</strong>, com divisões administrativas apenas como agregação. Estado por componente: <strong>Índice P (Propagação)</strong> — já existe implícito no score (WorldCover + NDVI + declive + área ardida), a destilar como produto explícito · <strong>Índice I (Suscetibilidade de Ignição)</strong> — próximo a construir, como superfície contínua (KDE) das ignições georreferenciadas, a partir de <code>areas_ardidas</code> · <strong>Índice V (Vulnerabilidade)</strong> — horizonte (modelo PREFER) · <strong>Camada M (Meteorologia)</strong> — já existe (FWI/vento), a separar dos índices estruturais · <strong>Grelha 250 m</strong> — decisão de arquitetura tomada (princípio da variável limitante; <code>GRID_RESOLUTION</code> configurável), por implementar. Princípio: cada índice validado isoladamente contra dados reais antes de qualquer combinação; um de cada vez. <strong>Estrutura científica</strong> (hipóteses H1-H4, maturidade por componente, arquitetura temporal, método de validação com ROC/recall/RMSE) documentada em <code>saeif_visao_2.0.html</code> §07.
+              A viragem de "detecção operacional" para "inteligência territorial de suscetibilidade" (ver <code>saeif_visao_2.0.html</code>). Reorganiza a leitura estrutural em três índices independentes + meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>, sobre um <strong>modelo espacial contínuo (grelha 250 m)</strong>, com divisões administrativas apenas como agregação. Estado por componente: <strong>Índice P (Propagação)</strong> — já existe implícito no score (WorldCover + NDVI + declive + área ardida), a destilar como produto explícito · <strong>Índice I (Suscetibilidade de Ignição)</strong> — <strong>piloto v1 construído (7 Jul 2026)</strong>: KDE sobre 4747 centroides de <code>areas_ardidas</code>, grelha 250m/EPSG:3763, bandwidth 3500m por validação cruzada leave-one-out (ver secção 15.10) · <strong>Índice V (Vulnerabilidade)</strong> — horizonte (modelo PREFER) · <strong>Camada M (Meteorologia)</strong> — já existe (FWI/vento), a separar dos índices estruturais · <strong>Grelha 250 m</strong> — implementada e em uso pelo Índice I (<code>config/grid_spec.py</code>, EPSG:3763, extensão ibérica; <code>GRID_RESOLUTION</code> configurável), pendente aplicar às restantes camadas. Princípio: cada índice validado isoladamente contra dados reais antes de qualquer combinação; um de cada vez. <strong>Estrutura científica</strong> (hipóteses H1-H4, maturidade por componente, arquitetura temporal, método de validação com ROC/recall/RMSE) documentada em <code>saeif_visao_2.0.html</code> §07.
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Em curso</div>
@@ -2028,6 +2029,57 @@ ORDER BY h.frp DESC;
 SQL</code></pre>
     <p><strong>Nível 3 — Os órfãos são fuga real ou dedup legítima?</strong> Usar a query de calibração da secção 15.8 (coluna <code>alerta_ha_horas</code>).</p>
     <p>Se o Nível 2 devolver órfãos confirmados como fuga real: reactivar com <code>UPDATE hotspots SET processed=FALSE WHERE id IN (...)</code> e disparar o ciclo (<code>curl -s -X POST http://127.0.0.1:8000/api/ingest/trigger</code>).</p>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.10 — Índice I: geração e validação do KDE de Suscetibilidade de Ignição</h3>
+    <p>Procedimento completo para (re)gerar a superfície do Índice I, incluindo as decisões de dados e de método tomadas em 7 Jul 2026. Ver <code>saeif_visao_2.0.html</code> §06 para o enquadramento estratégico.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão de dados — fonte de pontos e filtro de causa</h4>
+    <p><code>areas_ardidas</code> só tem geometria de polígono (<code>MultiPolygon</code>), sem ponto de ignição nativo. Avaliou-se também <code>ocorrencias_prociv</code> (geometria <code>Point</code> real) — mas cobre só uma época (~29 Mai a 6 Jul 2026), profundidade histórica insuficiente para um KDE estrutural isolado. <strong>Decisão:</strong> centroides de <code>areas_ardidas</code> (2020-2025) como base v1; plano de enriquecimento futuro com <code>ocorrencias_prociv</code> à medida que acumula épocas (mesmo princípio de recalibração anual do bónus de área ardida no Índice P).</p>
+    <p>Filtro de causa sobre <code>causa_tipo</code>: mantidos <strong>Negligente</strong> (2690), <strong>Intencional</strong> (1140) e <strong>Desconhecida</strong> (917) — 4747 registos, 94,6% da tabela. Excluídos <strong>Natural</strong> (47, raio — não é suscetibilidade de gestão humana) e <strong>Reacendimento</strong> (192 — não é uma ignição nova, duplicaria densidade sobre área já contada) e vazios (32).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão de arquitetura — grelha oficial do SAEIF</h4>
+    <p>Primeira implementação real da grelha de 250 m decidida na secção 07 (até 7 Jul 2026 só existia como decisão documentada, sem artefacto). Especificação em <code>config/grid_spec.py</code>: <code>GRID_CRS=EPSG:3763</code>, <code>GRID_RESOLUTION=250</code>, extensão fixa cobrindo toda a Península Ibérica (bbox herdado do <code>slope_norm.tif</code> legado, reprojetado e arredondado a múltiplos de 250 m: <code>xmin=-122000, ymin=-306500, xmax=181250, ymax=283250</code> → 1213×2359 células). A cobertura ibérica é decisão deliberada — fogos não respeitam fronteiras; a metade espanhola aparece hoje como KDE≈0 por limitação de dados (só ICNF/PT), não por desenho da grelha. Todos os rasters futuros do SAEIF (P, V, e regeneração de declive/NDVI) devem obedecer a esta mesma especificação para permitir <code>I + P + V</code> como soma direta de matrizes, sem reprojeção/resampling intermédio.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão de método — bandwidth por validação cruzada leave-one-out</h4>
+    <p>Testada uma gama de 1000 a 15000 m. Método: para cada ponto, calcula-se a densidade prevista <em>excluindo esse ponto</em> (leave-one-out), soma-se a log-verosimilhança de todos os pontos; o bandwidth que maximiza essa soma é o que melhor prevê cada ignição a partir de todas as outras, sem circularidade. A curva tem um máximo interior nítido (sobe, atinge pico, desce) — não monótona, o que confirma um ótimo real e não um artefacto de amostragem. Resultado: <strong>3500 m</strong>, dentro do intervalo de 1-3 km fisicamente plausível sugerido por consultoria SIG florestal para influência humana (estradas, povoações, interface urbano-florestal), ligeiramente acima. Valores abaixo de ~2000 m degradam rapidamente (pontos isolados sem vizinhos próximos o suficiente levam a log-verosimilhança a <code>-inf</code>); valores acima de ~4000 m degradam suavemente (over-smoothing).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Scripts e pipeline</h4>
+    <table>
+      <thead><tr><th>Ficheiro</th><th>Função</th></tr></thead>
+      <tbody>
+        <tr><td><code>config/grid_spec.py</code></td><td>Especificação oficial da grelha SAEIF (CRS, resolução, extensão, geotransform). Importado por todos os scripts de geração de raster.</td></tr>
+        <tr><td><code>scripts/gerar_kde_ignicao.py</code></td><td>Motor do KDE: lê GeoJSON de pontos (EPSG:4326), reprojeta para EPSG:3763, constrói histograma na grelha oficial, aplica filtro gaussiano (<code>scipy.ndimage.gaussian_filter</code>, sigma=bandwidth/250) — equivalente a um KDE gaussiano, muito mais rápido que soma directa ponto-a-ponto. Escreve GeoTIFF via <code>osgeo.gdal</code> (usa <code>WriteRaster</code>, não <code>WriteArray</code>, para evitar incompatibilidade de ABI entre o numpy do venv e os bindings GDAL do sistema).</td></tr>
+        <tr><td><code>scripts/gerar_kde_ignicao.sh</code></td><td>Orquestrador: ativa <code>venv_kde</code>, corre o motor para uma lista de bandwidths, escreve em <code>data/indice_i/</code>.</td></tr>
+        <tr><td><code>scripts/validar_bandwidth_kde.py</code></td><td>Validação cruzada leave-one-out: calcula a log-verosimilhança LOO para uma lista de bandwidths (matriz de distâncias par-a-par, O(n²), processada em blocos), reporta qual maximiza.</td></tr>
+      </tbody>
+    </table>
+
+    <h4 style="margin:1.2rem 0 .5rem">Ambiente — venv isolado (numpy/scipy vs GDAL do sistema)</h4>
+    <p>O <code>numpy</code> do sistema (instalado via apt, usado pelos bindings Python do GDAL) é <strong>incompatível em ABI</strong> com a versão de <code>numpy</code> que o <code>scipy</code> exige. Corrigido com um venv isolado que reaproveita o GDAL do sistema sem reinstalar:</p>
+    <pre><code>cd /srv/saeif
+python3 -m venv venv_kde --system-site-packages
+source venv_kde/bin/activate
+pip install scipy</code></pre>
+    <p><code>--system-site-packages</code> mantém o GDAL do sistema acessível dentro do venv; o <code>numpy</code> mais recente do <code>scipy</code> instala-se só dentro do venv, sem tocar no <code>numpy</code> do sistema. Confirmar sempre com:</p>
+    <pre><code>python3 -c "import scipy, numpy; from osgeo import gdal; print(scipy.__version__, numpy.__version__, gdal.__version__)"</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo a passo — extração de pontos</h4>
+    <pre><code>mkdir -p /srv/saeif/data
+ogr2ogr -f GeoJSON /srv/saeif/data/ignicoes_centroides.geojson \
+  PG:"host=127.0.0.1 port=5434 dbname=saeif user=saeif password=saeif_db_2026" \
+  -sql "SELECT id, ano, causa_tipo, area_ha, ST_Centroid(geom) AS geom FROM areas_ardidas WHERE causa_tipo IN ('Negligente','Intencional','Desconhecida')" \
+  -nln ignicoes_centroides</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo a passo — validar bandwidth (LOO-CV) e gerar o raster de produção</h4>
+    <pre><code>source venv_kde/bin/activate
+python3 scripts/validar_bandwidth_kde.py data/ignicoes_centroides.geojson 2500 3000 3200 3500 3700 4000
+python3 scripts/gerar_kde_ignicao.py data/ignicoes_centroides.geojson 3500 \
+  data/indice_i/indice_i_kde_producao_bw3500m.tif</code></pre>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (7 Jul 2026)</strong><br>
+      Raster de produção gerado: <code>data/indice_i/indice_i_kde_producao_bw3500m.tif</code> (4747 pontos, soma preservada 4746.99, grelha 1213×2359 células). Rasters exploratórios (bandwidth 1000/2000/3000m) mantidos em <code>data/indice_i/</code> como material de comparação. <strong>Pendente:</strong> comparação visual do raster com a densidade histórica de ocorrências (quando visualizado em QGIS/navegador); avaliar <code>causa_tipo</code> como possível ponderação futura (não usado em v1); expor via endpoint <code>/api/layers</code> quando integrado ao frontend.
+    </div>
 
   </div>
 </div><!-- /container -->
