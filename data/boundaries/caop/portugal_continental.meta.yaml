@@ -1,0 +1,45 @@
+# Metadados da camada de fronteira oficial do SAEIF
+#
+# Esta camada e as suas irmas (distritos.gpkg, concelhos.gpkg, freguesias.gpkg)
+# sao "Camadas Base" do SAEIF -- infraestrutura de referencia geografica,
+# nao produtos/indices do sistema. Usadas para: mascarar rasters ao territorio
+# real (excluindo mar/Espanha/NoData), calcular estatisticas nacionais,
+# recortar exports, e (no futuro) gerar relatorios por distrito/concelho.
+
+layer: portugal_continental
+description: >
+  Limite oficial de Portugal Continental (NUTS I), dissolvido num unico
+  poligono. Extraido da camada cont_nuts1 do GeoPackage CAOP2025.
+
+source:
+  name: Carta Administrativa Oficial de Portugal (CAOP2025)
+  organization: Direcao-Geral do Territorio (DGT)
+  reference_date: "2026-02-18"
+  approval: >
+    Aviso n.o 3502/2026/2, Diario da Republica, 2.a serie, n.o 34, de
+    18 de fevereiro de 2026
+  url: https://www.dgterritorio.gov.pt/carta-administrativa-oficial-de-portugal-caop-2025
+  download_url: https://geo2.dgterritorio.gov.pt/caop/CAOP_Continente_2025-gpkg.zip
+  downloaded_at: "2026-07-08"
+
+crs: EPSG:3763  # ETRS89 / Portugal TM06 -- ja na CRS oficial do SAEIF, sem reprojecao necessaria
+
+license: CC-BY-4.0
+license_url: https://creativecommons.org/licenses/by/4.0/
+attribution_required: true
+
+purpose:
+  - Mascara oficial do SAEIF (excluir mar/Espanha/NoData de calculos de percentis e estatisticas)
+  - Recorte de rasters para exports/visualizacao
+  - Base para futuros relatorios/agregacoes por distrito/concelho/freguesia
+
+related_layers:
+  distritos: distritos.gpkg       # cont_distritos, 18 features
+  concelhos: concelhos.gpkg       # cont_municipios, 278 features
+  freguesias: freguesias.gpkg     # cont_freguesias, 3049 features
+
+notes: >
+  A CAOP e actualizada periodicamente pela DGT (alteracoes de limites
+  administrativos por diploma legal). Revisitar esta pagina e comparar a
+  reference_date antes de assumir que esta versao ainda e a mais recente,
+  caso o SAEIF venha a precisar de reprocessar esta camada no futuro.

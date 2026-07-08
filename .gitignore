@@ -9,7 +9,9 @@ api/data/*.geojson
 *.bak
 *.prebuild-*
 FETCH_HEAD
-data/
+data/*
 !data/boundaries/
+data/boundaries/*
 !data/boundaries/caop/
+data/boundaries/caop/*
 !data/boundaries/caop/*.yaml
