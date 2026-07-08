@@ -49,6 +49,8 @@ def main():
           f"({gs.GRID_CRS}, {gs.GRID_RESOLUTION}m, sum) ...")
     cmd_warp = [
         "gdalwarp",
+        "--config", "GDAL_CACHEMAX", "128",
+        "-wm", "128",
         "-t_srs", gs.GRID_CRS,
         "-te", str(gs.GRID_XMIN), str(gs.GRID_YMIN), str(gs.GRID_XMAX), str(gs.GRID_YMAX),
         "-tr", str(gs.GRID_RESOLUTION), str(gs.GRID_RESOLUTION),
@@ -62,7 +64,12 @@ def main():
     ]
     resultado = subprocess.run(cmd_warp, capture_output=True, text=True)
     if resultado.returncode != 0:
-        print(f"ERRO no gdalwarp:\n{resultado.stderr}")
+        print(f"ERRO no gdalwarp (codigo de saida {resultado.returncode}):")
+        print(f"stdout: {resultado.stdout}")
+        print(f"stderr: {resultado.stderr}")
+        if resultado.returncode == -9 or resultado.returncode == 137:
+            print("Codigo 137/-9 = processo morto pelo OOM killer (falta de memoria), "
+                  "nao um erro do comando em si.")
         sys.exit(1)
     print(resultado.stdout)
 
