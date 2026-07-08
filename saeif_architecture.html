@@ -478,6 +478,7 @@
     <span style="color:var(--blue)">Enquadramento 3 índices: 6 Jul 2026</span>
     <span style="color:var(--green)">Índice I v1 (KDE, bw=3500m): 7 Jul 2026</span>
     <span style="color:var(--green)">Índice P destilado (get_indice_p): 7 Jul 2026</span>
+    <span style="color:var(--amber)">Índice V — Exposição (GHSL+CAOP, p99): 8 Jul 2026</span>
   </div>
 </div>
 
@@ -1017,7 +1018,7 @@ score = (
         <ul>
           <li><strong>Índice P — Propagação:</strong> <strong>destilado (7 Jul 2026)</strong> — era o <code>risco_estrutural</code> calculado inline dentro de <code>calcular_score()</code> (WorldCover + NDVI + declive + bónus área ardida); extraído como função explícita <code>get_indice_p()</code> em <code>score.py</code>, agora também gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>. Ver secção 15.11 para o procedimento e a inconsistência histórica identificada e corrigida.</li>
           <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>validado (AUC 0,86; 7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out, e testado por holdout temporal (treino 2020-2023, teste 2024-2025) com AUC de curva de concentração de 0,86. Ver secção 15.10 para o procedimento completo e a fundamentação de cada decisão.</li>
-          <li><strong>Índice V — Vulnerabilidade:</strong> <em>não existe</em>. Horizonte (modelo PREFER, Bento-Gonçalves et al. 2014).</li>
+          <li><strong>Índice V — Vulnerabilidade:</strong> <strong>componente Exposição construída (8 Jul 2026)</strong> — população (GHS-POP) + edificado (GHS-BUILT-S), normalizados por percentil 99 dentro da máscara oficial CAOP, combinados com peso igual. Sensibilidade e Capacidade de Resposta ainda não iniciadas (modelo PREFER, Bento-Gonçalves et al. 2014). Ver secção 15.12 para o procedimento completo.</li>
           <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
         </ul>
         Nota: nenhum índice novo entra no score final até ser validado isoladamente contra dados reais. A fórmula actual (documentada acima) mantém-se em produção como está; a reorganização é incremental.
@@ -1319,7 +1320,7 @@ score = (
           <div class="phase-content">
             <div class="phase-title">Fase 6 — SAEIF 2.0: arquitetura de índices <span style="color:var(--amber);font-size:11px">(em curso, desde Jul 2026)</span></div>
             <div class="phase-desc">
-              A viragem de "detecção operacional" para "inteligência territorial de suscetibilidade" (ver <code>saeif_visao_2.0.html</code>). Reorganiza a leitura estrutural em três índices independentes + meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>, sobre um <strong>modelo espacial contínuo (grelha 250 m)</strong>, com divisões administrativas apenas como agregação. Estado por componente: <strong>Índice P (Propagação)</strong> — <strong>destilado (7 Jul 2026)</strong>: extraído do score como função explícita <code>get_indice_p()</code>, gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>, inconsistência histórica identificada e corrigida (ver secção 15.11) · <strong>Índice I (Suscetibilidade de Ignição)</strong> — <strong>validado (7 Jul 2026)</strong>: KDE sobre 4747 centroides de <code>areas_ardidas</code>, grelha 250m/EPSG:3763, bandwidth 3500m por validação cruzada leave-one-out, testado por holdout temporal (treino até 2023, teste 2024-2025) com <strong>AUC 0,86</strong> (ver secção 15.10) · <strong>Índice V (Vulnerabilidade)</strong> — horizonte (modelo PREFER) · <strong>Camada M (Meteorologia)</strong> — já existe (FWI/vento), a separar dos índices estruturais · <strong>Grelha 250 m</strong> — implementada e em uso pelo Índice I (<code>config/grid_spec.py</code>, EPSG:3763, extensão ibérica; <code>GRID_RESOLUTION</code> configurável), pendente aplicar às restantes camadas. Princípio: cada índice validado isoladamente contra dados reais antes de qualquer combinação; um de cada vez. <strong>Estrutura científica</strong> (hipóteses H1-H4, maturidade por componente, arquitetura temporal, método de validação com ROC/recall/RMSE) documentada em <code>saeif_visao_2.0.html</code> §07.
+              A viragem de "detecção operacional" para "inteligência territorial de suscetibilidade" (ver <code>saeif_visao_2.0.html</code>). Reorganiza a leitura estrutural em três índices independentes + meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>, sobre um <strong>modelo espacial contínuo (grelha 250 m)</strong>, com divisões administrativas apenas como agregação. Estado por componente: <strong>Índice P (Propagação)</strong> — <strong>destilado (7 Jul 2026)</strong>: extraído do score como função explícita <code>get_indice_p()</code>, gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>, inconsistência histórica identificada e corrigida (ver secção 15.11) · <strong>Índice I (Suscetibilidade de Ignição)</strong> — <strong>validado (7 Jul 2026)</strong>: KDE sobre 4747 centroides de <code>areas_ardidas</code>, grelha 250m/EPSG:3763, bandwidth 3500m por validação cruzada leave-one-out, testado por holdout temporal (treino até 2023, teste 2024-2025) com <strong>AUC 0,86</strong> (ver secção 15.10) · <strong>Índice V (Vulnerabilidade)</strong> — <strong>componente Exposição construída (8 Jul 2026)</strong>: GHS-POP+GHS-BUILT-S, normalização p99 dentro da máscara CAOP, validação automática (ver secção 15.12); Sensibilidade e Capacidade de Resposta pendentes · <strong>Camada M (Meteorologia)</strong> — já existe (FWI/vento), a separar dos índices estruturais · <strong>Grelha 250 m</strong> — implementada e em uso pelos Índices I e V (<code>config/grid_spec.py</code>, EPSG:3763, extensão ibérica; <code>GRID_RESOLUTION</code> configurável), pendente aplicar às restantes camadas. Princípio: cada índice validado isoladamente contra dados reais antes de qualquer combinação; um de cada vez. <strong>Estrutura científica</strong> (hipóteses H1-H4, maturidade por componente, arquitetura temporal, método de validação com ROC/recall/RMSE) documentada em <code>saeif_visao_2.0.html</code> §07.
             </div>
           </div>
           <div class="phase-badge badge-pending">⏳ Em curso</div>
@@ -2162,6 +2163,66 @@ docker compose exec -T -e DB_HOST=db -e DB_PORT=5432 api python3 teste_funcional
       </tbody>
     </table>
     <p><strong>Pendente</strong> (nenhum bloqueante): análise multitemporal do NDVI; Getis-Ord Gi* para corredores de fogo; escalar visualização do declive a Portugal; expor Índice P como camada própria via <code>/api/layers</code>.</p>
+    </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.12 — Índice V: construção da componente Exposição</h3>
+    <p>Primeira componente do modelo PREFER (Bento-Gonçalves et al. 2014) a ser construída. Ao contrário dos Índices I e P, o Índice V parte de dados que não existiam em lado nenhum do sistema — nem população, nem edificado, nem fronteiras administrativas. Esta secção documenta as fontes escolhidas, as decisões de método, e o procedimento completo.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Fonte de dados — GHSL (JRC/Copernicus)</h4>
+    <p><strong>GHS-POP</strong> (população) e <strong>GHS-BUILT-S</strong> (área edificada, m²/célula), ambos do <em>Global Human Settlement Layer</em> (Comissão Europeia, JRC), epoch 2020 (última observação real por satélite, não projeção), 100m de resolução, projeção nativa Mollweide (ESRI:54009). Descarregados via <a href="https://human-settlement.emergency.copernicus.eu/download.php">portal de tiles da GHSL</a> — Portugal cobre 2 tiles por produto (R4_C18 + R5_C18, contíguos verticalmente). Fonte escolhida por ser a mesma família institucional (Copernicus) já usada para o DEM/declive do Índice P — consistência de proveniência.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Mosaico e reprojeção — dois métodos, por limitação de memória</h4>
+    <p>Reamostragem de 100m para 250m exige o método <code>sum</code> (não <code>average</code>), para preservar o total (população, m² edificados) — agregar células menores em células maiores deve somar, não fazer média.</p>
+    <p><strong>Tentativa 1 (gdalwarp, <code>scripts/mosaicar_ghsl.py</code>):</strong> funcionou para GHS-POP, mas o mosaico de GHS-BUILT-S esgotou a memória do servidor (3,7GB RAM total) — o resampler <code>sum</code> do GDAL aloca memória proporcional ao tamanho da <em>fonte</em> (não do destino) ao reprojetar entre CRS com rotação/distorção (Mollweide → EPSG:3763), chegando a 2,43GB residentes mesmo com <code>-wm</code>/<code>GDAL_CACHEMAX</code> limitados a 128MB (esses parâmetros não cobrem esta alocação interna). Confirmado via <code>dmesg</code> (OOM killer, <code>anon-rss:2547524kB</code>).</p>
+    <p><strong>Resolução prática:</strong> o mosaico/reprojeção final correu no <strong>MacBook</strong> (RAM generosa, sem limitação), usando o mesmo <code>scripts/mosaicar_ghsl.py</code> (gdalwarp), e o resultado foi depois copiado para o servidor via <code>scp</code>. Reservado para o servidor apenas processamento leve/contínuo (pipeline de produção); processamento pesado pontual (construção de camadas base) faz mais sentido numa máquina com mais recursos.</p>
+    <p><strong>Alternativa desenvolvida (não usada em produção, mantida para casos futuros sem acesso a máquina com mais RAM):</strong> <code>scripts/agregar_ghsl_streaming.py</code> — processa a fonte por blocos de linhas (streaming), transformando coordenadas de cada pixel e acumulando diretamente na grelha de destino (pequena, ~11MB). Memória controlada e previsível (testado: 76s para um tile de 80M pixels, memória sempre limitada ao tamanho do bloco), mais lento que o gdalwarp mas seguro em servidores com pouca RAM.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Máscara oficial — CAOP2025 (DGT)</h4>
+    <p>Para calcular percentis de normalização apenas sobre o território real (excluindo Espanha/oceano, que distorceriam a distribuição), foi necessária uma fronteira administrativa oficial. Decisão: <strong>Carta Administrativa Oficial de Portugal (CAOP2025)</strong>, Direção-Geral do Território — fonte oficial do Estado, rastreável, já na CRS oficial do SAEIF (EPSG:3763, sem reprojeção necessária), com licença CC-BY-4.0. Camadas extraídas para <code>data/boundaries/caop/</code>: <code>portugal_continental.gpkg</code> (limite nacional dissolvido, cont_nuts1), mais <code>distritos.gpkg</code>, <code>concelhos.gpkg</code>, <code>freguesias.gpkg</code> para uso futuro (relatórios por divisão administrativa). Metadados de proveniência em <code>portugal_continental.meta.yaml</code> (fonte, data de referência, licença, URL de download).</p>
+    <p>Estas camadas são <strong>infraestrutura de referência</strong> ("Camadas Base"), não índices — usadas para mascarar rasters, calcular estatísticas nacionais, e (no futuro) recortes/relatórios por distrito/concelho.</p>
+    <p>Rasterização da fronteira para a grelha oficial (<code>scripts/criar_mascara_portugal.py</code>, <code>gdal_rasterize</code>): máscara binária (1=dentro, 0=fora), 1.425.631 células dentro de Portugal Continental (de um total de 2.861.467 na grelha ibérica).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Validação de sanidade — soma de população</h4>
+    <p>População total dentro da máscara: <strong>9.802.159</strong> habitantes, contra os ~10,3 milhões reais (Censos/estimativas recentes) — diferença de ~5%, explicada pelo epoch 2020 do GHSL (não é o dado populacional mais recente) e por perda residual de bordo na rasterização vetor→raster. Ordem de grandeza correta, sem sinal de erro grave.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão de método — normalização por percentil, não min-max</h4>
+    <p>Ambas as variáveis têm distribuições extremamente assimétricas dentro da máscara real: população com <strong>assimetria (skewness) = 18,84</strong>, edificado com <strong>5,24</strong>; mais de 60% das células têm valor exatamente zero nas duas variáveis (mediana = 0). Um min-max simples deixaria uma única célula ultra-densa (ex. centro de Lisboa) definir o "1,0", esmagando toda a distinção entre zonas rurais de baixa/média densidade. <strong>Decisão:</strong> normalização por saturação no <strong>percentil 99</strong> (calculado só dentro da máscara de Portugal, incluindo células de valor zero — uma célula sem população/edificado é um valor real do fenómeno, não dado em falta), com limite inferior fixo em 0 (variáveis fisicamente não-negativas). Valores acima do p99 saturam em 1,0.</p>
+    <p>Percentis 99 reais calculados (<code>scripts/percentis_exposicao_mascarados.py</code>): população <strong>133,20</strong> habitantes/célula, edificado <strong>15.838,74</strong> m²/célula.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Configuração por domínio</h4>
+    <p>Em vez de um ficheiro de configuração dedicado só à Exposição, optou-se por uma estrutura <strong>por domínio</strong> — <code>config/indice_v.py</code> — preparada desde já para os subcomponentes futuros (Sensibilidade, Capacidade de Resposta), evitando um ficheiro monolítico com dezenas de parâmetros de natureza distinta à medida que o Índice V crescer:</p>
+    <pre><code>EXPOSURE_NORMALIZATION = "percentile"  # preparado para "minmax"/"robust"/"log" no futuro
+EXPOSURE_PERCENTILE = 99.0
+EXPOSURE_LOWER_BOUND = 0.0
+EXPOSURE_WEIGHT_POPULATION = 0.50
+EXPOSURE_WEIGHT_BUILT_AREA = 0.50
+
+SENSITIVITY_PERCENTILE = 99.0   # reservado
+RESPONSE_PERCENTILE = 99.0      # reservado
+
+VALIDATION_EXPORT_HISTOGRAM = True
+VALIDATION_EXPORT_STATISTICS = True</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Script de geração e validação automática</h4>
+    <p><code>scripts/gerar_indice_v_exposicao.py</code>: normaliza população e edificado (percentil 99, dentro da máscara), combina com ponderação idêntica (0,5+0,5), e <strong>valida automaticamente</strong> antes de gravar — mínimo ≥ 0, máximo ≤ 1 (tolerância numérica ±1e-6), ausência de NaN/Inf. Se a validação falhar, o script aborta com erro explícito em vez de gravar um raster inválido silenciosamente (testado deliberadamente com uma variável degenerada — toda a zero — para confirmar que o script recusa corretamente). Fora da máscara de Portugal, o resultado fica NoData (o Índice V não tem significado fora do domínio do modelo). Exporta também estatísticas (percentis, média, assimetria) e um histograma em texto (sem dependência de matplotlib, indisponível de forma fiável neste servidor).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Passo a passo</h4>
+    <pre><code># Mosaico + reprojecao (no MacBook, RAM suficiente -- ver nota acima)
+python3 scripts/mosaicar_ghsl.py &lt;tile_R4_pop&gt; &lt;tile_R5_pop&gt; data/indice_v_exposicao_pop.tif
+python3 scripts/mosaicar_ghsl.py &lt;tile_R4_built&gt; &lt;tile_R5_built&gt; data/indice_v_exposicao_built.tif
+# (copiar resultados para o servidor via scp)
+
+# No servidor: mascara + percentis + geracao final
+python3 scripts/criar_mascara_portugal.py data/boundaries/caop/portugal_continental.gpkg data/mascara_portugal_continental.tif
+python3 scripts/percentis_exposicao_mascarados.py data/mascara_portugal_continental.tif data/indice_v_exposicao_pop.tif data/indice_v_exposicao_built.tif
+python3 scripts/gerar_indice_v_exposicao.py data/mascara_portugal_continental.tif data/indice_v_exposicao_pop.tif data/indice_v_exposicao_built.tif data/indice_v_exposicao.tif</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Resultado e confirmação visual</h4>
+    <p>Estatísticas finais (dentro da máscara): média 0,0445, mediana 0, desvio-padrão 0,1412, assimetria 4,57, p99=0,8565, p100=1,0 (validação: min=0,000000, max=1,000000, sem NaN/Inf). Confirmação visual (PNG colorido, ver preview gerado): concentração nítida no Grande Porto, eixo de Lisboa, e faixa costeira do Algarve — o padrão de litoralização da população portuguesa, bem documentado na literatura, reproduzido de forma independente sem qualquer conhecimento prévio do território incorporado no algoritmo (só GHSL + máscara CAOP).</p>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (8 Jul 2026)</strong><br>
+      <strong>Índice V — Exposição construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_exposicao.tif</code>. Camadas base de referência estabelecidas (<code>data/boundaries/caop/</code>) para uso em toda a arquitetura futura do SAEIF. <strong>Pendente:</strong> Sensibilidade (idosos, combustível, comportamento perante o fogo) e Capacidade de Resposta (estradas florestais, bombeiros por área) — ainda não iniciadas; mapa de valor económico dos elementos expostos; verificação futura da correlação entre população e edificado antes de fixar os pesos definitivamente (sugestão de consultoria SIG externa, ainda não executada); exposição via <code>/api/layers</code>.
     </div>
 
   </div>
