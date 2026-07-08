@@ -53,6 +53,7 @@ def main():
         "-te", str(gs.GRID_XMIN), str(gs.GRID_YMIN), str(gs.GRID_XMAX), str(gs.GRID_YMAX),
         "-tr", str(gs.GRID_RESOLUTION), str(gs.GRID_RESOLUTION),
         "-r", "sum",
+        "-ot", "Float32",
         "-dstnodata", str(gs.GRID_NODATA),
         "-co", "COMPRESS=LZW",
         "-co", "TILED=YES",
