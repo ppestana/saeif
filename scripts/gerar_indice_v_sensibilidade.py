@@ -2,23 +2,29 @@
 """
 Gera o raster oficial da componente Sensibilidade do Indice V (Vulnerabilidade).
 
-Nesta versao, a Sensibilidade tem um unico componente implementado --
-proporcao de populacao idosa (65+), ja ponderada por confianca estatistica
-(ver scripts/gerar_proporcao_idosos.py). Estruturado para aceitar mais
-componentes no futuro (crianças, isolamento, escolaridade, etc.), cada um
-com o seu proprio peso em config/indice_v.py.
+Combina duas variaveis, cada uma normalizada independentemente (min-max
+real, dentro da mascara de Portugal) antes de agregar com ponderacao:
+    Sensibilidade = SENSITIVITY_WEIGHT_ELDERLY  * idosos_norm
+                  + SENSITIVITY_WEIGHT_CHILDREN * criancas_norm
 
 Metodo de normalizacao: min-max (nao percentil), decidido a partir da
-distribuicao real dos dados -- ao contrario da Exposicao (assimetria ~19,
-outliers extremos genuinos), a Sensibilidade por idosos, apos a ponderacao
-de confianca, tem assimetria moderada (~0.65) e o maximo real ja nao
-representa ruido estatistico (celulas no topo da distribuicao tem
-populacoes de dezenas a centenas de habitantes, nao os "2 habitantes"
-que geravam falsos 100% antes da ponderacao). Usar percentil aqui
-saturaria informacao real sem ganho de robustez correspondente.
+distribuicao real dos dados para AMBAS as variaveis -- apos a ponderacao
+de confianca (ver scripts/gerar_proporcao_idosos.py e
+gerar_proporcao_faixa_etaria.py), as duas tem assimetria moderada
+(idosos ~0.65, criancas ~0.58) e os maximos reais ja nao representam
+ruido estatistico (confirmado por cruzamento com populacoes reais no
+topo da distribuicao). Usar percentil aqui saturaria informacao real
+sem ganho de robustez correspondente.
+
+Pesos (ver config/indice_v.py): a literatura sobre mortalidade em
+incendios documenta risco relativo consistentemente mais elevado para
+idosos (65+) do que para criancas -- mas os valores exactos dos pesos
+(0.65/0.35) sao uma decisao de modelacao informada por essa evidencia,
+nao uma derivacao matematica do risco relativo (ver nota em
+config/indice_v.py e saeif_architecture.html).
 
 Uso:
-    python3 gerar_indice_v_sensibilidade.py <mascara.tif> <idosos.tif> <output.tif>
+    python3 gerar_indice_v_sensibilidade.py <mascara.tif> <idosos.tif> <criancas.tif> <output.tif>
 """
 import sys
 import os
@@ -60,7 +66,6 @@ def skewness(x):
 
 
 def normalizar_minmax(valores, dentro_mask, limite_inferior):
-    """Normaliza por min-max real (maximo calculado a partir dos dados dentro da mascara)."""
     v_max = np.max(valores[dentro_mask])
     if v_max <= limite_inferior:
         raise ValueError(
@@ -70,6 +75,21 @@ def normalizar_minmax(valores, dentro_mask, limite_inferior):
     norm = (valores - limite_inferior) / (v_max - limite_inferior)
     norm = np.clip(norm, 0.0, 1.0)
     return norm, v_max
+
+
+def preparar_variavel(path, dentro_pt, nome):
+    """Le, identifica celulas sem dados INE, normaliza (min-max), e trata
+    explicitamente as celulas sem dados como 0 (ver nota em
+    saeif_architecture.html sobre a decisao de cobertura incompleta)."""
+    arr, nodata = ler_raster_completo(path)
+    valido = dentro_pt & (arr != nodata if nodata is not None else dentro_pt)
+    sem_dados = dentro_pt & ~valido
+
+    norm, v_max = normalizar_minmax(arr, valido, cfg.SENSITIVITY_LOWER_BOUND)
+    print(f"  [{nome}] Maximo real (dentro da mascara): {v_max:.4f}")
+    norm[sem_dados] = 0.0
+    print(f"  [{nome}] {int(np.sum(sem_dados))} celulas sem dados INE definidas explicitamente como 0.")
+    return norm
 
 
 def exportar_histograma_texto(valores, path, n_bins=20):
@@ -104,11 +124,11 @@ def escrever_geotiff(array, path):
 
 
 def main():
-    if len(sys.argv) != 4:
-        print("Uso: python3 gerar_indice_v_sensibilidade.py <mascara.tif> <idosos.tif> <output.tif>")
+    if len(sys.argv) != 5:
+        print("Uso: python3 gerar_indice_v_sensibilidade.py <mascara.tif> <idosos.tif> <criancas.tif> <output.tif>")
         sys.exit(1)
 
-    mascara_path, idosos_path, output_path = sys.argv[1:4]
+    mascara_path, idosos_path, criancas_path, output_path = sys.argv[1:5]
 
     gs.assert_grid_consistency()
 
@@ -123,31 +143,17 @@ def main():
     dentro_pt = mascara == 1
     print(f"Celulas dentro de Portugal Continental: {int(np.sum(dentro_pt))}")
 
-    print(f"A ler sensibilidade de idosos de {idosos_path} ...")
-    idosos, idosos_nodata = ler_raster_completo(idosos_path)
-    idosos_valido = dentro_pt & (idosos != idosos_nodata if idosos_nodata is not None else dentro_pt)
+    print("A normalizar (min-max) cada variavel ...")
+    idosos_norm = preparar_variavel(idosos_path, dentro_pt, "idosos")
+    criancas_norm = preparar_variavel(criancas_path, dentro_pt, "criancas")
 
-    # Celulas dentro de Portugal sem dados do INE (idosos_nodata): o INE nao
-    # publica dados de populacao para celulas de 1km essencialmente
-    # desabitadas (confirmado por cruzamento com a populacao GHSL da
-    # Exposicao: destas celulas, so 0.7% tem alguma populacao real, media
-    # ~0.035 habitantes -- ver saeif_architecture.html). DECISAO EXPLICITA:
-    # tratadas como sensibilidade=0 (nao ha populacao idosa a proteger onde
-    # nao ha, na pratica, populacao nenhuma), nao como NoData. Isto e feito
-    # de forma explicita aqui, nao como efeito colateral do clip da
-    # normalizacao (fragil e nao documentado).
-    sem_dados_ine = dentro_pt & ~idosos_valido
-
-    print("A normalizar (min-max) ...")
-    idosos_norm, v_max = normalizar_minmax(idosos, idosos_valido, cfg.SENSITIVITY_LOWER_BOUND)
-    print(f"  Maximo real (dentro da mascara): {v_max:.4f}")
-    idosos_norm[sem_dados_ine] = 0.0
-    print(f"  {int(np.sum(sem_dados_ine))} celulas sem dados INE (essencialmente desabitadas, "
-          f"confirmado por GHSL) definidas explicitamente como 0.")
-
-    # Por agora, um so componente -- peso 1.0. Estrutura pronta para mais
-    # variaveis no futuro (cada uma com o seu SENSITIVITY_WEIGHT_*).
-    sensibilidade = cfg.SENSITIVITY_WEIGHT_ELDERLY * idosos_norm
+    print(f"A combinar: {cfg.SENSITIVITY_WEIGHT_ELDERLY} x idosos + "
+          f"{cfg.SENSITIVITY_WEIGHT_CHILDREN} x criancas "
+          f"(pesos: {cfg.SENSITIVITY_WEIGHT_METHOD}) ...")
+    sensibilidade = (
+        cfg.SENSITIVITY_WEIGHT_ELDERLY * idosos_norm
+        + cfg.SENSITIVITY_WEIGHT_CHILDREN * criancas_norm
+    )
 
     sensibilidade_final = np.where(dentro_pt, sensibilidade, gs.GRID_NODATA)
 

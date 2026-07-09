@@ -20,8 +20,21 @@ SENSITIVITY_NORMALIZATION = "minmax"  # decidido com base na distribuicao real (
 SENSITIVITY_LOWER_BOUND = 0.0
 SENSITIVITY_PERCENTILE = 99.0  # reservado para futuras variaveis da Sensibilidade que precisem de saturacao
 
-SENSITIVITY_WEIGHT_ELDERLY = 1.0  # unico componente implementado por agora; pesos futuros a rever
-                                    # quando mais variaveis (crianças, isolamento, etc.) forem adicionadas
+SENSITIVITY_WEIGHT_ELDERLY = 0.65
+SENSITIVITY_WEIGHT_CHILDREN = 0.35
+SENSITIVITY_WEIGHT_METHOD = "literature-based (initial)"
+# Os pesos NAO sao derivados matematicamente do risco relativo observado na
+# literatura (ex. idosos 65+ com risco de mortalidade em incendio 2.2-2.9x
+# superior a populacao geral, FEMA/USFA 2014-2023). Essa evidencia justifica
+# QUE os idosos devem ter peso superior as criancas, nao O VALOR exato do
+# peso -- o peso de uma variavel num indice multicriterio depende tambem de
+# correlacao, redundancia, variabilidade espacial e calibracao do modelo,
+# nao so do risco relativo individual. Os valores 0.65/0.35 sao uma decisao
+# de modelacao informada pela evidencia disponivel para esta primeira
+# versao operacional -- provisorios, sujeitos a recalibracao futura
+# (regressao, Random Forest, SHAP, analise de sensibilidade) quando houver
+# dados suficientes. Quando isso acontecer, actualizar tambem
+# SENSITIVITY_WEIGHT_METHOD para "calibrated".
 
 SENSITIVITY_CONFIDENCE_N0 = 50.0  # populacao de referencia para peso de confianca total
 # Proporcoes calculadas sobre populacoes pequenas (denominador n) sao
