@@ -2313,8 +2313,23 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (9 Jul 2026)</strong><br>
-      <strong>Índice V — Sensibilidade hierárquica (idosos+crianças+isolamento) construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_sensibilidade.tif</code> (domínio real 0,00-0,6907, ver Princípio da Separação Analítica). <strong>Pendente:</strong> escolaridade (fonte ainda não encontrada); Capacidade de Resposta (não iniciada); combustível e comportamento perante o fogo (variáveis de Sensibilidade citadas na visão original, ainda não abordadas); refinamento do proxy de isolamento (cruzamento com idade); exposição via <code>/api/layers</code>.
+      <strong>Índice V — Sensibilidade hierárquica (idosos+crianças+isolamento) construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_sensibilidade.tif</code> (domínio real 0,00-0,6907, ver Princípio da Separação Analítica). <strong>Pendente:</strong> Capacidade de Resposta (não iniciada); combustível e comportamento perante o fogo (variáveis de Sensibilidade citadas na visão original, ainda não abordadas); refinamento do proxy de isolamento (cruzamento com idade); exposição via <code>/api/layers</code>. <strong>Escolaridade investigada e deliberadamente adiada (ver secção 15.16)</strong> — não por falta de fonte, mas por inconsistência de resolução estatística com as restantes variáveis.
     </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.16 — Escolaridade: investigada, adiada por inconsistência de resolução</h3>
+    <p>Investigada a disponibilidade de dados de escolaridade (nível de instrução) do INE para incluir como quarta variável da Vulnerabilidade Social. <strong>Resultado da investigação:</strong> a escolaridade dos Censos 2021 só está publicamente disponível com desagregação máxima ao nível de <strong>freguesia</strong> — não existe nem na grelha de 1km nem na BGRI (subsecção estatística), ao contrário de idosos/crianças/isolamento.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão: não incluir nesta versão</h4>
+    <p>Uma freguesia tem em média dezenas de km² — ordens de grandeza maior do que a mediana de 6 ha de uma subsecção BGRI. Incluir escolaridade misturaria, dentro da mesma componente do índice, variáveis com resoluções espaciais muito diferentes: uma freguesia com vila + várias aldeias + dezenas de km² de floresta receberia um único valor uniforme de escolaridade, enquanto idosos/crianças/isolamento continuariam a variar de subsecção para subsecção dentro da mesma freguesia. Um incêndio a atravessar duas subsecções vizinhas veria o modelo distinguir diferenças de idade e isolamento, mas nenhuma diferença de escolaridade — não porque não exista, mas porque o dado de origem não a permite representar a essa escala.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Princípio geral adoptado</h4>
+    <blockquote style="border-left:3px solid var(--fire);padding-left:1rem;margin:1rem 0;color:var(--text-dim)">
+      Sempre que possível, as variáveis que compõem uma mesma dimensão do índice devem possuir resolução estatística equivalente. Variáveis disponíveis apenas em escalas administrativas significativamente mais agregadas serão tratadas como indicadores complementares, ou integradas apenas quando a sua resolução for compatível com a restante componente.
+    </blockquote>
+    <p>Este princípio protege o SAEIF de incorporar variáveis apenas porque estão disponíveis, priorizando a coerência interna de cada componente do índice sobre a completude nominal da lista de variáveis citada na visão original.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Caminho futuro</h4>
+    <p>Duas vias possíveis, não excludentes: (1) aguardar uma fonte de escolaridade com resolução compatível com a BGRI (indicadores sociais do INE, Índice Europeu de Deprivação, dados municipais, futuras disponibilizações censitárias); ou (2) criar uma componente separada de "Contexto Socioeconómico" a nível de freguesia, distinta da Sensibilidade operacional (que fica a 250m/BGRI), evitando misturar escalas dentro do mesmo indicador. Nenhuma das duas implementada nesta versão.</p>
 
   </div>
 </div><!-- /container -->
@@ -2389,13 +2404,13 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>21.8</td><td>55</td><td>1199.00</td></tr>
-        <tr><td>Design</td><td>14.5</td><td>55</td><td>797.50</td></tr>
+        <tr><td>Análise</td><td>22.1</td><td>55</td><td>1215.50</td></tr>
+        <tr><td>Design</td><td>14.8</td><td>55</td><td>814.00</td></tr>
         <tr><td>Gestão</td><td>4.3</td><td>40</td><td>172.00</td></tr>
         <tr><td>Programação</td><td>97.3</td><td>45</td><td>4378.50</td></tr>
         <tr><td>Testes</td><td>13.5</td><td>35</td><td>472.50</td></tr>
-        <tr><td>Documentação</td><td>25.3</td><td>30</td><td>759.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>176.7</td><td>—</td><td>7778.50</td></tr>
+        <tr><td>Documentação</td><td>25.8</td><td>30</td><td>774.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>177.8</td><td>—</td><td>7826.50</td></tr>
       </tbody>
     </table>
     <p>Nota: a fase <strong>Programação</strong> domina o total (~55% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto. A fase <strong>Design</strong> cresceu de forma notável nesta actualização (12,0→14,5h) devido à reestruturação hierárquica da Sensibilidade e à formalização do Princípio da Separação Analítica (secção 16) — decisões de arquitectura com impacto em todos os índices futuros, não só no Índice V.</p>
@@ -2406,6 +2421,7 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
       <tbody>
         <tr><td>9 Jul 2026</td><td>Secção criada. Reconstrução retrospectiva completa desde o início do projecto (30 Mai 2026), a pedido de Pedro Pestana.</td></tr>
         <tr><td>9 Jul 2026 (mesma sessão)</td><td>+16,2h: variável crianças (Sensibilidade), investigação e integração do isolamento social via BGRI (fonte, N0 próprio para agregados domésticos, script genérico numerador/denominador), reestruturação hierárquica da Sensibilidade (Vulnerabilidade Demográfica + Social), formalização do Princípio da Separação Analítica, correcção de menu de navegação em falta.</td></tr>
+        <tr><td>9 Jul 2026 (mesma sessão)</td><td>+1,1h: investigação da fonte de escolaridade (INE); decisão de adiar deliberadamente por inconsistência de resolução estatística (freguesia vs. BGRI); formalização de princípio geral sobre consistência de resolução dentro de cada componente do índice.</td></tr>
       </tbody>
     </table>
 
