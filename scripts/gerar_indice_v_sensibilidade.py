@@ -127,9 +127,23 @@ def main():
     idosos, idosos_nodata = ler_raster_completo(idosos_path)
     idosos_valido = dentro_pt & (idosos != idosos_nodata if idosos_nodata is not None else dentro_pt)
 
+    # Celulas dentro de Portugal sem dados do INE (idosos_nodata): o INE nao
+    # publica dados de populacao para celulas de 1km essencialmente
+    # desabitadas (confirmado por cruzamento com a populacao GHSL da
+    # Exposicao: destas celulas, so 0.7% tem alguma populacao real, media
+    # ~0.035 habitantes -- ver saeif_architecture.html). DECISAO EXPLICITA:
+    # tratadas como sensibilidade=0 (nao ha populacao idosa a proteger onde
+    # nao ha, na pratica, populacao nenhuma), nao como NoData. Isto e feito
+    # de forma explicita aqui, nao como efeito colateral do clip da
+    # normalizacao (fragil e nao documentado).
+    sem_dados_ine = dentro_pt & ~idosos_valido
+
     print("A normalizar (min-max) ...")
     idosos_norm, v_max = normalizar_minmax(idosos, idosos_valido, cfg.SENSITIVITY_LOWER_BOUND)
     print(f"  Maximo real (dentro da mascara): {v_max:.4f}")
+    idosos_norm[sem_dados_ine] = 0.0
+    print(f"  {int(np.sum(sem_dados_ine))} celulas sem dados INE (essencialmente desabitadas, "
+          f"confirmado por GHSL) definidas explicitamente como 0.")
 
     # Por agora, um so componente -- peso 1.0. Estrutura pronta para mais
     # variaveis no futuro (cada uma com o seu SENSITIVITY_WEIGHT_*).
