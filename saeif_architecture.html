@@ -2279,5 +2279,63 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
 
   </div>
 </div><!-- /container -->
+
+<div class="container">
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">16</span>
+      <h2 class="section-title">Custos Estimados do Projecto (por Fase)</h2>
+    </div>
+
+    <p><strong>Instrução permanente (9 Jul 2026):</strong> esta secção deve ser actualizada em <em>todas</em> as futuras revisões deste documento, acrescentando o esforço estimado do trabalho entretanto realizado.</p>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.1 — Metodologia e avisos</h3>
+    <p>O projecto não teve registo de horas em tempo real desde o início (30 Mai 2026). Os valores desta secção são uma <strong>reconstrução retrospectiva estimada</strong>, não um registo de horas real (<em>timesheet</em>). O método:</p>
+    <ul>
+      <li>Para o período <strong>7-9 Jul 2026</strong>, as estimativas baseiam-se no acompanhamento directo e detalhado das sessões de trabalho (este assistente).</li>
+      <li>Para o período <strong>30 Mai — 6 Jul 2026</strong>, as estimativas baseiam-se numa heurística de horas por tipo de commit (<code>git log</code> completo do repositório: 143 commits), calibrada por analogia com o esforço observado nas sessões mais recentes e semelhantes em natureza (ex. um commit <code>feat:</code> de uma funcionalidade nova ≈ 1-2h; um commit <code>fix:</code> pontual ≈ 0.3-0.5h; um commit <code>docs:</code> de auditoria/decisão de arquitectura ≈ 1-2h; um commit <code>docs:</code> de acompanhamento de versão ≈ 0.5h).</li>
+      <li>Classificação por fase (Análise, Design, Gestão, Programação, Testes, Documentação) atribuída por commit, com base no conteúdo real da mensagem, não apenas no prefixo (ex. um commit <code>docs:</code> que documenta uma decisão de arquitectura é classificado em <strong>Design</strong>, não em Documentação; um commit <code>docs:</code> que audita o código contra a documentação é classificado em <strong>Análise</strong>).</li>
+      <li>Estes números devem ser tratados como uma <strong>ordem de grandeza defensável</strong>, não como facturação exacta. Ficam sujeitos a revisão se surgir informação mais precisa (ex. registo real de horas a partir de agora).</li>
+    </ul>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.2 — Taxas horárias por fase</h3>
+    <p>Taxas diferenciadas por fase (decisão de 9 Jul 2026): fases que exigem maior senioridade e responsabilidade de decisão (Análise, Design) têm taxa mais alta; fases mais mecânicas (Testes, Documentação) têm taxa mais baixa. Valores estimados por este assistente (Pedro está reformado, sem taxa de mercado actual de referência) — ajustáveis a qualquer momento.</p>
+    <table>
+      <thead><tr><th>Fase</th><th>Taxa (€/hora)</th><th>Justificação</th></tr></thead>
+      <tbody>
+        <tr><td>Análise</td><td>55</td><td>Avaliação de fontes, decisões metodológicas, investigação de inconsistências</td></tr>
+        <tr><td>Design</td><td>55</td><td>Arquitectura, decisões estruturais de sistema</td></tr>
+        <tr><td>Gestão</td><td>40</td><td>Coordenação, planeamento, resolução de incidentes (git, segurança)</td></tr>
+        <tr><td>Programação</td><td>45</td><td>Implementação técnica (scripts, código, migrações)</td></tr>
+        <tr><td>Testes</td><td>35</td><td>Validação, testes funcionais e de sanidade</td></tr>
+        <tr><td>Documentação</td><td>30</td><td>Escrita e actualização de documentos-base</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.3 — Custos acumulados (30 Mai 2026 — 9 Jul 2026)</h3>
+    <table>
+      <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
+      <tbody>
+        <tr><td>Análise</td><td>18.0</td><td>55</td><td>990.00</td></tr>
+        <tr><td>Design</td><td>12.0</td><td>55</td><td>660.00</td></tr>
+        <tr><td>Gestão</td><td>4.0</td><td>40</td><td>160.00</td></tr>
+        <tr><td>Programação</td><td>92.9</td><td>45</td><td>4180.50</td></tr>
+        <tr><td>Testes</td><td>11.3</td><td>35</td><td>395.50</td></tr>
+        <tr><td>Documentação</td><td>22.3</td><td>30</td><td>669.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>160.5</td><td>—</td><td>7055.00</td></tr>
+      </tbody>
+    </table>
+    <p>Nota: a fase <strong>Programação</strong> domina o total (~58% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto.</p>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.4 — Histórico de actualizações desta secção</h3>
+    <table>
+      <thead><tr><th>Data</th><th>Nota</th></tr></thead>
+      <tbody>
+        <tr><td>9 Jul 2026</td><td>Secção criada. Reconstrução retrospectiva completa desde o início do projecto (30 Mai 2026), a pedido de Pedro Pestana.</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</div><!-- /container -->
 </body>
 </html>
