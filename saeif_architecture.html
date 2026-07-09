@@ -500,6 +500,7 @@
   <a href="#mobile">Interface Mobile</a>
   <a href="#melhorias">Melhorias Futuras</a>
   <a href="#manutencao">Procedimentos de Manutenção</a>
+  <a href="#separacao-analitica">Separação Analítica</a>
   <a href="#custos">Custos do Projecto</a>
 </nav>
 
@@ -2276,8 +2277,41 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (9 Jul 2026)</strong><br>
-      <strong>Índice V — Sensibilidade (idosos) construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_sensibilidade.tif</code>. <strong>Pendente:</strong> outras variáveis de Sensibilidade (crianças, isolamento, escolaridade — estrutura já preparada por domínio em <code>config/indice_v.py</code>); Capacidade de Resposta (ainda não iniciada); combustível e comportamento perante o fogo (as outras duas variáveis de Sensibilidade citadas na visão); exposição via <code>/api/layers</code>.
+      <strong>Índice V — Sensibilidade (idosos) construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_sensibilidade.tif</code>. <strong>Pendente:</strong> outras variáveis de Sensibilidade (crianças, isolamento, escolaridade — estrutura já preparada por domínio em <code>config/indice_v.py</code>); Capacidade de Resposta (ainda não iniciada); combustível e comportamento perante o fogo (as outras duas variáveis de Sensibilidade citadas na visão); exposição via <code>/api/layers</code>. <strong>Actualização (9 Jul 2026):</strong> combinada com crianças (pesos 0,65/0,35) — teto real observado 0,65, não 1,0 (ver secção 16, Princípio da Separação Analítica).
     </div>
+
+  </div>
+</div><!-- /container -->
+
+<div class="container">
+  <div class="section" id="separacao-analitica">
+    <div class="section-header">
+      <span class="section-num">16</span>
+      <h2 class="section-title">Princípio da Separação Analítica</h2>
+    </div>
+
+    <p><strong>Decisão de arquitectura (9 Jul 2026), aplicável a todos os índices do SAEIF.</strong></p>
+
+    <blockquote style="border-left:3px solid var(--fire);padding-left:1rem;margin:1rem 0;color:var(--text-dim)">
+      Todos os índices do SAEIF são armazenados no seu domínio analítico original. As transformações destinadas exclusivamente à representação cartográfica (normalização visual, estiramento de contraste, classificação ou simbologia) são efectuadas apenas na fase de visualização, preservando integralmente os valores produzidos pelo modelo.
+    </blockquote>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.1 — Motivação: o caso que revelou a necessidade da regra</h3>
+    <p>Ao combinar idosos (peso 0,65) e crianças (peso 0,35) na Sensibilidade do Índice V, o valor máximo real observado em Portugal Continental ficou em <strong>0,65</strong>, não perto de 1,0. Motivo: as duas variáveis partilham o mesmo denominador populacional e são, na prática, quase mutuamente exclusivas no espaço — uma célula com 98,75% de idosos não pode simultaneamente ter uma fracção elevada de crianças. A célula onde a proporção de idosos atinge o máximo tem uma proporção de crianças próxima de zero, pelo que o valor combinado nessa célula é ≈0,65×1,0 + 0,35×0 = 0,65, não 1,0.</p>
+    <p>Ponderada a alternativa de reescalar o raster final para usar 0-1 completo (esticando os valores observados), decidiu-se <strong>não o fazer</strong>, pelas razões abaixo.</p>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.2 — Porque não reescalar os dados analíticos</h3>
+    <ul>
+      <li><strong>Alvo móvel:</strong> se no futuro a Sensibilidade passar a combinar mais variáveis (ex. isolamento, escolaridade), o máximo teórico muda outra vez — reescalar agora obrigaria a recalcular todos os rasters anteriores sempre que uma nova variável entrasse, e um valor como 0,80 deixaria de significar a mesma coisa entre versões do índice.</li>
+      <li><strong>Auditoria e reprodutibilidade:</strong> cada pixel deve representar exactamente o valor produzido pela fórmula documentada, sem manipulação posterior — essencial para validação científica e publicação.</li>
+      <li><strong>Prática GIS estabelecida:</strong> software como QGIS, ArcGIS ou GRASS distingue sempre o raster armazenado da simbologia usada para o representar; o raster nunca muda, só a rampa de cores.</li>
+    </ul>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.3 — Onde vive a transformação de visualização</h3>
+    <p>Os scripts de geração (<code>scripts/gerar_indice_*.py</code>) produzem sempre o raster no seu domínio analítico original (ex. <code>indice_v_sensibilidade.tif</code>, valores 0,00-0,65) — nenhum conhecimento de simbologia entra no cálculo. A adaptação visual (rampa de cor esticada ao intervalo realmente observado, não a um 0-1 fixo) é feita separadamente, no momento de gerar um preview/mapa (ex. <code>gdaldem color-relief</code> com uma rampa calibrada aos valores mín/máx reais desse raster específico). Isto permite, no futuro, gerar múltiplas representações do mesmo raster (contínuo, classes, quantis, Jenks) sem qualquer recálculo do índice em si.</p>
+
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.4 — Ressalva: a legenda tem de refletir a escala real</h3>
+    <p>Sempre que um raster com domínio inferior a [0,1] for visualizado (ex. Sensibilidade combinada, 0,00-0,65), a legenda do mapa deve indicar explicitamente o intervalo real dos dados (ex. "0,00 – 0,65"), ou declarar que a rampa de cores foi ajustada ao intervalo observado — nunca implicar uma escala 0-1 completa quando os dados não a preenchem. Evita interpretações erradas por quem consulta o mapa sem conhecer os bastidores do cálculo.</p>
 
   </div>
 </div><!-- /container -->
@@ -2285,13 +2319,13 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
 <div class="container">
   <div class="section" id="custos">
     <div class="section-header">
-      <span class="section-num">16</span>
+      <span class="section-num">17</span>
       <h2 class="section-title">Custos Estimados do Projecto (por Fase)</h2>
     </div>
 
     <p><strong>Instrução permanente (9 Jul 2026):</strong> esta secção deve ser actualizada em <em>todas</em> as futuras revisões deste documento, acrescentando o esforço estimado do trabalho entretanto realizado.</p>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.1 — Metodologia e avisos</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.1 — Metodologia e avisos</h3>
     <p>O projecto não teve registo de horas em tempo real desde o início (30 Mai 2026). Os valores desta secção são uma <strong>reconstrução retrospectiva estimada</strong>, não um registo de horas real (<em>timesheet</em>). O método:</p>
     <ul>
       <li>Para o período <strong>7-9 Jul 2026</strong>, as estimativas baseiam-se no acompanhamento directo e detalhado das sessões de trabalho (este assistente).</li>
@@ -2300,7 +2334,7 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
       <li>Estes números devem ser tratados como uma <strong>ordem de grandeza defensável</strong>, não como facturação exacta. Ficam sujeitos a revisão se surgir informação mais precisa (ex. registo real de horas a partir de agora).</li>
     </ul>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.2 — Taxas horárias por fase</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.2 — Taxas horárias por fase</h3>
     <p>Taxas diferenciadas por fase (decisão de 9 Jul 2026): fases que exigem maior senioridade e responsabilidade de decisão (Análise, Design) têm taxa mais alta; fases mais mecânicas (Testes, Documentação) têm taxa mais baixa. Valores estimados por este assistente (Pedro está reformado, sem taxa de mercado actual de referência) — ajustáveis a qualquer momento.</p>
     <table>
       <thead><tr><th>Fase</th><th>Taxa (€/hora)</th><th>Justificação</th></tr></thead>
@@ -2314,7 +2348,7 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
       </tbody>
     </table>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.3 — Custos acumulados (30 Mai 2026 — 9 Jul 2026)</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 9 Jul 2026)</h3>
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
@@ -2329,7 +2363,7 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
     </table>
     <p>Nota: a fase <strong>Programação</strong> domina o total (~58% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto.</p>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">16.4 — Histórico de actualizações desta secção</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
       <thead><tr><th>Data</th><th>Nota</th></tr></thead>
       <tbody>
