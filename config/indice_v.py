@@ -36,7 +36,21 @@ SENSITIVITY_WEIGHT_METHOD = "literature-based (initial)"
 # dados suficientes. Quando isso acontecer, actualizar tambem
 # SENSITIVITY_WEIGHT_METHOD para "calibrated".
 
-SENSITIVITY_CONFIDENCE_N0 = 50.0  # populacao de referencia para peso de confianca total
+SENSITIVITY_CONFIDENCE_N0 = 50.0  # populacao de referencia (pessoas) para peso de confianca total
+
+# Numero minimo de agregados domesticos para atingir confianca total na
+# estimativa de proporcoes calculadas sobre agregados (nao pessoas) --
+# ex. proporcao de agregados com 1-2 pessoas (isolamento). Nao reutiliza
+# SENSITIVITY_CONFIDENCE_N0 porque agregados e pessoas sao universos
+# estatisticos de escala diferente (um agregado tem em media 2-3 pessoas).
+# Valor calibrado empiricamente a partir da distribuicao nacional da BGRI
+# 2021 (mediana=11, p25=5, p75=22, p90=47, p99=178 agregados por
+# subseccao): com N0=25, a mediana fica com peso ~0.44, o p75 com ~0.88,
+# e o p90 ja atinge confianca total -- crescimento gradual, sem excesso
+# de permissividade (N0=10 daria quase metade do pais em confianca alta)
+# nem excesso de penalizacao (N0=50 deixaria so ~10% das subseccoes em
+# confianca total).
+SENSITIVITY_CONFIDENCE_HOUSEHOLDS_N0 = 25.0
 # Proporcoes calculadas sobre populacoes pequenas (denominador n) sao
 # estatisticamente instaveis (variancia de uma proporcao cresce quando n
 # diminui). Em vez de um limiar fixo (que criaria descontinuidades
