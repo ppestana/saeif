@@ -479,7 +479,7 @@
     <span style="color:var(--green)">Índice I v1 (KDE, bw=3500m): 7 Jul 2026</span>
     <span style="color:var(--green)">Índice P destilado (get_indice_p): 7 Jul 2026</span>
     <span style="color:var(--amber)">Índice V — Exposição (GHSL+CAOP, p99): 8 Jul 2026</span>
-    <span style="color:var(--amber)">Índice V — Sensibilidade/idosos (INE, confiança, min-max): 9 Jul 2026</span>
+    <span style="color:var(--amber)">Índice V — Sensibilidade hierárquica (idosos+crianças+isolamento): 9 Jul 2026</span>
   </div>
 </div>
 
@@ -1022,7 +1022,7 @@ score = (
         <ul>
           <li><strong>Índice P — Propagação:</strong> <strong>destilado (7 Jul 2026)</strong> — era o <code>risco_estrutural</code> calculado inline dentro de <code>calcular_score()</code> (WorldCover + NDVI + declive + bónus área ardida); extraído como função explícita <code>get_indice_p()</code> em <code>score.py</code>, agora também gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>. Ver secção 15.11 para o procedimento e a inconsistência histórica identificada e corrigida.</li>
           <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>validado (AUC 0,86; 7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out, e testado por holdout temporal (treino 2020-2023, teste 2024-2025) com AUC de curva de concentração de 0,86. Ver secção 15.10 para o procedimento completo e a fundamentação de cada decisão.</li>
-          <li><strong>Índice V — Vulnerabilidade:</strong> <strong>componentes Exposição e Sensibilidade construídas (8-9 Jul 2026)</strong> — Exposição: população (GHS-POP) + edificado (GHS-BUILT-S), percentil 99 dentro da máscara CAOP; Sensibilidade: proporção de idosos (INE Censos 2021, grelha 1km), ponderada por confiança estatística, normalizada por min-max real. Capacidade de Resposta ainda não iniciada (modelo PREFER, Bento-Gonçalves et al. 2014). Ver secções 15.12 e 15.13 para os procedimentos completos.</li>
+          <li><strong>Índice V — Vulnerabilidade:</strong> <strong>componentes Exposição e Sensibilidade construídas (8-9 Jul 2026)</strong> — Exposição: população (GHS-POP) + edificado (GHS-BUILT-S), percentil 99; Sensibilidade: estrutura HIERÁRQUICA — Vulnerabilidade Demográfica (idosos+crianças, INE grelha 1km) + Vulnerabilidade Social (isolamento, INE BGRI), cada subdimensão com o seu próprio N0 de confiança, combinadas com peso igual. Capacidade de Resposta ainda não iniciada (modelo PREFER, Bento-Gonçalves et al. 2014). Ver secções 15.12-15.15 para os procedimentos completos.</li>
           <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
         </ul>
         Nota: nenhum índice novo entra no score final até ser validado isoladamente contra dados reais. A fórmula actual (documentada acima) mantém-se em produção como está; a reorganização é incremental.
@@ -2275,15 +2275,52 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
     <h4 style="margin:1.2rem 0 .5rem">Resultado e confirmação visual</h4>
     <p>Estatísticas finais (dentro da máscara): média 0,0829, mediana 0, desvio-padrão 0,1349, assimetria 1,6665, p99=0,5188, p100=1,0 (validação: min=0, max=1, sem NaN/Inf). Confirmação visual: envelhecimento espalhado pelo interior e zonas rurais dispersas, complementar (não sobreposto) ao padrão de concentração litoral da Exposição — reproduz o fenómeno de "duplo envelhecimento" (fuga de população jovem do interior para o litoral) bem documentado nos próprios dados do INE.</p>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.14 — Índice V: adição de crianças e reestruturação hierárquica da Sensibilidade</h3>
+    <p>Segunda variável demográfica: proporção de crianças (0-14 anos), mesma fonte e metodologia dos idosos — <code>scripts/gerar_proporcao_faixa_etaria.py</code> generalizado (aceita o campo do numerador como parâmetro, evitando duplicar a lógica de <code>gerar_proporcao_idosos.py</code>). Campo real: <code>N_INDIVIDUOS_0_14</code> (o CSV descritivo do INE indicava <code>N_INDIVIDUOS_0A14</code> — nome divergente, confirmado por <code>ogrinfo</code> antes de assumir).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Ponderação idosos/crianças — evidência vs. decisão de modelação</h4>
+    <p>A literatura sobre mortalidade em incêndios documenta risco relativo consistentemente mais elevado para idosos: 2,2-2,9× a população geral (FEMA/USFA, 2014-2023), ligado a fragilidade física e dificuldade de evacuação (NIST, 2017). Não se encontrou um factor de risco equivalente e quantificado para crianças — a vulnerabilidade infantil é mediada pela capacidade do adulto responsável, não um factor de risco independente e directo. <strong>Distinção metodológica importante</strong>: esta evidência justifica <em>que</em> os idosos devem ter peso superior às crianças, não deriva matematicamente <em>o valor exacto</em> do peso — o peso de uma variável num índice multicritério depende também de correlação, redundância e calibração do modelo, não só do risco relativo individual. Pesos adoptados: <strong>0,65 (idosos) / 0,35 (crianças)</strong>, documentados como decisão de modelação informada pela evidência disponível, provisórios e sujeitos a recalibração futura (regressão, Random Forest, SHAP) quando houver dados suficientes.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Descoberta: o tecto da combinação nunca atinge 1,0</h4>
+    <p>Ao combinar idosos+crianças, o máximo real observado foi <strong>0,65</strong>, não próximo de 1,0. Motivo: as duas variáveis partilham o mesmo denominador populacional e são quase mutuamente exclusivas espacialmente — a célula com proporção máxima de idosos tem, quase por definição, proporção de crianças próxima de zero. Esta descoberta motivou o <strong>Princípio da Separação Analítica</strong> (secção 16): os dados analíticos não são reescalados para "corrigir" este tecto; a adaptação visual é feita só na fase de representação cartográfica.</p>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.15 — Índice V: isolamento social e reestruturação hierárquica da Sensibilidade</h3>
+
+    <h4 style="margin:1.2rem 0 .5rem">Fonte de dados — BGRI 2021, não a grelha de 1km</h4>
+    <p>A proporção de agregados domésticos com 1-2 pessoas (<code>N_ADP_1_OU_2_PESSOAS / N_AGREGADOS_DOMESTICOS_PRIVADOS</code>) — o proxy mais direto para isolamento social disponível — <strong>não está presente na grelha GRID1K21_CONT</strong> (1km) usada para idosos/crianças, apesar de listada no CSV descritivo de variáveis. Está disponível na <strong>BGRI 2021</strong> (Base Geográfica de Referenciação de Informação, subsecção estatística) — <code>BGRI21_CONT.gpkg</code>, 203.264 polígonos, mesma fonte INE mas noutra página de download (<code>mapas.ine.pt/download/index2021.phtml</code>, sem "Grid" no nome). <strong>Escolaridade continua indisponível</strong> em qualquer produto INE consultado até agora (confirmado: o CSV de variáveis da BGRI é idêntico ao da grelha de 1km, <code>diff</code> sem diferenças) — fica como limitação conhecida, a investigar outra fonte no futuro.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Resolução estatística vs. espacial (nota metodológica sobre a BGRI)</h4>
+    <p>A BGRI não foi construída para ter células de área constante — foi construída para representar unidades censitárias. Estatísticas de área dos 203.264 polígonos: mediana 6,19 ha (praticamente igual aos 6,25 ha de uma célula da grelha oficial do SAEIF — nessas zonas a rasterização para 250m não inventa resolução, só harmoniza a grelha de trabalho), mas p90=86 ha, p95=204 ha, p99=707 ha, máximo 13.543 ha (subsecções rurais extensas). <strong>Registo explícito:</strong> a resolução espacial efectiva das variáveis provenientes da BGRI corresponde à dimensão das subsecções censitárias; a rasterização para 250m constitui uma harmonização da grelha de trabalho do modelo, não um aumento da resolução estatística da informação original. Em zonas rurais extensas, a incerteza espacial é maior — não é um erro do método, é uma limitação inerente ao dado de origem.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">N0 de confiança próprio para agregados domésticos</h4>
+    <p>O <code>SENSITIVITY_CONFIDENCE_N0=50</code> (calibrado para contagens de pessoas) não é directamente aplicável a agregados domésticos — universo estatístico de escala diferente (cada agregado tem em média 2-3 pessoas). Calibrado empiricamente a partir da distribuição nacional real de <code>N_AGREGADOS_DOMESTICOS_PRIVADOS</code> (mediana=11, p25=5, p75=22, p90=47, p99=178): com <strong>N0=25</strong>, a mediana fica com peso ≈0,44, o p75 com ≈0,88, o p90 já atinge confiança total — crescimento gradual, sem excesso de permissividade (N0=10 daria a quase metade do país confiança alta) nem excesso de penalização (N0=50 deixaria só ~10% das subsecções em confiança total). Verificado após ponderação: células no p99,9 têm mínimo 24 agregados, mediana 29 — já não são os "poucos agregados" que geram ruído, confirmando que a calibração resolveu o problema na origem, tal como aconteceu com a população para idosos/crianças.</p>
+    <p>Script generalizado (não específico para idosos ou isolamento): <code>scripts/gerar_proporcao_generica.py</code>, aceita numerador, denominador e N0 como parâmetros — reutilizável para qualquer proporção futura, com qualquer denominador (pessoas, agregados, edifícios, etc.), incluindo geometrias irregulares (testado com polígonos de forma/área variável, não só grelha regular).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Reestruturação hierárquica da Sensibilidade</h4>
+    <p>Em vez de pesos planos entre as três variáveis (idosos, crianças, isolamento), adoptou-se uma estrutura por <strong>subdimensões homogéneas</strong>:</p>
+    <pre><code>Vulnerabilidade Demografica (V_D) = 0.65 x idosos_norm + 0.35 x criancas_norm
+Vulnerabilidade Social (V_S)      = 1.00 x isolamento_norm  (unico componente por agora)
+
+Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
+    <p><strong>Motivo:</strong> idosos e crianças medem a mesma dimensão (estrutura etária) — competem entre si por 100% do peso demográfico. Isolamento mede uma dimensão diferente (vulnerabilidade social) — não compete directamente com idosos/crianças, é agregado primeiro dentro da sua própria subdimensão. Vantagem prática: quando novas variáveis sociais forem adicionadas (escolaridade, rendimento, deficiência), só os pesos <em>dentro</em> da subdimensão social são redistribuídos — a subdimensão demográfica e o peso de combinação final (0,5/0,5) ficam estáveis, evitando recalibrar todo o modelo a cada nova variável.</p>
+    <p>O peso de combinação final (0,5 demográfica / 0,5 social) não tem, tal como o de idosos/crianças, uma derivação matemática — reflecte o princípio de dar peso igual a duas dimensões sem evidência forte o suficiente para justificar um desequilíbrio entre elas.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Limitação documentada: isolamento não distingue idade</h4>
+    <p>O proxy de isolamento (agregados com 1-2 pessoas) não distingue a composição etária desse agregado — captura tanto o idoso que vive sozinho numa aldeia despovoada (o caso relevante para vulnerabilidade a incêndio: mobilidade reduzida, apoio social limitado) como o jovem profissional solteiro numa zona urbana central (vulnerabilidade de natureza muito diferente perante um incêndio florestal). Confirmado visualmente: o mapa da Sensibilidade combinada mostra textura mais dispersa e "urbana" do que só o padrão de envelhecimento visto na secção 15.13. Não invalida a variável como proxy geral de isolamento social, mas é uma limitação conhecida. <strong>Refinamento futuro possível:</strong> cruzar isolamento só com células onde a proporção de idosos também é elevada, para um proxy mais específico de "idoso isolado" (não implementado nesta versão).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Resultado final</h4>
+    <p>Cobertura: 793.488 células sem dados de idosos/crianças (grelha 1km, ~56% de Portugal), mas só 477.373 sem dados de isolamento (BGRI, ~33%) — a BGRI, com mais do dobro dos polígonos, cobre melhor o território disperso. Estatísticas finais (dentro da máscara): média 0,0982, mediana 0,04, desvio-padrão 0,1208, assimetria 1,31, p99=0,4578, <strong>máximo real 0,6907</strong> (não 1,0 — mesmo fenómeno do tecto documentado em 15.14 e formalizado no Princípio da Separação Analítica, secção 16). Validação: min=0, max=0,690721, sem NaN/Inf.</p>
+
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (9 Jul 2026)</strong><br>
-      <strong>Índice V — Sensibilidade (idosos) construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_sensibilidade.tif</code>. <strong>Pendente:</strong> outras variáveis de Sensibilidade (crianças, isolamento, escolaridade — estrutura já preparada por domínio em <code>config/indice_v.py</code>); Capacidade de Resposta (ainda não iniciada); combustível e comportamento perante o fogo (as outras duas variáveis de Sensibilidade citadas na visão); exposição via <code>/api/layers</code>. <strong>Actualização (9 Jul 2026):</strong> combinada com crianças (pesos 0,65/0,35) — teto real observado 0,65, não 1,0 (ver secção 16, Princípio da Separação Analítica).
+      <strong>Índice V — Sensibilidade hierárquica (idosos+crianças+isolamento) construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_sensibilidade.tif</code> (domínio real 0,00-0,6907, ver Princípio da Separação Analítica). <strong>Pendente:</strong> escolaridade (fonte ainda não encontrada); Capacidade de Resposta (não iniciada); combustível e comportamento perante o fogo (variáveis de Sensibilidade citadas na visão original, ainda não abordadas); refinamento do proxy de isolamento (cruzamento com idade); exposição via <code>/api/layers</code>.
     </div>
 
   </div>
 </div><!-- /container -->
 
 <div class="container">
+
   <div class="section" id="separacao-analitica">
     <div class="section-header">
       <span class="section-num">16</span>
@@ -2352,22 +2389,23 @@ python3 scripts/gerar_indice_v_sensibilidade.py data/mascara_portugal_continenta
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>18.0</td><td>55</td><td>990.00</td></tr>
-        <tr><td>Design</td><td>12.0</td><td>55</td><td>660.00</td></tr>
-        <tr><td>Gestão</td><td>4.0</td><td>40</td><td>160.00</td></tr>
-        <tr><td>Programação</td><td>92.9</td><td>45</td><td>4180.50</td></tr>
-        <tr><td>Testes</td><td>11.3</td><td>35</td><td>395.50</td></tr>
-        <tr><td>Documentação</td><td>22.3</td><td>30</td><td>669.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>160.5</td><td>—</td><td>7055.00</td></tr>
+        <tr><td>Análise</td><td>21.8</td><td>55</td><td>1199.00</td></tr>
+        <tr><td>Design</td><td>14.5</td><td>55</td><td>797.50</td></tr>
+        <tr><td>Gestão</td><td>4.3</td><td>40</td><td>172.00</td></tr>
+        <tr><td>Programação</td><td>97.3</td><td>45</td><td>4378.50</td></tr>
+        <tr><td>Testes</td><td>13.5</td><td>35</td><td>472.50</td></tr>
+        <tr><td>Documentação</td><td>25.3</td><td>30</td><td>759.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>176.7</td><td>—</td><td>7778.50</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> domina o total (~58% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto.</p>
+    <p>Nota: a fase <strong>Programação</strong> domina o total (~55% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto. A fase <strong>Design</strong> cresceu de forma notável nesta actualização (12,0→14,5h) devido à reestruturação hierárquica da Sensibilidade e à formalização do Princípio da Separação Analítica (secção 16) — decisões de arquitectura com impacto em todos os índices futuros, não só no Índice V.</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
       <thead><tr><th>Data</th><th>Nota</th></tr></thead>
       <tbody>
         <tr><td>9 Jul 2026</td><td>Secção criada. Reconstrução retrospectiva completa desde o início do projecto (30 Mai 2026), a pedido de Pedro Pestana.</td></tr>
+        <tr><td>9 Jul 2026 (mesma sessão)</td><td>+16,2h: variável crianças (Sensibilidade), investigação e integração do isolamento social via BGRI (fonte, N0 próprio para agregados domésticos, script genérico numerador/denominador), reestruturação hierárquica da Sensibilidade (Vulnerabilidade Demográfica + Social), formalização do Princípio da Separação Analítica, correcção de menu de navegação em falta.</td></tr>
       </tbody>
     </table>
 
