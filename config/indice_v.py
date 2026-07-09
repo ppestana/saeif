@@ -15,7 +15,14 @@ EXPOSURE_WEIGHT_POPULATION = 0.50
 EXPOSURE_WEIGHT_BUILT_AREA = 0.50
 
 # --- Sensibilidade ---
-SENSITIVITY_PERCENTILE = 99.0
+SENSITIVITY_NORMALIZATION = "minmax"  # decidido com base na distribuicao real (assimetria moderada, 0.65,
+                                        # apos ponderacao por confianca -- ver saeif_architecture.html)
+SENSITIVITY_LOWER_BOUND = 0.0
+SENSITIVITY_PERCENTILE = 99.0  # reservado para futuras variaveis da Sensibilidade que precisem de saturacao
+
+SENSITIVITY_WEIGHT_ELDERLY = 1.0  # unico componente implementado por agora; pesos futuros a rever
+                                    # quando mais variaveis (crianças, isolamento, etc.) forem adicionadas
+
 SENSITIVITY_CONFIDENCE_N0 = 50.0  # populacao de referencia para peso de confianca total
 # Proporcoes calculadas sobre populacoes pequenas (denominador n) sao
 # estatisticamente instaveis (variancia de uma proporcao cresce quando n
