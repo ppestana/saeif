@@ -20,21 +20,38 @@ SENSITIVITY_NORMALIZATION = "minmax"  # decidido com base na distribuicao real (
 SENSITIVITY_LOWER_BOUND = 0.0
 SENSITIVITY_PERCENTILE = 99.0  # reservado para futuras variaveis da Sensibilidade que precisem de saturacao
 
-SENSITIVITY_WEIGHT_ELDERLY = 0.65
-SENSITIVITY_WEIGHT_CHILDREN = 0.35
-SENSITIVITY_WEIGHT_METHOD = "literature-based (initial)"
-# Os pesos NAO sao derivados matematicamente do risco relativo observado na
-# literatura (ex. idosos 65+ com risco de mortalidade em incendio 2.2-2.9x
-# superior a populacao geral, FEMA/USFA 2014-2023). Essa evidencia justifica
-# QUE os idosos devem ter peso superior as criancas, nao O VALOR exato do
-# peso -- o peso de uma variavel num indice multicriterio depende tambem de
-# correlacao, redundancia, variabilidade espacial e calibracao do modelo,
-# nao so do risco relativo individual. Os valores 0.65/0.35 sao uma decisao
-# de modelacao informada pela evidencia disponivel para esta primeira
-# versao operacional -- provisorios, sujeitos a recalibracao futura
-# (regressao, Random Forest, SHAP, analise de sensibilidade) quando houver
-# dados suficientes. Quando isso acontecer, actualizar tambem
-# SENSITIVITY_WEIGHT_METHOD para "calibrated".
+SENSITIVITY_WEIGHT_METHOD = "literature-based (initial), hierarchical by sub-dimension"
+
+# --- Subdimensao: Vulnerabilidade Demografica (estrutura etaria) ---
+# A literatura sobre mortalidade em incendios documenta risco relativo
+# consistentemente mais elevado para idosos (65+) do que para criancas --
+# mas os valores exactos dos pesos (0.65/0.35) sao uma decisao de
+# modelacao informada por essa evidencia, nao uma derivacao matematica
+# do risco relativo (ex. idosos 65+ com risco de mortalidade em incendio
+# 2.2-2.9x superior a populacao geral, FEMA/USFA 2014-2023). Idosos e
+# criancas medem a MESMA dimensao (estrutura etaria), por isso competem
+# entre si por 100% do peso desta subdimensao.
+SENSITIVITY_DEMOGRAPHIC_WEIGHT_ELDERLY = 0.65
+SENSITIVITY_DEMOGRAPHIC_WEIGHT_CHILDREN = 0.35
+
+# --- Subdimensao: Vulnerabilidade Social (dimensao independente da demografica) ---
+# Isolamento (proporcao de agregados domesticos com 1-2 pessoas) e, por
+# agora, o unico componente desta subdimensao -- peso 1.0. Quando outras
+# variaveis sociais forem adicionadas (escolaridade, rendimento,
+# deficiencia, acesso a transportes), os pesos redistribuem-se DENTRO
+# desta subdimensao, sem afectar a subdimensao demografica nem os pesos
+# de combinacao final (ver abaixo).
+SENSITIVITY_SOCIAL_WEIGHT_ISOLATION = 1.00
+
+# --- Combinacao das subdimensoes na Sensibilidade final ---
+# Peso igual entre as duas grandes dimensoes -- nao ha evidencia
+# cientifica forte o suficiente para justificar um desequilibrio entre
+# vulnerabilidade demografica e vulnerabilidade social, por isso
+# privilegia-se o principio simples de peso identico. Esta e a decisao
+# que fica estavel a longo prazo, mesmo que os pesos DENTRO de cada
+# subdimensao mudem com novas variaveis.
+SENSITIVITY_WEIGHT_DEMOGRAPHIC = 0.50
+SENSITIVITY_WEIGHT_SOCIAL = 0.50
 
 SENSITIVITY_CONFIDENCE_N0 = 50.0  # populacao de referencia (pessoas) para peso de confianca total
 
