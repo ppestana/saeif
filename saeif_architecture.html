@@ -482,6 +482,7 @@
     <span style="color:var(--amber)">Índice V — Sensibilidade hierárquica (idosos+crianças+isolamento): 9 Jul 2026</span>
     <span style="color:var(--green)">Índice I — camadas analíticas por causa: 10 Jul 2026</span>
     <span style="color:var(--green)">Infraestrutura /api/layers — I e V publicados: 10 Jul 2026</span>
+    <span style="color:var(--amber)">Índice V — Défice de Acessibilidade (OSM, pesos por fclass): 10 Jul 2026</span>
   </div>
 </div>
 
@@ -1042,7 +1043,7 @@ score = (
         <ul>
           <li><strong>Índice P — Propagação:</strong> <strong>destilado (7 Jul 2026)</strong> — era o <code>risco_estrutural</code> calculado inline dentro de <code>calcular_score()</code> (WorldCover + NDVI + declive + bónus área ardida); extraído como função explícita <code>get_indice_p()</code> em <code>score.py</code>, agora também gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>. Ver secção 15.11 para o procedimento e a inconsistência histórica identificada e corrigida.</li>
           <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>validado (AUC 0,86; 7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out, e testado por holdout temporal (treino 2020-2023, teste 2024-2025) com AUC de curva de concentração de 0,86. Ver secção 15.10 para o procedimento completo. <strong>Camadas analíticas por causa adicionadas (10 Jul 2026)</strong> — Índice I oficial inalterado; três KDE complementares por <code>causa_tipo</code>, não ponderados (correlação espacial baixa entre causas, ρ Spearman 0,06-0,28, não justifica ponderação sem evidência adicional). Ver secção 15.17.</li>
-          <li><strong>Índice V — Vulnerabilidade:</strong> <strong>componentes Exposição e Sensibilidade construídas (8-9 Jul 2026)</strong> — Exposição: população (GHS-POP) + edificado (GHS-BUILT-S), percentil 99; Sensibilidade: estrutura HIERÁRQUICA — Vulnerabilidade Demográfica (idosos+crianças, INE grelha 1km) + Vulnerabilidade Social (isolamento, INE BGRI), cada subdimensão com o seu próprio N0 de confiança, combinadas com peso igual. Capacidade de Resposta ainda não iniciada (modelo PREFER, Bento-Gonçalves et al. 2014). Ver secções 15.12-15.15 para os procedimentos completos.</li>
+          <li><strong>Índice V — Vulnerabilidade:</strong> <strong>componentes Exposição, Sensibilidade e Défice de Acessibilidade construídos (8-10 Jul 2026)</strong> — Exposição: população (GHS-POP) + edificado (GHS-BUILT-S), percentil 99; Sensibilidade: estrutura HIERÁRQUICA — Vulnerabilidade Demográfica (idosos+crianças, INE grelha 1km) + Vulnerabilidade Social (isolamento, INE BGRI); Défice de Acessibilidade: rede viária OSM (Geofabrik) ponderada por classe de via, invertida (1−acessibilidade), sem via mapeada = défice máximo. Falta Cobertura Operacional (proximidade a bombeiros) para fechar a Capacidade de Resposta (modelo PREFER, Bento-Gonçalves et al. 2014). Ver secções 15.12-15.19 para os procedimentos completos.</li>
           <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
         </ul>
         Nota: nenhum índice novo entra no score final até ser validado isoladamente contra dados reais. A fórmula actual (documentada acima) mantém-se em produção como está; a reorganização é incremental.
@@ -2419,7 +2420,70 @@ GET /layers/{id}.png     -> imagem PNG da camada (fora do namespace /api, serve 
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (10 Jul 2026)</strong><br>
-      <strong>Infraestrutura de publicação de camadas construída e confirmada em produção real.</strong> 3 camadas publicadas (Índice I, Índice V Exposição, Índice V Sensibilidade). <strong>Pendente:</strong> publicar as 3 camadas do Índice I por causa (secção 15.17, script já pronto); publicar Índice P (não existe ainda como raster de grelha, só como valor por alerta — precisaria de gerar um raster de superfície primeiro); ligação ao frontend Leaflet (consumo do catálogo, ainda não feito no lado do cliente).
+      <strong>Infraestrutura de publicação de camadas construída e confirmada em produção real.</strong> 3 camadas publicadas (Índice I, Índice V Exposição, Índice V Sensibilidade). <strong>Pendente:</strong> publicar as 3 camadas do Índice I por causa (secção 15.17, script já pronto); publicar Défice de Acessibilidade (secção 15.19); publicar Índice P (não existe ainda como raster de grelha, só como valor por alerta — precisaria de gerar um raster de superfície primeiro); ligação ao frontend Leaflet (consumo do catálogo, ainda não feito no lado do cliente).
+    </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.19 — Índice V: Capacidade de Resposta, subdimensão Défice de Acessibilidade</h3>
+    <p>Primeira subdimensão da Capacidade de Resposta construída (modelo PREFER — a componente que faltava do Índice V). Estrutura hierárquica proposta por consultoria SIG externa, análoga à da Sensibilidade: <strong>Acessibilidade</strong> (rede viária, propriedade do território) + <strong>Cobertura Operacional</strong> (proximidade a bombeiros, propriedade do dispositivo de proteção civil) — só a primeira construída nesta sessão.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Reformulação conceptual: acessibilidade operacional, não densidade de estradas</h4>
+    <p>Decisão de enquadramento antes de qualquer dado: a variável não mede "quantos recursos existem", mede <em>a facilidade com que um incêndio pode ser combatido nos seus primeiros minutos</em> — um caminho florestal transitável junto ao local pode ser mais decisivo do que um quartel de bombeiros distante. Por isso a variável de base é acessibilidade viária ponderada por utilidade operacional, não uma simples densidade de vias.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Fonte de dados — OpenStreetMap, extrato Geofabrik</h4>
+    <p><code>portugal.gpkg</code> (Geofabrik, licença ODbL, atribuição "OpenStreetMap Contributors") — extrato nacional completo do OSM, camada <code>gis_osm_roads_free</code>: 1.582.086 segmentos de via, campo <code>fclass</code> (esquema de classificação próprio da Geofabrik, mais detalhado que o esperado — distingue caminhos florestais por qualidade de piso, <code>track_grade1</code> a <code>track_grade5</code>).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Pesos por classe de via (decisão de modelação, não medição)</h4>
+    <table>
+      <thead><tr><th>fclass</th><th>Peso</th><th>fclass</th><th>Peso</th></tr></thead>
+      <tbody>
+        <tr><td>track_grade1</td><td>1,00</td><td>living_street</td><td>0,30</td></tr>
+        <tr><td>track_grade2</td><td>0,90</td><td>track_grade5</td><td>0,25</td></tr>
+        <tr><td>track / service</td><td>0,80 / 0,70</td><td>primary</td><td>0,20</td></tr>
+        <tr><td>track_grade3</td><td>0,70</td><td>primary_link</td><td>0,18</td></tr>
+        <tr><td>unclassified</td><td>0,65</td><td>trunk</td><td>0,10</td></tr>
+        <tr><td>tertiary</td><td>0,60</td><td>busway</td><td>0,10</td></tr>
+        <tr><td>tertiary_link</td><td>0,55</td><td>trunk_link</td><td>0,09</td></tr>
+        <tr><td>residential</td><td>0,50</td><td>motorway_link</td><td>0,06</td></tr>
+        <tr><td>track_grade4</td><td>0,45</td><td>motorway</td><td>0,05</td></tr>
+        <tr><td>secondary</td><td>0,40</td><td>secondary_link</td><td>0,35</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Excluídas</strong> (sem acesso viável a veículos de combate): <code>footway</code>, <code>path</code>, <code>steps</code>, <code>pedestrian</code>, <code>cycleway</code>, <code>bridleway</code>, <code>unknown</code> — 282 mil segmentos (~18% do total), removidos antes do processamento, não ponderados a zero.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Técnica de rasterização — máximo por célula via ordenação, não N passagens</h4>
+    <p>Em vez de rasterizar cada classe de via separadamente (~20 passagens de <code>gdal_rasterize</code>), o peso é calculado em SQL (<code>CASE WHEN fclass ... END AS peso</code>) e as features são <strong>ordenadas por peso ascendente</strong> antes de uma única passagem de rasterização. O <code>gdal_rasterize</code> desenha as features pela ordem em que aparecem na camada, sobrepondo a anterior em células partilhadas — ordenar por peso ascendente faz com que a via de <em>maior</em> peso vença nas células onde há cruzamento ou vizinhança de vias de classes diferentes. <strong>Confirmado por teste deliberado antes de aplicar aos dados reais</strong>: duas linhas sintéticas cruzando-se na mesma célula (pesos 0,1 e 0,9) resultaram corretamente em 0,9 nessa célula.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Descoberta: distribuição com assimetria invertida</h4>
+    <p>Ao contrário de todas as variáveis anteriores (Exposição, idosos, crianças, isolamento — todas com assimetria positiva forte, maioria de células em valores baixos), a Acessibilidade tem <strong>assimetria negativa</strong> (-1,79): a maioria do território tem boa acessibilidade (mediana 0,80), com uma cauda de más zonas. Padrão esperado e interpretado como sinal de que a variável acrescenta informação genuinamente nova ao modelo, não redundante com as anteriores.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão: inversão para défice, sem via mapeada = pior caso, não NoData</h4>
+    <p><strong>Inversão:</strong> <code>deficit = 1 − acessibilidade</code>, para manter a mesma semântica aditiva de toda a Sensibilidade/Exposição (valor alto = sempre pior) — permite que a fórmula final do Índice V continue simplesmente aditiva (<code>V = w_E·E + w_S·S + w_R·R</code>), sem misturar sinais.</p>
+    <p><strong>Semântica invertida face às variáveis do INE:</strong> 513.852 células (36,0% de Portugal Continental) não têm nenhuma via mapeada. Ao contrário das variáveis do INE (onde "sem dados" = "sem população relevante" = valor 0), aqui "sem via" é o <em>extremo oposto</em> — o pior caso possível de acessibilidade, não ausência de informação. Tratadas explicitamente como <code>défice = 1,0</code>, não como NoData nem herdando o padrão de tratamento das outras variáveis.</p>
+    <p><strong>Validação antes de implementar</strong> (cruzamento com população GHSL, mesma técnica já usada para validar a cobertura do INE): células sem via têm população média 0,11 habitantes, contra 10,69 nas células com via — quase 100× menos, confirmando zonas genuinamente remotas, não viés de extração. Cauda residual documentada como limitação conhecida: 2,3% das células sem via (11.619) têm alguma população, 0,2% (972) têm população &gt;10, máximo ~168 habitantes numa célula sem via — atribuído a cobertura incompleta do OSM em caminhos rurais locais, não a um erro de filtragem.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão de normalização: sem percentil (única exceção até agora)</h4>
+    <p>Ao contrário de todas as outras variáveis do Índice V, <strong>não se aplica nenhuma saturação por percentil</strong> aqui. Razão: o extremo de má acessibilidade não é ruído estatístico a comprimir — é precisamente o fenómeno que a variável pretende identificar. Normalização linear directa (a inversão <code>1−acessibilidade</code> já produz um resultado no intervalo [0,1], sem necessidade de reescala adicional).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Indicador de qualidade do índice</h4>
+    <p>Cada execução gera um ficheiro <code>{output}_qualidade.json</code> com a fonte, os tipos de via incluídos/excluídos, a percentagem de células sem via, e a nota de validação — permite comparar objectivamente versões futuras do índice quando o OSM for actualizado ou os tipos de via considerados mudarem.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Scripts e passo a passo</h4>
+    <table>
+      <thead><tr><th>Ficheiro</th><th>Função</th></tr></thead>
+      <tbody>
+        <tr><td><code>scripts/gerar_acessibilidade_viaria.py</code></td><td>Calcula pesos por <code>fclass</code>, ordena ascendente, rasteriza (máximo por célula via ordenação).</td></tr>
+        <tr><td><code>scripts/gerar_deficit_acessibilidade.py</code></td><td>Inverte para défice, trata células sem via explicitamente, valida, exporta indicador de qualidade.</td></tr>
+      </tbody>
+    </table>
+    <pre><code>python3 scripts/gerar_acessibilidade_viaria.py data/osm/portugal.gpkg gis_osm_roads_free data/indice_v_resposta_acessibilidade.tif
+python3 scripts/gerar_deficit_acessibilidade.py data/mascara_portugal_continental.tif data/indice_v_resposta_acessibilidade.tif data/indice_v_resposta_acessibilidade_deficit.tif</code></pre>
+
+    <h4 style="margin:1.2rem 0 .5rem">Resultado e confirmação visual</h4>
+    <p>Estatísticas finais do défice (dentro da máscara): média 0,5494, mediana 0,40, desvio-padrão 0,3623, assimetria 0,31, p75-p99 saturados em 1,0 (esperado, dado os 36% sem via). Validação: min=0, max=1, sem NaN/Inf. Confirmação visual: concentração forte de défice no <strong>Alentejo</strong> (grandes propriedades agrícolas extensivas, rede viária rural esparsa) e manchas dispersas nas zonas de montanha do interior — padrão complementar, não sobreposto, ao envelhecimento (interior norte/centro, secção 15.13) nem à concentração populacional litoral (secção 15.12).</p>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (10 Jul 2026)</strong><br>
+      <strong>Défice de Acessibilidade construído, validado e confirmado visualmente.</strong> Raster: <code>data/indice_v_resposta_acessibilidade_deficit.tif</code>. <strong>Pendente:</strong> Cobertura Operacional (proximidade a corpos de bombeiros — segunda subdimensão da Capacidade de Resposta); combinação das duas subdimensões; validação cartográfica adicional sugerida (sobrepor 20-30 células "sem via" no QGIS para confirmar visualmente que correspondem a serras/áreas remotas, não feita nesta sessão — a validação estatística por população já dá confiança razoável, mas fica como refinamento possível); publicação via <code>/api/layers</code>.
     </div>
 
   </div>
@@ -2495,16 +2559,16 @@ GET /layers/{id}.png     -> imagem PNG da camada (fora do namespace /api, serve 
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>23.7</td><td>55</td><td>1303.50</td></tr>
-        <tr><td>Design</td><td>16.4</td><td>55</td><td>902.00</td></tr>
+        <tr><td>Análise</td><td>25.3</td><td>55</td><td>1391.50</td></tr>
+        <tr><td>Design</td><td>17.9</td><td>55</td><td>984.50</td></tr>
         <tr><td>Gestão</td><td>4.8</td><td>40</td><td>192.00</td></tr>
-        <tr><td>Programação</td><td>101.0</td><td>45</td><td>4545.00</td></tr>
-        <tr><td>Testes</td><td>16.0</td><td>35</td><td>560.00</td></tr>
-        <tr><td>Documentação</td><td>27.9</td><td>30</td><td>837.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>189.8</td><td>—</td><td>8339.50</td></tr>
+        <tr><td>Programação</td><td>103.7</td><td>45</td><td>4666.50</td></tr>
+        <tr><td>Testes</td><td>17.9</td><td>35</td><td>626.50</td></tr>
+        <tr><td>Documentação</td><td>29.1</td><td>30</td><td>873.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>198.7</td><td>—</td><td>8734.00</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> domina o total (~53% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais, TestClient para a API) que não existia no período inicial do projecto. A fase <strong>Design</strong> cresceu de forma notável nesta actualização (12,0→16,4h) devido à reestruturação hierárquica da Sensibilidade, à formalização do Princípio da Separação Analítica (secção 16), à decisão sobre as camadas por causa do Índice I (secção 15.17), e à infraestrutura genérica de publicação de camadas (secção 15.18).</p>
+    <p>Nota: a fase <strong>Programação</strong> domina o total (~52% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais, TestClient para a API, teste deliberado da técnica de rasterização por ordenação) que não existia no período inicial do projecto. A fase <strong>Design</strong> continua a crescer de forma notável (12,0→17,9h) — reestruturação hierárquica da Sensibilidade, Princípio da Separação Analítica, camadas por causa do Índice I, infraestrutura de publicação de camadas, e agora a reformulação conceptual da Capacidade de Resposta como "défice" (secção 15.19).</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2516,6 +2580,7 @@ GET /layers/{id}.png     -> imagem PNG da camada (fora do namespace /api, serve 
         <tr><td>9 Jul 2026 (mesma sessão)</td><td>+1,1h: análise de correlação Pearson/Spearman entre população e edificado (Exposição) — script <code>scripts/analisar_correlacao.py</code>, correlação moderada a alta (r=0,57/ρ=0,77) mas sem redundância suficiente para justificar alterar os pesos 0,5/0,5.</td></tr>
         <tr><td>10 Jul 2026</td><td>+5,2h: análise de correlação espacial entre causas de ignição do Índice I (Negligente/Intencional/Desconhecida); decisão de manter o Índice I oficial inalterado e gerar camadas analíticas separadas por causa; script <code>scripts/gerar_kde_por_causa.sh</code> (com correcção de um problema do driver GeoJSON do GDAL).</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+5,7h: infraestrutura genérica de publicação de camadas (<code>/api/layers</code>, <code>/layers/{id}.png</code>) — script <code>scripts/publicar_camada.py</code> (bounds sempre extraídos do GeoTIFF, nunca hardcoded), edição de <code>api/main.py</code> (substituição deliberada do piloto de Viseu), testado com TestClient real; 3 primeiras camadas publicadas (Índice I, Índice V Exposição, Índice V Sensibilidade).</td></tr>
+        <tr><td>10 Jul 2026 (mesma sessão)</td><td>+8,9h: Capacidade de Resposta do Índice V — reformulação conceptual como "défice" (mantém semântica aditiva); subdimensão Défice de Acessibilidade construída (OSM/Geofabrik, pesos por classe de via, técnica de rasterização por ordenação testada deliberadamente antes de aplicar, inversão 1−acessibilidade, tratamento explícito de células sem via como défice máximo, validado por cruzamento com população).</td></tr>
       </tbody>
     </table>
 
