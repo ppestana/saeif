@@ -706,11 +706,71 @@
             <td>10 dias</td>
             <td><span class="badge badge-fire">Risco dinâmico</span></td>
           </tr>
+          <tr>
+            <td><strong>EFFIS</strong><br><span class="dimtext">Copernicus EMS</span></td>
+            <td>FWI europeu, ranking e anomalia de risco de incêndio (contexto europeu do alerta)</td>
+            <td>API REST</td>
+            <td>Diária</td>
+            <td><span class="badge badge-blue">Enriquecimento</span></td>
+          </tr>
+          <tr>
+            <td><strong>ICNF</strong><br><span class="dimtext">areas_ardidas, 2020-2025</span></td>
+            <td>Histórico de área ardida (polígonos, causa, área) — Índice I (KDE ignição) e bónus de área ardida do Índice P</td>
+            <td>Tabela PostgreSQL/PostGIS local</td>
+            <td>Estático (2020-2025)</td>
+            <td><span class="badge badge-fire">Índice I / P</span></td>
+          </tr>
+          <tr>
+            <td><strong>GHSL</strong><br><span class="dimtext">JRC/Copernicus · R2023A · 100m</span></td>
+            <td>GHS-POP (população) + GHS-BUILT-S (área edificada), epoch 2020 — Exposição do Índice V. Ver <code>data/ghsl.meta.yaml</code></td>
+            <td>GeoTIFF local, mosaico R4+R5 (<code>data/indice_v_exposicao_pop.tif</code>, <code>_built.tif</code>)</td>
+            <td>Estático (epoch 2020)</td>
+            <td><span class="badge badge-amber">Índice V — Exposição</span></td>
+          </tr>
+          <tr>
+            <td><strong>CAOP2025</strong><br><span class="dimtext">DGT · Fev 2026</span></td>
+            <td>Fronteira oficial de Portugal Continental + distritos/concelhos/freguesias — máscara de todos os cálculos estatísticos do Índice V. Ver <code>data/boundaries/caop/portugal_continental.meta.yaml</code></td>
+            <td>GeoPackage local (<code>data/boundaries/caop/*.gpkg</code>)</td>
+            <td>Estático (versão anual)</td>
+            <td><span class="badge badge-purple">Infraestrutura</span></td>
+          </tr>
+          <tr>
+            <td><strong>INE Censos 2021</strong><br><span class="dimtext">Grelha 1km, GRID1K21_CONT</span></td>
+            <td>População por grupo etário (idosos, crianças) — Vulnerabilidade Demográfica da Sensibilidade. Ver <code>data/GRID1K21_CONT/grid1k21.meta.yaml</code></td>
+            <td>GeoPackage local</td>
+            <td>Estático (Censos 2021)</td>
+            <td><span class="badge badge-amber">Índice V — Sensibilidade</span></td>
+          </tr>
+          <tr>
+            <td><strong>INE Censos 2021</strong><br><span class="dimtext">BGRI, BGRI21_CONT</span></td>
+            <td>Agregados domésticos por tamanho (isolamento) — Vulnerabilidade Social da Sensibilidade. Ver <code>data/BGRI21_CONT/bgri21.meta.yaml</code></td>
+            <td>GeoPackage local</td>
+            <td>Estático (Censos 2021)</td>
+            <td><span class="badge badge-amber">Índice V — Sensibilidade</span></td>
+          </tr>
+          <tr>
+            <td><strong>OpenStreetMap</strong><br><span class="dimtext">Extrato Geofabrik</span></td>
+            <td>Rede viária classificada (1,58M segmentos) — Défice de Acessibilidade da Capacidade de Resposta. Ver <code>data/osm/portugal_osm.meta.yaml</code></td>
+            <td>GeoPackage local (<code>data/osm/portugal.gpkg</code>)</td>
+            <td>Estático (download pontual)</td>
+            <td><span class="badge badge-amber">Índice V — Resposta</span></td>
+          </tr>
+          <tr>
+            <td><strong>Wikidata</strong><br><span class="dimtext">Query Service / SPARQL</span></td>
+            <td>Localização de 466 quartéis de bombeiros — Défice de Cobertura Operacional da Capacidade de Resposta. Ver <code>data/bombeiros/bombeiros_wikidata.meta.yaml</code></td>
+            <td>CSV local, via consulta SPARQL (<code>data/bombeiros/bombeiros_wikidata.csv</code>)</td>
+            <td>Estático (download pontual)</td>
+            <td><span class="badge badge-amber">Índice V — Resposta</span></td>
+          </tr>
         </tbody>
       </table>
 
       <div class="alert alert-blue" style="margin-top: 1rem;">
         <strong>Estratégia de fallback:</strong> Se NASA FIRMS não estiver disponível, o sistema opera em modo degradado usando apenas fogos.pt/PROCIV, com um aviso visual no dashboard. Se fogos.pt não estiver disponível, opera exclusivamente com FIRMS. O sistema nunca gera alertas sem pelo menos uma fonte activa.
+      </div>
+
+      <div class="alert alert-amber" style="margin-top: 1rem;">
+        <strong>Convenção de metadados de proveniência (desde 10 Jul 2026):</strong> toda fonte de dados externa usada nas componentes do Índice V (e futuras) tem um ficheiro <code>.meta.yaml</code> junto aos dados (fonte, organização, URL de download, data de acesso, licença, CRS original, propósito, limitações conhecidas) — nunca só documentação em prosa dispersa. Esta tabela é o índice consolidado; os ficheiros <code>.meta.yaml</code> são a fonte de verdade detalhada por camada. Padrão estabelecido com a CAOP (9 Jul 2026), aplicado retroactivamente às restantes fontes do Índice V nesta actualização (10 Jul 2026) — ver <code>data/*.meta.yaml</code> e subpastas.
       </div>
     </div>
   </div>

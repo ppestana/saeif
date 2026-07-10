@@ -1,0 +1,51 @@
+# Metadados de proveniencia - OpenStreetMap (extrato Geofabrik)
+#
+# Usado na componente Defice de Capacidade de Resposta do Indice V
+# (subdimensao Acessibilidade, rede viaria).
+# Ver saeif_architecture.html Sec15.19.
+
+layer: gis_osm_roads_free
+description: >
+  Rede viaria completa de Portugal (incluindo Acores/Madeira, fora do
+  ambito do SAEIF), 1.582.086 segmentos, campo 'fclass' com classificacao
+  detalhada (distingue caminhos florestais por qualidade de piso,
+  track_grade1 a track_grade5).
+
+source:
+  name: OpenStreetMap (extrato pre-processado)
+  organization: Geofabrik GmbH (processamento) / OpenStreetMap Contributors (dados)
+  url: https://download.geofabrik.de/europe/portugal.html
+  download_url: https://download.geofabrik.de/europe/portugal-latest-free.gpkg.zip
+  downloaded_at: "2026-07-10"
+  file_size_mb: 820
+
+crs_original: EPSG:4326 (WGS84 / CRS84)
+crs_projeto: EPSG:3763
+
+license: ODbL 1.0 (Open Database License)
+license_url: https://www.openstreetmap.org/copyright
+attribution_required: true
+attribution_text: "© OpenStreetMap Contributors"
+
+purpose:
+  - Rede viaria ponderada por classe (fclass) para a variavel de
+    Acessibilidade da Capacidade de Resposta do Indice V
+
+processing_notes: >
+  Ficheiro completo (portugal.gpkg, 1.66GB) contem 20 camadas (estradas,
+  edificios, POIs, uso do solo, etc.) -- so gis_osm_roads_free e
+  gis_osm_pois_free (para investigacao de bombeiros, ver
+  bombeiros_wikidata.meta.yaml) foram usadas.
+
+known_issues:
+  - >
+    A camada de POIs (gis_osm_pois_free, fclass='fire_station') so tinha
+    93 quarteis de bombeiros mapeados, contra os 434 oficiais da ANEPC
+    (~21% de cobertura) -- rejeitada para essa finalidade, substituida
+    por Wikidata (ver bombeiros_wikidata.meta.yaml).
+
+notes: >
+  O OSM e um projecto colaborativo continuo -- a cobertura/qualidade varia
+  por regiao e melhora ao longo do tempo. A data de download fica
+  registada aqui precisamente para permitir avaliar se vale a pena
+  reprocessar esta camada no futuro com um extrato mais recente.

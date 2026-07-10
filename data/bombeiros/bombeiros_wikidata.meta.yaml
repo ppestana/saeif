@@ -1,0 +1,70 @@
+# Metadados de proveniencia - Wikidata (quarteis de bombeiros de Portugal)
+#
+# Usado na componente Defice de Capacidade de Resposta do Indice V
+# (subdimensao Cobertura Operacional).
+# Ver saeif_architecture.html Sec15.20.
+
+description: >
+  Localizacao geografica de corpos de bombeiros/quarteis de Portugal,
+  obtida via consulta SPARQL directa ao Wikidata Query Service. 466
+  quarteis unicos (440 dentro da grelha oficial do SAEIF, cobertura
+  continental).
+
+source:
+  name: Wikidata Query Service
+  organization: Wikimedia Foundation / comunidade Wikidata
+  url: https://query.wikidata.org/
+  query_endpoint: https://query.wikidata.org/sparql
+  downloaded_at: "2026-07-10"
+
+query_sparql: |
+  SELECT ?item ?itemLabel ?coord WHERE {
+    VALUES ?class { wd:Q6498663 wd:Q285852 }
+    ?item wdt:P31/wdt:P279* ?class .
+    ?item wdt:P17 wd:Q45 .
+    ?item wdt:P625 ?coord .
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "pt" }
+  }
+query_classes:
+  Q6498663: corpo de bombeiros
+  Q285852: bombeiros voluntarios
+  Q45: Portugal (P17, pais)
+
+crs_original: EPSG:4326 (formato WKT "Point(lon lat)")
+crs_projeto: EPSG:3763
+
+license: CC0 (dominio publico, licenca padrao do Wikidata)
+license_url: https://www.wikidata.org/wiki/Wikidata:Licensing
+
+purpose:
+  - Distancia ao quartel mais proximo (distance transform euclidiano),
+    normalizada linearmente com parametro fixo RESPONSE_MAX_DISTANCE_KM=34
+
+rejected_alternatives:
+  - fonte: OpenStreetMap (gis_osm_pois_free, fclass=fire_station)
+    motivo: so 93 quarteis mapeados (~21% de cobertura vs 434 oficiais ANEPC)
+  - fonte: dados.gov.pt, dataset GO27
+    motivo: >
+      apesar da descricao sugerir cobertura nacional, a inspeccao directa
+      da pagina revelou tratar-se apenas do quartel de Cascais -- dataset
+      arquivado, ficheiros indisponiveis
+
+known_issues:
+  - >
+    A consulta SPARQL inicial devolveu 885 linhas para 466 items unicos
+    (duplicacao causada pela clausula VALUES com duas classes sobrepostas)
+    -- corrigido por deduplicacao no script de processamento
+    (scripts/gerar_distancia_bombeiros.py), nao na consulta.
+  - >
+    466 quarteis e um numero superior aos 434 oficiais da ANEPC --
+    provavelmente inclui alguns destacamentos ou pequenas diferencas de
+    contagem. Nao investigado a fundo, aceite como ordem de grandeza
+    plausivel e muito superior a alternativa OSM.
+
+notes: >
+  Fonte comunitaria (Wikidata), nao institucional -- mais completa que o
+  OSM para este caso especifico, mas sem garantia formal de actualizacao
+  ou precisao ao nivel de uma fonte oficial da ANEPC/RNBP, que nao foi
+  encontrada publicamente acessivel em formato estruturado nesta
+  investigacao. Se uma fonte oficial completa surgir no futuro, deve
+  substituir esta.

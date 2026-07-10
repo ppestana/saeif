@@ -1,0 +1,53 @@
+# Metadados de proveniência - GHSL (Global Human Settlement Layer)
+#
+# Usado na componente Exposição do Indice V (populacao + area edificada).
+# Ver saeif_architecture.html Sec15.12.
+
+layers:
+  - name: GHS-POP
+    description: >
+      Populacao residente por celula de 100m, epoch 2020 (ultima observacao
+      real por satelite, nao projecao). Fonte da variavel de populacao na
+      Exposicao do Indice V.
+    file_pattern: "GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0_R{4,5}_C18.tif"
+
+  - name: GHS-BUILT-S
+    description: >
+      Area edificada (m2) por celula de 100m, epoch 2020. Fonte da variavel
+      de edificado na Exposicao do Indice V.
+    file_pattern: "GHS_BUILT_S_E2020_GLOBE_R2023A_54009_100_V1_0_R{4,5}_C18.tif"
+
+source:
+  name: Global Human Settlement Layer (GHSL)
+  organization: Comissao Europeia, Joint Research Centre (JRC) / Copernicus
+  data_release: R2023A
+  epoch: 2020
+  url: https://human-settlement.emergency.copernicus.eu/
+  download_url: https://human-settlement.emergency.copernicus.eu/download.php
+  downloaded_at: "2026-07-08"
+  tiles: "R4_C18, R5_C18 (grelha Mollweide, cobrem Portugal Continental)"
+
+crs_original: ESRI:54009  # World Mollweide
+crs_projeto: EPSG:3763    # reprojectado para a grelha oficial do SAEIF
+
+resolution_original_m: 100
+resolution_projeto_m: 250
+
+license: Livre para uso nao-comercial e comercial, com atribuicao (ver termos GHSL)
+license_url: https://ghsl.jrc.ec.europa.eu/ghs_pop.php
+
+purpose:
+  - Populacao residente e area edificada para a componente Exposicao do Indice V
+  - Agregado por soma (nao media) na reprojeccao 100m->250m, para preservar totais
+
+processing_notes: >
+  Mosaico dos dois tiles (R4+R5) e reprojeccao feitos no MacBook (nao no
+  servidor) devido a um problema de memoria do gdalwarp com o resampler
+  'sum' em fontes grandes com reprojeccao entre CRS distorcidos -- ver
+  saeif_architecture.html Sec15.12 para detalhe completo.
+
+notes: >
+  A GHSL e actualizada periodicamente pelo JRC com novos releases (R2023A
+  e o mais recente conhecido em Jul 2026). Revisitar antes de assumir que
+  esta e a versao mais actual, caso o SAEIF venha a reprocessar esta
+  camada no futuro.

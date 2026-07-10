@@ -1,0 +1,56 @@
+# Metadados de proveniencia - INE Censos 2021, Grelha 1km (GRID1K21_CONT)
+#
+# Usado na componente Sensibilidade do Indice V (idosos, criancas).
+# Ver saeif_architecture.html Sec15.13-15.14.
+
+layer: GRID1K21_CONT
+description: >
+  Grelha regular de 1000x1000m com variaveis do "ficheiro sintese" dos
+  Censos 2021, incluindo populacao total e por grupo etario
+  (N_INDIVIDUOS, N_INDIVIDUOS_0_14, N_INDIVIDUOS_15_24, N_INDIVIDUOS_25_64,
+  N_INDIVIDUOS_65_OU_MAIS). 93.542 poligonos, Portugal Continental.
+
+source:
+  name: Censos 2021 - Grelha Estatistica 1km
+  organization: Instituto Nacional de Estatistica (INE)
+  reference_year: 2021
+  url: https://mapas.ine.pt/download/index2021Grid.phtml
+  downloaded_at: "2026-07-09"
+
+crs_original: EPSG:3035  # ETRS89-extended / LAEA Europe
+crs_projeto: EPSG:3763   # reprojectado para a grelha oficial do SAEIF
+
+resolution_original_m: 1000
+resolution_projeto_m: 250
+
+license: Consultar termos de reutilizacao do INE (dados abertos, Censos 2021)
+license_url: https://www.ine.pt
+
+fields_used:
+  N_INDIVIDUOS: Populacao residente total (denominador das proporcoes)
+  N_INDIVIDUOS_0_14: Populacao 0-14 anos (numerador da variavel "criancas")
+  N_INDIVIDUOS_65_OU_MAIS: Populacao 65+ anos (numerador da variavel "idosos")
+
+purpose:
+  - Proporcao de idosos e criancas, ponderada por confianca estatistica (N0=50)
+  - Fonte demografica da subdimensao Vulnerabilidade Demografica da Sensibilidade
+
+known_issues:
+  - >
+    Nomes dos campos no CSV descritivo (C2021_FSINTESE_VARIAVEIS.csv) divergem
+    dos nomes reais no GeoPackage (ex. N_INDIVIDUOS_0A14 no CSV vs
+    N_INDIVIDUOS_0_14 no ficheiro real) -- confirmar sempre via ogrinfo, nao
+    assumir o nome do CSV.
+  - >
+    A variavel N_ADP_1OU2_PESSOAS (isolamento) esta descrita no CSV mas
+    NAO existe neste produto -- so na BGRI (ver bgri21.meta.yaml).
+  - >
+    Escolaridade nao esta disponivel neste produto nem em nenhum outro
+    produto INE geografico consultado (so ao nivel de freguesia) -- ver
+    saeif_architecture.html Sec15.16.
+
+notes: >
+  Cobertura incompleta e esperada: so 632.143 das 1.425.631 celulas de
+  Portugal Continental (44.3%) tem dados nesta grelha -- o INE nao publica
+  celulas de 1km essencialmente desabitadas. Confirmado por cruzamento com
+  GHSL (celulas sem dados tem populacao media ~0.035 hab.).

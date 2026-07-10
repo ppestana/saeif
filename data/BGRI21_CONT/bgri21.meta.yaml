@@ -1,0 +1,54 @@
+# Metadados de proveniencia - INE Censos 2021, BGRI (Base Geografica de
+# Referenciacao de Informacao)
+#
+# Usado na componente Sensibilidade do Indice V (isolamento).
+# Ver saeif_architecture.html Sec15.15.
+
+layer: BGRI21_CONT
+description: >
+  Poligonos irregulares por subseccao estatistica, Censos 2021. Inclui
+  variaveis do "ficheiro sintese" nao disponiveis na grelha regular de
+  1km, nomeadamente a desagregacao de agregados domesticos por tamanho
+  (N_ADP_1_OU_2_PESSOAS, N_AGREGADOS_DOMESTICOS_PRIVADOS). 203.264
+  poligonos, Portugal Continental.
+
+source:
+  name: Censos 2021 - BGRI (Base Geografica de Referenciacao de Informacao)
+  organization: Instituto Nacional de Estatistica (INE)
+  reference_year: 2021
+  url: https://mapas.ine.pt/download/index2021.phtml
+  downloaded_at: "2026-07-10"
+
+crs_original: EPSG:3035  # ETRS89-extended / LAEA Europe
+crs_projeto: EPSG:3763   # reprojectado para a grelha oficial do SAEIF
+
+resolution_original: >
+  Variavel por poligono (mediana 6.19ha, p90 86ha, p99 707ha, max
+  13543ha) -- nao e uma grelha regular. A resolucao estatistica efectiva
+  varia: proxima de 250m em zonas urbanas, muito mais grosseira em
+  subseccoes rurais extensas.
+resolution_projeto_m: 250
+
+license: Consultar termos de reutilizacao do INE (dados abertos, Censos 2021)
+license_url: https://www.ine.pt
+
+fields_used:
+  N_AGREGADOS_DOMESTICOS_PRIVADOS: Total de agregados domesticos (denominador)
+  N_ADP_1_OU_2_PESSOAS: Agregados com 1-2 pessoas (numerador, proxy de isolamento)
+
+purpose:
+  - Proporcao de agregados pequenos (proxy de isolamento social), ponderada
+    por confianca estatistica (N0=25, calibrado especificamente para
+    agregados domesticos, diferente do N0=50 usado para pessoas)
+  - Fonte da subdimensao Vulnerabilidade Social da Sensibilidade
+
+known_limitations:
+  - >
+    O proxy de isolamento nao distingue idade -- capta tanto o idoso
+    isolado como o jovem profissional solteiro. Refinamento futuro
+    possivel: cruzar com a proporcao de idosos.
+
+notes: >
+  Cobertura mais completa que a grelha de 1km (so 477.373 celulas sem
+  dados, ~33%, contra 793.488, ~56%, na grelha de 1km) -- a BGRI tem mais
+  do dobro dos poligonos, cobrindo melhor o territorio disperso.

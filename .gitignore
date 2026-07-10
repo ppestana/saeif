@@ -10,8 +10,5 @@ api/data/*.geojson
 *.prebuild-*
 FETCH_HEAD
 data/*
-!data/boundaries/
-data/boundaries/*
-!data/boundaries/caop/
-data/boundaries/caop/*
-!data/boundaries/caop/*.yaml
+!data/**/
+!data/**/*.meta.yaml
