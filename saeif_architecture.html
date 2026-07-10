@@ -480,6 +480,7 @@
     <span style="color:var(--green)">Índice P destilado (get_indice_p): 7 Jul 2026</span>
     <span style="color:var(--amber)">Índice V — Exposição (GHSL+CAOP, p99): 8 Jul 2026</span>
     <span style="color:var(--amber)">Índice V — Sensibilidade hierárquica (idosos+crianças+isolamento): 9 Jul 2026</span>
+    <span style="color:var(--green)">Índice I — camadas analíticas por causa: 10 Jul 2026</span>
   </div>
 </div>
 
@@ -1021,7 +1022,7 @@ score = (
         <strong>Enquadramento na arquitetura-alvo de três índices (6 Jul 2026).</strong> A visão do SAEIF 2.0 (ver <code>saeif_visao_2.0.html</code> §6) reorganiza a leitura estrutural em três índices independentes que respondem a fenómenos distintos, modulados por meteorologia dinâmica: <strong>Risco = f(I, P, V, M)</strong>. Situando o código actual nesse mapa:
         <ul>
           <li><strong>Índice P — Propagação:</strong> <strong>destilado (7 Jul 2026)</strong> — era o <code>risco_estrutural</code> calculado inline dentro de <code>calcular_score()</code> (WorldCover + NDVI + declive + bónus área ardida); extraído como função explícita <code>get_indice_p()</code> em <code>score.py</code>, agora também gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>. Ver secção 15.11 para o procedimento e a inconsistência histórica identificada e corrigida.</li>
-          <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>validado (AUC 0,86; 7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out, e testado por holdout temporal (treino 2020-2023, teste 2024-2025) com AUC de curva de concentração de 0,86. Ver secção 15.10 para o procedimento completo e a fundamentação de cada decisão.</li>
+          <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>validado (AUC 0,86; 7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out, e testado por holdout temporal (treino 2020-2023, teste 2024-2025) com AUC de curva de concentração de 0,86. Ver secção 15.10 para o procedimento completo. <strong>Camadas analíticas por causa adicionadas (10 Jul 2026)</strong> — Índice I oficial inalterado; três KDE complementares por <code>causa_tipo</code>, não ponderados (correlação espacial baixa entre causas, ρ Spearman 0,06-0,28, não justifica ponderação sem evidência adicional). Ver secção 15.17.</li>
           <li><strong>Índice V — Vulnerabilidade:</strong> <strong>componentes Exposição e Sensibilidade construídas (8-9 Jul 2026)</strong> — Exposição: população (GHS-POP) + edificado (GHS-BUILT-S), percentil 99; Sensibilidade: estrutura HIERÁRQUICA — Vulnerabilidade Demográfica (idosos+crianças, INE grelha 1km) + Vulnerabilidade Social (isolamento, INE BGRI), cada subdimensão com o seu próprio N0 de confiança, combinadas com peso igual. Capacidade de Resposta ainda não iniciada (modelo PREFER, Bento-Gonçalves et al. 2014). Ver secções 15.12-15.15 para os procedimentos completos.</li>
           <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
         </ul>
@@ -2331,6 +2332,35 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
     <h4 style="margin:1.2rem 0 .5rem">Caminho futuro</h4>
     <p>Duas vias possíveis, não excludentes: (1) aguardar uma fonte de escolaridade com resolução compatível com a BGRI (indicadores sociais do INE, Índice Europeu de Deprivação, dados municipais, futuras disponibilizações censitárias); ou (2) criar uma componente separada de "Contexto Socioeconómico" a nível de freguesia, distinta da Sensibilidade operacional (que fica a 250m/BGRI), evitando misturar escalas dentro do mesmo indicador. Nenhuma das duas implementada nesta versão.</p>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.17 — Índice I: camadas analíticas por causa de ignição</h3>
+    <p>Pendente identificado na construção original do Índice I (7 Jul 2026): explorar se <code>causa_tipo</code> (Negligente/Intencional/Desconhecida) deveria ponderar o KDE de suscetibilidade de ignição.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Investigação — os padrões espaciais são realmente distintos?</h4>
+    <p>Antes de decidir <em>como</em> ponderar, testou-se <em>se</em> valia a pena: gerado um KDE separado por causa (mesmo bandwidth validado, 3500m), comparados par-a-par com <code>scripts/analisar_correlacao.py</code> (a mesma ferramenta usada para verificar a redundância população/edificado na Exposição). Resultado — correlações muito mais baixas do que as observadas entre variáveis genuinamente relacionadas:</p>
+    <table>
+      <thead><tr><th>Par</th><th>Pearson</th><th>Spearman</th></tr></thead>
+      <tbody>
+        <tr><td>Negligente × Intencional</td><td>0,5834</td><td>0,2836</td></tr>
+        <tr><td>Negligente × Desconhecida</td><td>0,0921</td><td>0,2607</td></tr>
+        <tr><td>Intencional × Desconhecida</td><td>0,1267</td><td>0,0559</td></tr>
+      </tbody>
+    </table>
+    <p>Para comparação, população×edificado (Exposição, secção 15.12) tinha Pearson 0,57/Spearman 0,77 — já ali classificado como "sem redundância suficiente para preocupar". Aqui os valores de Spearman (0,06-0,28) são consistentemente mais baixos, indicando que as três causas têm geografias de ignição genuinamente distintas, não uma subdivisão arbitrária do mesmo fenómeno espacial.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão: preservar informação, não ponderar arbitrariamente</h4>
+    <p>Considerada e rejeitada a hipótese de ponderar as causas dentro de um único KDE combinado — a pergunta conceptual "o que mede o Índice I?" tem resposta clara (probabilidade espacial de ignição, independente da causa), pelo que dar mais peso a uma causa do que a outra deixaria de ser uma decisão estatística e passaria a ser uma decisão operacional/política sem base quantitativa que a sustente (o mesmo tipo de "salto sem fundamentação" já evitado noutras decisões do SAEIF).</p>
+    <p><strong>Decisão adoptada:</strong> o Índice I oficial permanece <em>exactamente como está</em> (agregado, todas as causas incluídas, sem ponderação) — garante estabilidade metodológica e comparabilidade com as versões já validadas (AUC 0,86, secção 15.10). Em paralelo, o sistema passa a gerar automaticamente três <strong>camadas analíticas complementares</strong> — <code>indice_i_negligente.tif</code>, <code>indice_i_intencional.tif</code>, <code>indice_i_desconhecida.tif</code> — que preservam a estrutura espacial distinta revelada pela análise, sem entrar no cálculo do índice oficial nem do risco final. Utilidade operacional: cada camada responde a uma pergunta diferente (negligência → onde concentrar campanhas de sensibilização; intencional → onde reforçar vigilância; desconhecida → onde há maior incerteza de classificação).</p>
+    <p>Pesos entre causas ficam deliberadamente por atribuir nesta versão — não por falta de decisão, mas porque ainda não existe base quantitativa suficiente (validação temporal por causa, análise de eficácia de campanhas por categoria, etc.) que os justifique. Se essa evidência surgir no futuro, os pesos poderão emergir por validação, não por escolha arbitrária.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Script e reprodutibilidade</h4>
+    <p><code>scripts/gerar_kde_por_causa.sh</code> — automatiza extração (por causa) + geração KDE (mesmo bandwidth 3500m do Índice I oficial) para as três categorias, gravando em <code>data/indice_i/</code>. Nota de desenvolvimento: o driver GeoJSON do GDAL não suporta bem a opção <code>-overwrite</code> quando o ficheiro de destino já existe (erro <code>DeleteLayer() not supported by this dataset</code>) — corrigido apagando o ficheiro explicitamente (<code>rm -f</code>) antes de o regenerar, em vez de depender do <code>-overwrite</code>.</p>
+    <pre><code>./scripts/gerar_kde_por_causa.sh</code></pre>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (10 Jul 2026)</strong><br>
+      <strong>Camadas analíticas do Índice I por causa geradas e reproduzíveis.</strong> Índice I oficial inalterado. Rasters: <code>data/indice_i/indice_i_negligente.tif</code> (2690 pontos), <code>indice_i_intencional.tif</code> (1140 pontos), <code>indice_i_desconhecida.tif</code> (917 pontos) — soma preservada em todos, valores confirmados idênticos entre geração manual e geração via script. <strong>Pendente:</strong> exposição destas camadas via <code>/api/layers</code>; eventual calibração de pesos por causa se surgir evidência quantitativa futura.
+    </div>
+
   </div>
 </div><!-- /container -->
 
@@ -2400,20 +2430,20 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
       </tbody>
     </table>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 9 Jul 2026)</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 10 Jul 2026)</h3>
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>22.4</td><td>55</td><td>1232.00</td></tr>
-        <tr><td>Design</td><td>14.8</td><td>55</td><td>814.00</td></tr>
-        <tr><td>Gestão</td><td>4.3</td><td>40</td><td>172.00</td></tr>
-        <tr><td>Programação</td><td>97.6</td><td>45</td><td>4392.00</td></tr>
-        <tr><td>Testes</td><td>13.7</td><td>35</td><td>479.50</td></tr>
-        <tr><td>Documentação</td><td>26.1</td><td>30</td><td>783.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>178.9</td><td>—</td><td>7872.50</td></tr>
+        <tr><td>Análise</td><td>23.4</td><td>55</td><td>1287.00</td></tr>
+        <tr><td>Design</td><td>15.6</td><td>55</td><td>858.00</td></tr>
+        <tr><td>Gestão</td><td>4.6</td><td>40</td><td>184.00</td></tr>
+        <tr><td>Programação</td><td>98.9</td><td>45</td><td>4450.50</td></tr>
+        <tr><td>Testes</td><td>14.7</td><td>35</td><td>514.50</td></tr>
+        <tr><td>Documentação</td><td>26.9</td><td>30</td><td>807.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>184.1</td><td>—</td><td>8101.00</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> domina o total (~55% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto. A fase <strong>Design</strong> cresceu de forma notável nesta actualização (12,0→14,5h) devido à reestruturação hierárquica da Sensibilidade e à formalização do Princípio da Separação Analítica (secção 16) — decisões de arquitectura com impacto em todos os índices futuros, não só no Índice V.</p>
+    <p>Nota: a fase <strong>Programação</strong> domina o total (~54% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto. A fase <strong>Design</strong> cresceu de forma notável nesta actualização (12,0→15,6h) devido à reestruturação hierárquica da Sensibilidade, à formalização do Princípio da Separação Analítica (secção 16) e à decisão sobre as camadas por causa do Índice I (secção 15.17).</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2423,6 +2453,7 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
         <tr><td>9 Jul 2026 (mesma sessão)</td><td>+16,2h: variável crianças (Sensibilidade), investigação e integração do isolamento social via BGRI (fonte, N0 próprio para agregados domésticos, script genérico numerador/denominador), reestruturação hierárquica da Sensibilidade (Vulnerabilidade Demográfica + Social), formalização do Princípio da Separação Analítica, correcção de menu de navegação em falta.</td></tr>
         <tr><td>9 Jul 2026 (mesma sessão)</td><td>+1,1h: investigação da fonte de escolaridade (INE); decisão de adiar deliberadamente por inconsistência de resolução estatística (freguesia vs. BGRI); formalização de princípio geral sobre consistência de resolução dentro de cada componente do índice.</td></tr>
         <tr><td>9 Jul 2026 (mesma sessão)</td><td>+1,1h: análise de correlação Pearson/Spearman entre população e edificado (Exposição) — script <code>scripts/analisar_correlacao.py</code>, correlação moderada a alta (r=0,57/ρ=0,77) mas sem redundância suficiente para justificar alterar os pesos 0,5/0,5.</td></tr>
+        <tr><td>10 Jul 2026</td><td>+5,2h: análise de correlação espacial entre causas de ignição do Índice I (Negligente/Intencional/Desconhecida); decisão de manter o Índice I oficial inalterado e gerar camadas analíticas separadas por causa; script <code>scripts/gerar_kde_por_causa.sh</code> (com correcção de um problema do driver GeoJSON do GDAL).</td></tr>
       </tbody>
     </table>
 
