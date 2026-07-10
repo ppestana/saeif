@@ -2226,7 +2226,7 @@ python3 scripts/gerar_indice_v_exposicao.py data/mascara_portugal_continental.ti
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (8 Jul 2026)</strong><br>
-      <strong>Índice V — Exposição construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_exposicao.tif</code>. Camadas base de referência estabelecidas (<code>data/boundaries/caop/</code>) para uso em toda a arquitetura futura do SAEIF. <strong>Pendente:</strong> mapa de valor económico dos elementos expostos; verificação futura da correlação entre população e edificado antes de fixar os pesos definitivamente (sugestão de consultoria SIG externa, ainda não executada); exposição via <code>/api/layers</code>. Sensibilidade (idosos) construída em 9 Jul 2026 — ver secção 15.13.
+      <strong>Índice V — Exposição construída, validada e confirmada visualmente.</strong> Raster de produção: <code>data/indice_v_exposicao.tif</code>. Camadas base de referência estabelecidas (<code>data/boundaries/caop/</code>) para uso em toda a arquitetura futura do SAEIF. <strong>Pendente:</strong> mapa de valor económico dos elementos expostos; exposição via <code>/api/layers</code>. Sensibilidade (idosos) construída em 9 Jul 2026 — ver secção 15.13. <strong>Correlação população/edificado verificada (9 Jul 2026):</strong> Pearson r=0,5707 (r²=0,3257), Spearman ρ=0,7721 (<code>scripts/analisar_correlacao.py</code>) — correlação moderada a alta, mas abaixo do patamar (&gt;0,9) que justificaria falar de redundância; a divergência Pearson/Spearman sugere relação monótona não-linear, esperada dado que ambas as variáveis têm distribuições muito assimétricas. Pesos 0,5/0,5 mantidos, sem alteração — as duas variáveis trazem informação genuinamente distinta (ex. zonas com edificado turístico/industrial mas pouca população residente registada, e vice-versa).
     </div>
 
     <h3 style="color:var(--fire);margin:2rem 0 1rem">15.13 — Índice V: construção da componente Sensibilidade (idosos)</h3>
@@ -2404,13 +2404,13 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>22.1</td><td>55</td><td>1215.50</td></tr>
+        <tr><td>Análise</td><td>22.4</td><td>55</td><td>1232.00</td></tr>
         <tr><td>Design</td><td>14.8</td><td>55</td><td>814.00</td></tr>
         <tr><td>Gestão</td><td>4.3</td><td>40</td><td>172.00</td></tr>
-        <tr><td>Programação</td><td>97.3</td><td>45</td><td>4378.50</td></tr>
-        <tr><td>Testes</td><td>13.5</td><td>35</td><td>472.50</td></tr>
-        <tr><td>Documentação</td><td>25.8</td><td>30</td><td>774.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>177.8</td><td>—</td><td>7826.50</td></tr>
+        <tr><td>Programação</td><td>97.6</td><td>45</td><td>4392.00</td></tr>
+        <tr><td>Testes</td><td>13.7</td><td>35</td><td>479.50</td></tr>
+        <tr><td>Documentação</td><td>26.1</td><td>30</td><td>783.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>178.9</td><td>—</td><td>7872.50</td></tr>
       </tbody>
     </table>
     <p>Nota: a fase <strong>Programação</strong> domina o total (~55% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais) que não existia no período inicial do projecto. A fase <strong>Design</strong> cresceu de forma notável nesta actualização (12,0→14,5h) devido à reestruturação hierárquica da Sensibilidade e à formalização do Princípio da Separação Analítica (secção 16) — decisões de arquitectura com impacto em todos os índices futuros, não só no Índice V.</p>
@@ -2422,6 +2422,7 @@ Sensibilidade = 0.50 x V_D + 0.50 x V_S</code></pre>
         <tr><td>9 Jul 2026</td><td>Secção criada. Reconstrução retrospectiva completa desde o início do projecto (30 Mai 2026), a pedido de Pedro Pestana.</td></tr>
         <tr><td>9 Jul 2026 (mesma sessão)</td><td>+16,2h: variável crianças (Sensibilidade), investigação e integração do isolamento social via BGRI (fonte, N0 próprio para agregados domésticos, script genérico numerador/denominador), reestruturação hierárquica da Sensibilidade (Vulnerabilidade Demográfica + Social), formalização do Princípio da Separação Analítica, correcção de menu de navegação em falta.</td></tr>
         <tr><td>9 Jul 2026 (mesma sessão)</td><td>+1,1h: investigação da fonte de escolaridade (INE); decisão de adiar deliberadamente por inconsistência de resolução estatística (freguesia vs. BGRI); formalização de princípio geral sobre consistência de resolução dentro de cada componente do índice.</td></tr>
+        <tr><td>9 Jul 2026 (mesma sessão)</td><td>+1,1h: análise de correlação Pearson/Spearman entre população e edificado (Exposição) — script <code>scripts/analisar_correlacao.py</code>, correlação moderada a alta (r=0,57/ρ=0,77) mas sem redundância suficiente para justificar alterar os pesos 0,5/0,5.</td></tr>
       </tbody>
     </table>
 
