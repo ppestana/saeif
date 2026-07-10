@@ -99,6 +99,22 @@ RESPONSE_MAX_DISTANCE_KM = 34.0
 # simples de peso identico. Provisorio, sujeito a recalibracao futura.
 RESPONSE_WEIGHT_ACCESSIBILITY = 0.50
 RESPONSE_WEIGHT_COVERAGE = 0.50
+
+# --- Combinacao final do Indice V (as tres componentes do modelo PREFER) ---
+# V = INDICE_V_WEIGHT_EXPOSURE * Exposicao
+#   + INDICE_V_WEIGHT_SENSITIVITY * Sensibilidade
+#   + INDICE_V_WEIGHT_RESPONSE * Deficit_Resposta
+# Peso igual entre as tres componentes -- mesmo principio ja usado nas
+# combinacoes internas (Demografica/Social, Acessibilidade/Cobertura):
+# sem evidencia forte o suficiente para justificar desequilibrio.
+# Nota (Principio da Separacao Analitica, saeif_architecture.html Sec16):
+# o Indice V final NAO e reescalado para 0-1 -- os componentes tem
+# dominios reais diferentes (Exposicao ate 1.0, Sensibilidade ate ~0.69,
+# Resposta ate ~1.0), pelo que o maximo real do Indice V combinado fica
+# abaixo de 1.0. Isto e esperado e correcto, nao um erro.
+INDICE_V_WEIGHT_EXPOSURE = 1.0 / 3.0
+INDICE_V_WEIGHT_SENSITIVITY = 1.0 / 3.0
+INDICE_V_WEIGHT_RESPONSE = 1.0 / 3.0
 # Proporcoes calculadas sobre populacoes pequenas (denominador n) sao
 # estatisticamente instaveis (variancia de uma proporcao cresce quando n
 # diminui). Em vez de um limiar fixo (que criaria descontinuidades
