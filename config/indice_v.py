@@ -68,6 +68,27 @@ SENSITIVITY_CONFIDENCE_N0 = 50.0  # populacao de referencia (pessoas) para peso 
 # nem excesso de penalizacao (N0=50 deixaria so ~10% das subseccoes em
 # confianca total).
 SENSITIVITY_CONFIDENCE_HOUSEHOLDS_N0 = 25.0
+
+# --- Capacidade de Resposta: Deficit de Acessibilidade (rede viaria) ---
+# Ver scripts/gerar_acessibilidade_viaria.py e gerar_deficit_acessibilidade.py
+# (pesos por classe de via la documentados; sem parametro de normalizacao
+# aqui, a inversao 1-acessibilidade ja produz [0,1] directamente).
+
+# --- Capacidade de Resposta: Deficit de Cobertura Operacional (bombeiros) ---
+# Distancia maxima de referencia para normalizacao linear da distancia ao
+# quartel de bombeiros mais proximo: deficit = min(distancia_km / RESPONSE_MAX_DISTANCE_KM, 1.0)
+#
+# Parametro FIXO, nao recalculado automaticamente a partir do maximo
+# observado em cada execucao -- evita que o indice "flutue" sempre que a
+# base de dados de quarteis for actualizada (novo quartel, encerramento,
+# integracao Acores/Madeira, etc.), o que mudaria retroactivamente o
+# significado de um valor de deficit ja calculado antes. Calibrado a
+# partir do maximo real observado nos dados de 10 Jul 2026 (466 quarteis,
+# fonte Wikidata/SPARQL, ver saeif_architecture.html): distancia maxima
+# observada em Portugal Continental ~33.9km, arredondado para 34km.
+# Rever manualmente (nao automaticamente) se os dados de origem mudarem
+# de forma substancial.
+RESPONSE_MAX_DISTANCE_KM = 34.0
 # Proporcoes calculadas sobre populacoes pequenas (denominador n) sao
 # estatisticamente instaveis (variancia de uma proporcao cresce quando n
 # diminui). Em vez de um limiar fixo (que criaria descontinuidades
