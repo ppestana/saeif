@@ -30,11 +30,11 @@ for CAUSA in Negligente Intencional Desconhecida; do
     OUTPUT="data/indice_i/indice_i_${CAUSA,,}.tif"
 
     echo "A extrair centroides (causa_tipo = '${CAUSA}') ..."
+    rm -f "$GEOJSON"
     ogr2ogr -f GeoJSON "$GEOJSON" \
         PG:"host=127.0.0.1 port=5434 dbname=saeif user=saeif password=saeif_db_2026" \
         -sql "SELECT id, ano, ST_Centroid(geom) AS geom FROM areas_ardidas WHERE causa_tipo = '${CAUSA}'" \
-        -nln "ignicoes_${CAUSA}" \
-        -overwrite
+        -nln "ignicoes_${CAUSA}"
 
     echo "A gerar KDE (bandwidth=${BANDWIDTH}m) ..."
     python3 scripts/gerar_kde_ignicao.py "$GEOJSON" "$BANDWIDTH" "$OUTPUT"
