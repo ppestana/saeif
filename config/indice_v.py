@@ -89,6 +89,16 @@ SENSITIVITY_CONFIDENCE_HOUSEHOLDS_N0 = 25.0
 # Rever manualmente (nao automaticamente) se os dados de origem mudarem
 # de forma substancial.
 RESPONSE_MAX_DISTANCE_KM = 34.0
+
+# --- Combinacao das subdimensoes da Capacidade de Resposta ---
+# Deficit_Resposta = RESPONSE_WEIGHT_ACCESSIBILITY * Deficit_Acessibilidade
+#                   + RESPONSE_WEIGHT_COVERAGE      * Deficit_Cobertura
+# Peso igual entre as duas subdimensoes -- mesmo principio ja usado na
+# combinacao Demografica/Social da Sensibilidade: sem evidencia forte o
+# suficiente para justificar um desequilibrio, privilegia-se o principio
+# simples de peso identico. Provisorio, sujeito a recalibracao futura.
+RESPONSE_WEIGHT_ACCESSIBILITY = 0.50
+RESPONSE_WEIGHT_COVERAGE = 0.50
 # Proporcoes calculadas sobre populacoes pequenas (denominador n) sao
 # estatisticamente instaveis (variancia de uma proporcao cresce quando n
 # diminui). Em vez de um limiar fixo (que criaria descontinuidades
