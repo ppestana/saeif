@@ -2594,6 +2594,27 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
       <strong>As três componentes do modelo PREFER (Exposição, Sensibilidade, Défice de Capacidade de Resposta) estão construídas, validadas e combinadas no Índice V final.</strong> Pela primeira vez desde o início da arquitectura de 3 índices (6 Jul 2026), o Índice V deixa de ser um conceito parcial e passa a ser um produto geoespacial completo e reproduzível, tal como os Índices I e P. <strong>Pendente:</strong> mapa de valor económico dos elementos expostos (Exposição); escolaridade e contexto socioeconómico (Sensibilidade, adiado por inconsistência de resolução, secção 15.16); validação estatística formal do Índice V completo (equivalente ao holdout temporal do Índice I ou à confirmação em produção do Índice P — ainda não feita); integração final no <code>Risco = f(I, P, V, M)</code>.
     </div>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.22 — Auditoria de infraestrutura: espaço em disco e lacuna nos backups</h3>
+    <p>Motivada pela dimensão dos downloads desta sessão (OSM ~820MB, GHSL, INE) — auditoria ao espaço em disco do servidor e verificação do estado real dos backups automáticos.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Espaço em disco — limpeza pontual</h4>
+    <p>Estado antes: 22GB usados de 75GB (31%). Identificado <code>data/osm/portugal-latest-free.gpkg.zip</code> (820MB) — o ficheiro `.zip` original do extrato Geofabrik, já descomprimido para <code>portugal.gpkg</code> (1,66GB, em uso activo pelos scripts de Acessibilidade e Cobertura Operacional) e por isso puramente redundante. Removido. Estado depois: 21GB usados, 51GB livres (29%). As restantes pastas grandes (WorldCover tiles, <code>fire_risk.tif</code>) são de fases anteriores do projecto e continuam em uso activo — não tocadas sem investigação própria.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Backups — lacuna real identificada e corrigida</h4>
+    <p>Verificação do <code>crontab</code> e do log de backup (<code>/var/log/saeif/backup.log</code>) confirmou execuções diárias saudáveis desde 24 Jun 2026, sem falhas — mas inspecção do próprio script (<code>scripts/backup_saeif.sh</code>) revelou que o backup **só cobria a base de dados** (<code>pg_dump</code>, ficheiros de 13-17MB). <strong>Nenhum dos produtos geoespaciais em <code>data/</code> — incluindo todo o trabalho do Índice V desta sessão — tinha qualquer backup</strong>, só recuperável reprocessando os scripts do zero em caso de perda de disco.</p>
+    <p><strong>Distinção deliberada ao definir o âmbito da correcção:</strong> as fontes brutas descarregadas (OSM <code>portugal.gpkg</code> 1,66GB, GHSL, grelhas INE — >2,5GB no total) são grandes mas <em>reproduzíveis</em> a partir de fontes públicas, agora documentadas nos ficheiros <code>.meta.yaml</code> (secção 03, Fontes de Dados) precisamente para permitir isso — incluí-las no backup seria desperdício de espaço para algo recuperável por download. Os <strong>produtos derivados/finais</strong> (índices, camadas publicadas em <code>data/layers/</code>) representam, pelo contrário, horas de processamento e decisões de modelação — esses sim, valem a pena proteger. Âmbito do novo backup: <code>data/*.tif</code> (raiz), <code>data/indice_i/</code>, <code>data/layers/</code> — 1,6GB comprimido.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Nota operacional: script duplicado, não sincronizado automaticamente</h4>
+    <p>O <code>cron</code> executa <code>/usr/local/bin/backup_saeif.sh</code>, uma cópia separada do <code>scripts/backup_saeif.sh</code> do repositório — não um link simbólico. Alterações ao script no repositório <strong>não se propagam automaticamente</strong> para a versão em produção; é necessário copiar manualmente (<code>cp scripts/backup_saeif.sh /usr/local/bin/backup_saeif.sh</code>) após cada alteração. Confirmado por <code>diff</code> antes desta correcção (estavam sincronizados) — mas é um ponto de fragilidade a ter presente para futuras alterações a este script.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Validação</h4>
+    <p>Execução manual do script corrigido confirmou backup de dados de 1,6GB gerado sem erros em menos de um minuto, com o Índice V completo (<code>data/indice_v.tif</code>) e o défice de resposta (<code>data/indice_v_resposta_deficit.tif</code>) confirmados presentes dentro do arquivo `.tar.gz` (via <code>tar -tzf | grep</code>). Retenção: 7 dias, igual à da base de dados (mesma lógica <code>find -mtime +7 -delete</code>).</p>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (10 Jul 2026)</strong><br>
+      <strong>Backup de produtos geoespaciais activo e validado.</strong> 51GB livres em disco. <strong>Pendente:</strong> considerar sincronização automática entre <code>scripts/backup_saeif.sh</code> e <code>/usr/local/bin/backup_saeif.sh</code> (ex. link simbólico) para eliminar o risco de dessincronização manual; considerar backup fora do servidor (off-site) para os produtos geoespaciais, actualmente só protegidos localmente.
+    </div>
+
   </div>
 </div><!-- /container -->
 
@@ -2667,16 +2688,16 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>27.7</td><td>55</td><td>1523.50</td></tr>
-        <tr><td>Design</td><td>18.7</td><td>55</td><td>1028.50</td></tr>
-        <tr><td>Gestão</td><td>4.8</td><td>40</td><td>192.00</td></tr>
-        <tr><td>Programação</td><td>107.3</td><td>45</td><td>4828.50</td></tr>
-        <tr><td>Testes</td><td>20.6</td><td>35</td><td>721.00</td></tr>
-        <tr><td>Documentação</td><td>30.9</td><td>30</td><td>927.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>210.0</td><td>—</td><td>9220.50</td></tr>
+        <tr><td>Análise</td><td>28.7</td><td>55</td><td>1578.50</td></tr>
+        <tr><td>Design</td><td>19.0</td><td>55</td><td>1045.00</td></tr>
+        <tr><td>Gestão</td><td>5.0</td><td>40</td><td>200.00</td></tr>
+        <tr><td>Programação</td><td>107.8</td><td>45</td><td>4851.00</td></tr>
+        <tr><td>Testes</td><td>21.2</td><td>35</td><td>742.00</td></tr>
+        <tr><td>Documentação</td><td>31.5</td><td>30</td><td>945.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>213.2</td><td>—</td><td>9361.50</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> domina o total (~51% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> continua a crescer de forma consistente desde 7 Jul 2026 — validação estatística formal, TestClient da API, testes geométricos deterministas (distance transform, rasterização por ordenação) antes de aplicar a dados reais. Marco desta actualização: <strong>o Índice V está completo</strong> — as três componentes do modelo PREFER construídas, validadas e combinadas, fechando o último dos três índices estruturais do SAEIF 2.0 (I, P e V agora todos operacionais).</p>
+    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~51% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). Marco desta sessão: <strong>o Índice V está completo</strong> — as três componentes do modelo PREFER construídas, validadas e combinadas, fechando o último dos três índices estruturais do SAEIF 2.0 (I, P e V agora todos operacionais) — seguido de uma auditoria de infraestrutura (secção 15.22) que identificou e corrigiu uma lacuna real nos backups (nenhum produto geoespacial estava protegido até hoje).</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2690,6 +2711,7 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+5,7h: infraestrutura genérica de publicação de camadas (<code>/api/layers</code>, <code>/layers/{id}.png</code>) — script <code>scripts/publicar_camada.py</code> (bounds sempre extraídos do GeoTIFF, nunca hardcoded), edição de <code>api/main.py</code> (substituição deliberada do piloto de Viseu), testado com TestClient real; 3 primeiras camadas publicadas (Índice I, Índice V Exposição, Índice V Sensibilidade).</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+8,9h: Capacidade de Resposta do Índice V — reformulação conceptual como "défice" (mantém semântica aditiva); subdimensão Défice de Acessibilidade construída (OSM/Geofabrik, pesos por classe de via, técnica de rasterização por ordenação testada deliberadamente antes de aplicar, inversão 1−acessibilidade, tratamento explícito de células sem via como défice máximo, validado por cruzamento com população).</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+11,3h: subdimensão Cobertura Operacional (bombeiros) — investigação de três fontes até encontrar uma completa (OSM 21%, dados.gov.pt arquivado/indisponível, Wikidata/SPARQL 466 quartéis), distance transform validado geometricamente, parâmetro fixo de distância máxima; combinação das duas subdimensões no Défice de Capacidade de Resposta; <strong>combinação final das três componentes do Índice V (marco: Índice V completo)</strong>; publicação via <code>/api/layers</code>.</td></tr>
+        <tr><td>10 Jul 2026 (mesma sessão)</td><td>+3,2h: auditoria de infraestrutura — limpeza de disco (820MB, .zip redundante do OSM); identificação e correcção de lacuna real nos backups (só cobriam a base de dados, nenhum produto geoespacial estava protegido); extensão do <code>backup_saeif.sh</code>, testado e validado em execução manual real.</td></tr>
       </tbody>
     </table>
 
