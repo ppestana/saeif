@@ -483,6 +483,7 @@
     <span style="color:var(--green)">Índice I — camadas analíticas por causa: 10 Jul 2026</span>
     <span style="color:var(--green)">Infraestrutura /api/layers — I e V publicados: 10 Jul 2026</span>
     <span style="color:var(--amber)">Índice V — Défice de Acessibilidade (OSM, pesos por fclass): 10 Jul 2026</span>
+    <span style="color:var(--green)">Índice V COMPLETO — 3 componentes PREFER combinadas: 10 Jul 2026</span>
   </div>
 </div>
 
@@ -1043,7 +1044,7 @@ score = (
         <ul>
           <li><strong>Índice P — Propagação:</strong> <strong>destilado (7 Jul 2026)</strong> — era o <code>risco_estrutural</code> calculado inline dentro de <code>calcular_score()</code> (WorldCover + NDVI + declive + bónus área ardida); extraído como função explícita <code>get_indice_p()</code> em <code>score.py</code>, agora também gravado como campo próprio (<code>indice_p</code>) na tabela <code>alertas</code>. Ver secção 15.11 para o procedimento e a inconsistência histórica identificada e corrigida.</li>
           <li><strong>Índice I — Suscetibilidade de Ignição:</strong> <strong>validado (AUC 0,86; 7 Jul 2026)</strong> — superfície KDE sobre 4747 centroides de <code>areas_ardidas</code> (causa Negligente/Intencional/Desconhecida), grelha 250m/EPSG:3763, bandwidth 3500m escolhido por validação cruzada leave-one-out, e testado por holdout temporal (treino 2020-2023, teste 2024-2025) com AUC de curva de concentração de 0,86. Ver secção 15.10 para o procedimento completo. <strong>Camadas analíticas por causa adicionadas (10 Jul 2026)</strong> — Índice I oficial inalterado; três KDE complementares por <code>causa_tipo</code>, não ponderados (correlação espacial baixa entre causas, ρ Spearman 0,06-0,28, não justifica ponderação sem evidência adicional). Ver secção 15.17.</li>
-          <li><strong>Índice V — Vulnerabilidade:</strong> <strong>componentes Exposição, Sensibilidade e Défice de Acessibilidade construídos (8-10 Jul 2026)</strong> — Exposição: população (GHS-POP) + edificado (GHS-BUILT-S), percentil 99; Sensibilidade: estrutura HIERÁRQUICA — Vulnerabilidade Demográfica (idosos+crianças, INE grelha 1km) + Vulnerabilidade Social (isolamento, INE BGRI); Défice de Acessibilidade: rede viária OSM (Geofabrik) ponderada por classe de via, invertida (1−acessibilidade), sem via mapeada = défice máximo. Falta Cobertura Operacional (proximidade a bombeiros) para fechar a Capacidade de Resposta (modelo PREFER, Bento-Gonçalves et al. 2014). Ver secções 15.12-15.19 para os procedimentos completos.</li>
+          <li><strong>Índice V — Vulnerabilidade:</strong> <strong>COMPLETO (8-10 Jul 2026)</strong> — as três componentes do modelo PREFER (Bento-Gonçalves et al. 2014) construídas, validadas e combinadas: Exposição (população GHS-POP + edificado GHS-BUILT-S, percentil 99); Sensibilidade (estrutura hierárquica — Demográfica: idosos+crianças, INE grelha 1km; Social: isolamento, INE BGRI); Défice de Capacidade de Resposta (Acessibilidade: rede viária OSM/Geofabrik ponderada por classe; Cobertura Operacional: distância a 466 quartéis de bombeiros, fonte Wikidata/SPARQL). Combinação final peso 1/3 cada. Ver secções 15.12-15.21 para os procedimentos completos.</li>
           <li><strong>Camada M — Meteorologia:</strong> os componentes <code>fwi_norm</code> e <code>vento_factor</code> do score actual são, conceptualmente, esta camada dinâmica — hoje <em>misturada</em> no score; a arquitetura-alvo separa-a dos índices estruturais.</li>
         </ul>
         Nota: nenhum índice novo entra no score final até ser validado isoladamente contra dados reais. A fórmula actual (documentada acima) mantém-se em produção como está; a reorganização é incremental.
@@ -2483,7 +2484,54 @@ python3 scripts/gerar_deficit_acessibilidade.py data/mascara_portugal_continenta
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (10 Jul 2026)</strong><br>
-      <strong>Défice de Acessibilidade construído, validado e confirmado visualmente.</strong> Raster: <code>data/indice_v_resposta_acessibilidade_deficit.tif</code>. <strong>Pendente:</strong> Cobertura Operacional (proximidade a corpos de bombeiros — segunda subdimensão da Capacidade de Resposta); combinação das duas subdimensões; validação cartográfica adicional sugerida (sobrepor 20-30 células "sem via" no QGIS para confirmar visualmente que correspondem a serras/áreas remotas, não feita nesta sessão — a validação estatística por população já dá confiança razoável, mas fica como refinamento possível); publicação via <code>/api/layers</code>.
+      <strong>Défice de Acessibilidade construído, validado e confirmado visualmente.</strong> Raster: <code>data/indice_v_resposta_acessibilidade_deficit.tif</code>. <strong>Pendente:</strong> validação cartográfica adicional sugerida (sobrepor 20-30 células "sem via" no QGIS para confirmar visualmente que correspondem a serras/áreas remotas, não feita nesta sessão — a validação estatística por população já dá confiança razoável, mas fica como refinamento possível). Cobertura Operacional construída em 10 Jul 2026 — ver secção 15.20.
+    </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.20 — Índice V: Capacidade de Resposta, subdimensão Cobertura Operacional</h3>
+    <p>Segunda e última subdimensão da Capacidade de Resposta: proximidade a corpos de bombeiros. Variável de base: distância (em metros) ao quartel mais próximo, calculada por *distance transform* euclidiano sobre a grelha oficial.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Fonte de dados — do OSM ao Wikidata (falso início documentado)</h4>
+    <p>Primeira tentativa: extrato OSM/Geofabrik já descarregado para a rede viária (camada <code>gis_osm_pois_free</code>, <code>fclass='fire_station'</code>) — <strong>só 93 quartéis mapeados</strong>, contra os 434 corpos de bombeiros oficiais da ANEPC (~21% de cobertura). Insuficiente para uma superfície de distância credível — rejeitado sem hesitação, ao contrário da rede viária (onde a cobertura era boa).</p>
+    <p>Um dataset nacional aparentemente promissor em <code>dados.gov.pt</code> (ID <code>GO27</code>, "Localização, área de influência e contactos das corporações de bombeiros") revelou-se, após inspecção directa da página, ser apenas o quartel de Cascais — arquivado, ficheiros indisponíveis. <strong>Confirma, mais uma vez, a disciplina de nunca assumir a partir de um resumo de pesquisa sem verificar a fonte original.</strong></p>
+    <p><strong>Fonte final: Wikidata</strong>, via consulta SPARQL directa ao endpoint público (<code>query.wikidata.org/sparql</code>), instâncias de "corpo de bombeiros" (Q6498663) ou "bombeiros voluntários" (Q285852) localizadas em Portugal (P17=Q45) com coordenadas (P625). Resultado: <strong>466 quartéis únicos</strong> (após remover duplicados causados pela cláusula <code>VALUES</code> com duas classes sobrepostas) — muito mais próximo do número oficial, e obtido de forma reproduzível (consulta estruturada, não scraping de HTML).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Cálculo da distância — distance transform euclidiano</h4>
+    <p>Pontos transformados para EPSG:3763, rasterizados como máscara binária na grelha oficial (0=quartel, 1=resto), e processados com <code>scipy.ndimage.distance_transform_edt</code> com <code>sampling=(250,250)</code> — devolve directamente a distância em metros a partir da célula mais próxima com quartel, sem necessidade de reescala posterior. Validado por teste geométrico determinístico antes de aplicar aos dados reais: duas estações sintéticas a 102,3km uma da outra, a distância calculada no ponto médio exacto foi 51.169m, contra 51.157m esperados analiticamente (diferença de 12m = arredondamento de célula de 250m, não erro).</p>
+    <p>440 dos 466 quartéis caem dentro da grelha oficial (os 26 restantes são Açores/Madeira, fora do âmbito continental do SAEIF). Distância real em Portugal Continental: mediana 7,5km, máximo 33,9km, sem outliers de amostragem — distribuição bem comportada.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Normalização: linear, com parâmetro fixo (não recalculado automaticamente)</h4>
+    <p><code>deficit = min(distancia_km / RESPONSE_MAX_DISTANCE_KM, 1.0)</code>. Tal como na Acessibilidade, sem percentil — a distância é uma variável física contínua, não há ambiguidade estatística de amostra pequena a resolver (2km é objectivamente melhor que 10km). <strong>Decisão adicional</strong>: <code>RESPONSE_MAX_DISTANCE_KM</code> é um parâmetro <em>fixo</em> (34,0, calibrado a partir do máximo real observado em 10 Jul 2026), não recalculado automaticamente em cada execução — evita que o índice "flutue" retroactivamente sempre que a base de dados de quartéis for actualizada (novo quartel, encerramento, integração futura de Açores/Madeira). Revisão manual, não automática, se os dados de origem mudarem substancialmente.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Combinação das duas subdimensões e resultado do Défice de Capacidade de Resposta</h4>
+    <p>Peso igual entre Acessibilidade e Cobertura Operacional (0,5/0,5) — mesmo princípio já usado na Sensibilidade, sem evidência forte para desequilíbrio. Estatísticas do défice combinado (dentro da máscara): média 0,3976, mediana 0,3214, assimetria 0,3853, máximo real 0,9988. Scripts: <code>scripts/gerar_distancia_bombeiros.py</code>, <code>scripts/gerar_deficit_bombeiros.py</code>, <code>scripts/gerar_deficit_resposta.py</code> (combinação final).</p>
+    <pre><code>curl -G https://query.wikidata.org/sparql \
+  --data-urlencode 'query=SELECT ?item ?itemLabel ?coord WHERE { VALUES ?class { wd:Q6498663 wd:Q285852 } ?item wdt:P31/wdt:P279* ?class . ?item wdt:P17 wd:Q45 . ?item wdt:P625 ?coord . SERVICE wikibase:label { bd:serviceParam wikibase:language "pt" } }' \
+  -H "Accept: text/csv" -o data/bombeiros/bombeiros_wikidata.csv
+
+python3 scripts/gerar_distancia_bombeiros.py data/bombeiros/bombeiros_wikidata.csv data/indice_v_resposta_distancia_bombeiros.tif
+python3 scripts/gerar_deficit_bombeiros.py data/mascara_portugal_continental.tif data/indice_v_resposta_distancia_bombeiros.tif data/indice_v_resposta_bombeiros_deficit.tif
+python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif data/indice_v_resposta_acessibilidade_deficit.tif data/indice_v_resposta_bombeiros_deficit.tif data/indice_v_resposta_deficit.tif</code></pre>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (10 Jul 2026)</strong><br>
+      <strong>Capacidade de Resposta (défice) completa — as duas subdimensões construídas, validadas e combinadas.</strong> Raster: <code>data/indice_v_resposta_deficit.tif</code>. Fecha a última componente pendente do modelo PREFER. Ver secção 15.21 para a combinação final do Índice V.
+    </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.21 — Índice V: combinação final das três componentes PREFER</h3>
+    <p>Combinação das três componentes construídas nesta e nas sessões anteriores — Exposição (secção 15.12), Sensibilidade (secções 15.13-15.16) e Défice de Capacidade de Resposta (secções 15.19-15.20) — no Índice V final:</p>
+    <pre><code>V = INDICE_V_WEIGHT_EXPOSURE * Exposicao
+  + INDICE_V_WEIGHT_SENSITIVITY * Sensibilidade
+  + INDICE_V_WEIGHT_RESPONSE * Deficit_Resposta</code></pre>
+    <p><strong>Peso igual entre as três componentes (1/3 cada)</strong> — mesmo princípio consistentemente aplicado em todas as combinações do Índice V nesta sessão (Demográfica/Social, Acessibilidade/Cobertura): sem evidência empírica forte o suficiente para justificar desequilíbrio entre dimensões conceptualmente distintas do modelo PREFER, opta-se pelo princípio simples e documentado de peso igual, provisório e sujeito a recalibração futura.</p>
+    <p>Todas as três componentes já estão na mesma semântica (valor alto = maior vulnerabilidade) desde a decisão de reformular a Capacidade de Resposta como "défice" (secção 15.19) — a combinação final é, por isso, simplesmente aditiva, sem necessidade de inverter sinais.</p>
+    <p><strong>Resultado (10 Jul 2026, dados reais):</strong> mínimo 0,0110, máximo real 0,7158 (não 1,0 — Princípio da Separação Analítica, secção 16: as três componentes raramente atingem os seus máximos individuais na mesma célula), média 0,1801, mediana 0,1871, assimetria 0,9393. Validação: sem NaN/Inf, dentro do intervalo [0,1].</p>
+    <p>Script: <code>scripts/gerar_indice_v.py</code>.</p>
+    <pre><code>python3 scripts/gerar_indice_v.py data/mascara_portugal_continental.tif data/indice_v_exposicao.tif data/indice_v_sensibilidade.tif data/indice_v_resposta_deficit.tif data/indice_v.tif</code></pre>
+    <p>Publicado via <code>/api/layers/indice_v</code> (infraestrutura genérica, secção 15.18) — quarta camada exposta, substituindo/complementando as publicações parciais anteriores (Exposição e Sensibilidade isoladas continuam disponíveis para análise temática).</p>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (10 Jul 2026) — marco: Índice V completo</strong><br>
+      <strong>As três componentes do modelo PREFER (Exposição, Sensibilidade, Défice de Capacidade de Resposta) estão construídas, validadas e combinadas no Índice V final.</strong> Pela primeira vez desde o início da arquitectura de 3 índices (6 Jul 2026), o Índice V deixa de ser um conceito parcial e passa a ser um produto geoespacial completo e reproduzível, tal como os Índices I e P. <strong>Pendente:</strong> mapa de valor económico dos elementos expostos (Exposição); escolaridade e contexto socioeconómico (Sensibilidade, adiado por inconsistência de resolução, secção 15.16); validação estatística formal do Índice V completo (equivalente ao holdout temporal do Índice I ou à confirmação em produção do Índice P — ainda não feita); integração final no <code>Risco = f(I, P, V, M)</code>.
     </div>
 
   </div>
@@ -2559,16 +2607,16 @@ python3 scripts/gerar_deficit_acessibilidade.py data/mascara_portugal_continenta
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>25.3</td><td>55</td><td>1391.50</td></tr>
-        <tr><td>Design</td><td>17.9</td><td>55</td><td>984.50</td></tr>
+        <tr><td>Análise</td><td>27.7</td><td>55</td><td>1523.50</td></tr>
+        <tr><td>Design</td><td>18.7</td><td>55</td><td>1028.50</td></tr>
         <tr><td>Gestão</td><td>4.8</td><td>40</td><td>192.00</td></tr>
-        <tr><td>Programação</td><td>103.7</td><td>45</td><td>4666.50</td></tr>
-        <tr><td>Testes</td><td>17.9</td><td>35</td><td>626.50</td></tr>
-        <tr><td>Documentação</td><td>29.1</td><td>30</td><td>873.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>198.7</td><td>—</td><td>8734.00</td></tr>
+        <tr><td>Programação</td><td>107.3</td><td>45</td><td>4828.50</td></tr>
+        <tr><td>Testes</td><td>20.6</td><td>35</td><td>721.00</td></tr>
+        <tr><td>Documentação</td><td>30.9</td><td>30</td><td>927.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>210.0</td><td>—</td><td>9220.50</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> domina o total (~52% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> só aparece de forma expressiva a partir de 7 Jul 2026 — reflecte a introdução de validação estatística formal (LOO-CV, holdout temporal, testes funcionais, TestClient para a API, teste deliberado da técnica de rasterização por ordenação) que não existia no período inicial do projecto. A fase <strong>Design</strong> continua a crescer de forma notável (12,0→17,9h) — reestruturação hierárquica da Sensibilidade, Princípio da Separação Analítica, camadas por causa do Índice I, infraestrutura de publicação de camadas, e agora a reformulação conceptual da Capacidade de Resposta como "défice" (secção 15.19).</p>
+    <p>Nota: a fase <strong>Programação</strong> domina o total (~51% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). A fase <strong>Testes</strong> continua a crescer de forma consistente desde 7 Jul 2026 — validação estatística formal, TestClient da API, testes geométricos deterministas (distance transform, rasterização por ordenação) antes de aplicar a dados reais. Marco desta actualização: <strong>o Índice V está completo</strong> — as três componentes do modelo PREFER construídas, validadas e combinadas, fechando o último dos três índices estruturais do SAEIF 2.0 (I, P e V agora todos operacionais).</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2581,6 +2629,7 @@ python3 scripts/gerar_deficit_acessibilidade.py data/mascara_portugal_continenta
         <tr><td>10 Jul 2026</td><td>+5,2h: análise de correlação espacial entre causas de ignição do Índice I (Negligente/Intencional/Desconhecida); decisão de manter o Índice I oficial inalterado e gerar camadas analíticas separadas por causa; script <code>scripts/gerar_kde_por_causa.sh</code> (com correcção de um problema do driver GeoJSON do GDAL).</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+5,7h: infraestrutura genérica de publicação de camadas (<code>/api/layers</code>, <code>/layers/{id}.png</code>) — script <code>scripts/publicar_camada.py</code> (bounds sempre extraídos do GeoTIFF, nunca hardcoded), edição de <code>api/main.py</code> (substituição deliberada do piloto de Viseu), testado com TestClient real; 3 primeiras camadas publicadas (Índice I, Índice V Exposição, Índice V Sensibilidade).</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+8,9h: Capacidade de Resposta do Índice V — reformulação conceptual como "défice" (mantém semântica aditiva); subdimensão Défice de Acessibilidade construída (OSM/Geofabrik, pesos por classe de via, técnica de rasterização por ordenação testada deliberadamente antes de aplicar, inversão 1−acessibilidade, tratamento explícito de células sem via como défice máximo, validado por cruzamento com população).</td></tr>
+        <tr><td>10 Jul 2026 (mesma sessão)</td><td>+11,3h: subdimensão Cobertura Operacional (bombeiros) — investigação de três fontes até encontrar uma completa (OSM 21%, dados.gov.pt arquivado/indisponível, Wikidata/SPARQL 466 quartéis), distance transform validado geometricamente, parâmetro fixo de distância máxima; combinação das duas subdimensões no Défice de Capacidade de Resposta; <strong>combinação final das três componentes do Índice V (marco: Índice V completo)</strong>; publicação via <code>/api/layers</code>.</td></tr>
       </tbody>
     </table>
 
