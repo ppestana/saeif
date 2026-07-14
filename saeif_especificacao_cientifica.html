@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAEIF — Especificação Científica · TerraDigital</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap');
+
+    :root {
+      --bg:          #0d1117;
+      --bg-panel:    #161b22;
+      --bg-card:     #1c2128;
+      --bg-code:     #0d1117;
+      --border:      #30363d;
+      --border-hi:   #444c56;
+      --text:        #c9d1d9;
+      --text-dim:    #8b949e;
+      --text-bright: #f0f6fc;
+      --fire:        #f85149;
+      --fire-dim:    #3d1f1e;
+      --amber:       #e3b341;
+      --amber-dim:   #2d2316;
+      --green:       #3fb950;
+      --green-dim:   #192c1e;
+      --blue:        #58a6ff;
+      --blue-dim:    #1a2742;
+      --purple:      #bc8cff;
+      --purple-dim:  #211d38;
+      --teal:        #39d353;
+      --accent:      #f85149;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 3rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .header-left { flex: 1; }
+    .project-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--fire);
+      border: 1px solid var(--fire-dim);
+      background: var(--fire-dim);
+      padding: .2rem .7rem;
+      border-radius: 2px;
+      margin-bottom: .75rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .project-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--fire);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+    .header h1 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: -.02em;
+      line-height: 1.2;
+    }
+    .header h1 span { color: var(--fire); }
+    .header-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: .5rem;
+      font-style: italic;
+    }
+    .header-meta {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      align-items: flex-end;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .header-meta span { white-space: nowrap; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .3rem .8rem;
+      border-radius: 2px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .status-dev  { background: var(--amber-dim); color: var(--amber); border: 1px solid #4a3a10; }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0 3rem;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+    }
+    nav a {
+      display: block;
+      padding: .75rem 1.25rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    nav a:hover { color: var(--text-bright); border-color: var(--border-hi); }
+
+    /* ── MAIN ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 3rem; }
+
+    /* ── SECTIONS ── */
+    .section {
+      margin-bottom: 3rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .section-header {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .section-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--fire);
+      border: 1px solid var(--fire-dim);
+      padding: .1rem .5rem;
+      border-radius: 2px;
+      background: var(--fire-dim);
+    }
+    .section-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: .02em;
+    }
+    .section-body { padding: 1.5rem; }
+
+    /* ── TABLES ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr { background: var(--bg-panel); }
+    thead th {
+      text-align: left;
+      padding: .6rem 1rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    tbody td {
+      padding: .6rem 1rem;
+      color: var(--text);
+      vertical-align: top;
+    }
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      background: var(--bg-code);
+      color: var(--blue);
+      padding: .1rem .4rem;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── CODE BLOCKS ── */
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+      margin: .75rem 0;
+    }
+    pre .c { color: var(--text-dim); font-style: italic; }
+    pre .k { color: var(--purple); }
+    pre .s { color: var(--green); }
+    pre .n { color: var(--blue); }
+    pre .f { color: var(--amber); }
+
+    /* ── ARCH BOX ── */
+    .arch-box {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── CARDS GRID ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+      margin: .75rem 0;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.25rem;
+    }
+    .card-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .4rem;
+    }
+    .card-value {
+      font-size: 13px;
+      color: var(--text-bright);
+      font-weight: 600;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: .25rem;
+    }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      padding: .15rem .55rem;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    .badge-fire    { background: var(--fire-dim);   color: var(--fire);   border: 1px solid #5a2020; }
+    .badge-amber   { background: var(--amber-dim);  color: var(--amber);  border: 1px solid #4a3a10; }
+    .badge-green   { background: var(--green-dim);  color: var(--green);  border: 1px solid #1e4a28; }
+    .badge-blue    { background: var(--blue-dim);   color: var(--blue);   border: 1px solid #1a3a6a; }
+    .badge-purple  { background: var(--purple-dim); color: var(--purple); border: 1px solid #3a2860; }
+    .badge-gray    { background: #1c2128;            color: var(--text-dim); border: 1px solid var(--border); }
+
+    /* ── FLOW STEPS ── */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      margin: .75rem 0;
+    }
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .85rem 1.25rem;
+    }
+    .flow-step-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--fire);
+      border: 1px solid var(--fire-dim);
+      background: var(--fire-dim);
+      padding: .1rem .45rem;
+      border-radius: 2px;
+      flex-shrink: 0;
+      margin-top: .15rem;
+    }
+    .flow-step-content h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+      margin-bottom: .25rem;
+    }
+    .flow-step-content p {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── ALERT/INFO BOXES ── */
+    .alert {
+      border-radius: 4px;
+      padding: .85rem 1.25rem;
+      font-size: 13px;
+      margin: .75rem 0;
+      border-left: 3px solid;
+    }
+    .alert-fire   { background: var(--fire-dim);   border-color: var(--fire);   color: #f8b4b1; }
+    .alert-amber  { background: var(--amber-dim);  border-color: var(--amber);  color: #e8cf8a; }
+    .alert-blue   { background: var(--blue-dim);   border-color: var(--blue);   color: #9ecbff; }
+    .alert-green  { background: var(--green-dim);  border-color: var(--green);  color: #85e89d; }
+
+    /* ── SCORE TABLE ── */
+    .score-row { display: flex; gap: 0; margin: .75rem 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .score-cell {
+      flex: 1;
+      padding: 1rem;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .score-cell:last-child { border-right: none; }
+    .score-cell .score-num { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; margin-bottom: .3rem; }
+    .score-cell .score-label { font-size: 12px; color: var(--text-dim); }
+    .score-cell .score-rec { font-size: 11px; color: var(--text-dim); margin-top: .4rem; font-style: italic; }
+    .score-baixo  { background: var(--green-dim);  }  .score-baixo  .score-num { color: var(--green); }
+    .score-medio  { background: var(--amber-dim);  }  .score-medio  .score-num { color: var(--amber); }
+    .score-alto   { background: #2a2210; }             .score-alto   .score-num { color: #f0a060; }
+    .score-critico{ background: var(--fire-dim);   }  .score-critico .score-num { color: var(--fire); }
+
+    /* ── SLA TABLE ── */
+    .sla-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: .75rem 0; }
+    .sla-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .85rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .sla-desc { font-size: 13px; color: var(--text); }
+    .sla-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green);
+      white-space: nowrap;
+    }
+
+    /* ── PHASE TIMELINE ── */
+    .phases { display: flex; flex-direction: column; gap: .75rem; margin: .75rem 0; }
+    .phase {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.25rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .phase-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--fire);
+      min-width: 2rem;
+      line-height: 1;
+      margin-top: .2rem;
+    }
+    .phase-content { flex: 1; }
+    .phase-title { font-size: 14px; font-weight: 600; color: var(--text-bright); margin-bottom: .35rem; }
+    .phase-desc  { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: .25rem .75rem;
+      border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+    .badge-pending { background: var(--amber-dim); color: var(--amber); border: 1px solid #4a3a10; }
+    .badge-done    { background: var(--green-dim);  color: var(--green);  border: 1px solid #1e4a28; }
+    .badge-live    { background: var(--green-dim);  color: var(--green);  border: 1px solid #1e4a28; }
+
+    /* ── INTEGRATION MATRIX ── */
+    .int-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; margin: .75rem 0; }
+    .int-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .85rem 1rem;
+    }
+    .int-system { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: var(--fire); margin-bottom: .35rem; text-transform: uppercase; }
+    .int-role { font-size: 12px; color: var(--text-dim); }
+    .int-arrow { color: var(--text-dim); margin: 0 .3rem; }
+
+    /* ── MISC ── */
+    h3 { font-size: 13px; font-weight: 600; color: var(--text-bright); margin: 1.25rem 0 .6rem; }
+    p  { font-size: 13px; color: var(--text); margin-bottom: .75rem; line-height: 1.7; }
+    ul { margin: .5rem 0 .75rem 1.5rem; font-size: 13px; color: var(--text); }
+    li { margin-bottom: .3rem; }
+    .dimtext { color: var(--text-dim); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+    @media (max-width: 768px) {
+      .header { flex-direction: column; padding: 1.5rem; }
+      .header-meta { align-items: flex-start; }
+      .container { padding: 1.5rem; }
+      nav { padding: 0 1rem; }
+      .two-col, .three-col, .sla-grid { grid-template-columns: 1fr; }
+      .score-row { flex-direction: column; }
+      .score-cell { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+<body>
+
+<!-- ─── HEADER ─── -->
+<div class="header">
+  <div class="header-left">
+    <div class="project-badge">TerraDigital · Projecto 02</div>
+    <h1><span>SAEIF</span> — Especificação Científica</h1>
+    <div class="header-sub">Sistema de Alerta e Encaminhamento Imediato em Incêndios Florestais — modelo científico consolidado<br>
+      <em>O que cada índice mede, porquê, e com que evidência — testável sem recorrer ao histórico de conversas</em>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="status-pill" style="background:var(--amber-dim);color:var(--amber);border:1px solid #4a3a1e;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:2px;">◐ Em construção</span>
+    <span>Documento-base 3 de 3 (com <code>saeif_visao_2.0.html</code> e <code>saeif_architecture.html</code>)</span>
+    <span>Iniciado: 10 Jul 2026</span>
+  </div>
+</div>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <a href="#proposito">Propósito</a>
+  <a href="#principios">Princípios Gerais</a>
+  <a href="#indice-i">Índice I</a>
+  <a href="#indice-p">Índice P</a>
+  <a href="#indice-v">Índice V</a>
+  <a href="#camada-m">Camada M</a>
+  <a href="#integracao">Modelo de Integração</a>
+  <a href="#glossario">Glossário de Decisões</a>
+</nav>
+
+<!-- ─── MAIN ─── -->
+<div class="container">
+
+  <!-- 00. PROPOSITO -->
+  <div class="section" id="proposito">
+    <div class="section-header">
+      <span class="section-num">00</span>
+      <span class="section-title">Propósito deste documento</span>
+    </div>
+    <div class="section-body">
+      <p><strong>ESBOÇO — estrutura confirmada com Pedro Pestana em 10 Jul 2026, conteúdo por preencher.</strong></p>
+      <p>Este documento consolida o modelo científico do SAEIF 2.0 — as centenas de decisões metodológicas tomadas ao longo do desenvolvimento (normalização, pesos, validação, limitações), hoje dispersas por dezenas de subsecções do <code>saeif_architecture.html</code> e pelo histórico de sessões de trabalho.</p>
+      <p><strong>Critério de "fechado":</strong> um índice está cientificamente fechado quando é possível escrever a sua página neste documento sem recorrer ao histórico de conversas — só à evidência e às decisões já registadas.</p>
+      <p><strong>Distinção face aos outros dois documentos-base:</strong></p>
+      <ul>
+        <li><code>saeif_visao_2.0.html</code> — o <em>porquê estratégico</em> (motivação, roadmap, maturidade)</li>
+        <li><code>saeif_architecture.html</code> — o <em>como técnico</em> (implementação, scripts, procedimentos, infraestrutura)</li>
+        <li><code>saeif_especificacao_cientifica.html</code> (este documento) — o <em>quê e porquê metodológico</em> (definição, variáveis, normalização, pesos, validação, limitações — por índice, sem detalhe de implementação)</li>
+      </ul>
+      <p class="dimtext">Nota: este documento não substitui a arquitectura — remete para lá sempre que o detalhe técnico (nome de script, comando exacto) for relevante. Aqui fica só a substância científica.</p>
+    </div>
+  </div>
+
+  <!-- 00b. PRINCIPIOS GERAIS -->
+  <div class="section" id="principios">
+    <div class="section-header">
+      <span class="section-num">00b</span>
+      <span class="section-title">Princípios Gerais (transversais a todos os índices)</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">POR PREENCHER — compilar a partir de <code>saeif_architecture.html</code>:</p>
+      <ul>
+        <li>Princípio da Separação Analítica (§16 da arquitectura) — dados nunca reescalados para visualização</li>
+        <li>Princípio de consistência de resolução dentro de cada componente (§15.16 — motivou o adiamento da escolaridade)</li>
+        <li>Grelha oficial do SAEIF: 250m, EPSG:3763, extensão ibérica (<code>config/grid_spec.py</code>) — porquê 250m ("princípio da variável limitante"), porquê extensão ibérica (fogos não respeitam fronteiras)</li>
+        <li>Convenção de normalização: método escolhido por variável a partir da distribuição real observada, nunca por analogia entre variáveis (percentil quando há outliers de amostra pequena a proteger; min-max/linear quando o extremo é o próprio fenómeno a medir)</li>
+        <li>Convenção de pesos: peso igual como posição por omissão na ausência de evidência forte para desequilíbrio; pesos informados por evidência (ex. risco relativo de mortalidade) documentados como tal, nunca apresentados como derivação matemática exacta</li>
+        <li>Convenção de metadados de proveniência (<code>.meta.yaml</code>) para toda fonte de dados externa</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 01. INDICE I -->
+  <div class="section" id="indice-i">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">Índice I — Suscetibilidade de Ignição</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">POR PREENCHER — compilar a partir de <code>saeif_architecture.html</code> §15.9-15.10, 15.17:</p>
+      <ul>
+        <li><strong>Definição:</strong> o que mede, que pergunta responde ("onde é mais provável surgir um foco?")</li>
+        <li><strong>Variáveis:</strong> 4747 centroides de <code>areas_ardidas</code> (ICNF, 2020-2025), filtro <code>causa_tipo</code> (excluídas Natural e Reacendimento, justificação)</li>
+        <li><strong>Método:</strong> KDE gaussiano sobre grelha 250m, bandwidth 3500m (não 2km — corrigir imprecisão)</li>
+        <li><strong>Escolha do bandwidth:</strong> validação cruzada leave-one-out, curva com máximo interior real (não monótona)</li>
+        <li><strong>Validação:</strong> holdout temporal (treino 2020-2023, teste 2024-2025), AUC de curva de concentração 0,86 — interpretação do número</li>
+        <li><strong>Limitações:</strong> centroides como proxy de ignição (mais fraco em fogos grandes/alongados); nenhuma ponderação por <code>causa_tipo</code> no índice oficial (justificação: correlação espacial baixa entre causas, sem base quantitativa para pesos)</li>
+        <li><strong>Camadas complementares:</strong> KDE por causa (analíticas, não entram no índice oficial)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 02. INDICE P -->
+  <div class="section" id="indice-p">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">Índice P — Potencial de Propagação</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">POR PREENCHER — compilar a partir de <code>saeif_architecture.html</code> §15.11, e <strong>actualizar após a Fase 2 do roadmap (transformar em raster de superfície)</strong>:</p>
+      <ul>
+        <li><strong>Definição:</strong> o que mede ("se houver ignição, quão facilmente o fogo se propaga?")</li>
+        <li><strong>Variáveis:</strong> WorldCover (uso do solo) + NDVI (Sentinel-2, dinâmico) + declive (Copernicus DEM GLO-30) + bónus de área ardida</li>
+        <li><strong>Fórmula:</strong> <code>0.5·WorldCover + 0.3·NDVI + 0.2·declive</code> + bónus — porquê estes pesos (herdados do score original, não recalibrados de raiz — assinalar honestamente como limitação)</li>
+        <li><strong>Destilação:</strong> extraído como <code>get_indice_p()</code>, campo <code>indice_p</code> explícito, inconsistência histórica corrigida (risco_estrutural desalinhado do score desde Maio 2026)</li>
+        <li><strong>Estado actual:</strong> calculado por ponto (por alerta), <em>não</em> como superfície de grelha contínua — <strong>bloqueador conhecido para a integração I/P/V/M</strong></li>
+        <li><strong>Próximo passo:</strong> gerar <code>indice_p.tif</code> na grelha oficial 250m, aplicando a mesma fórmula a cada célula (não só aos pontos de alerta) — permite finalmente publicar via <code>/api/layers</code> e combinar com I/V/M</li>
+        <li><strong>Validação:</strong> nenhuma validação estatística formal ainda feita (diferente de I) — considerar se/como validar após rasterização</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 03. INDICE V -->
+  <div class="section" id="indice-v">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Índice V — Vulnerabilidade</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">POR PREENCHER — compilar a partir de <code>saeif_architecture.html</code> §15.12-15.21 (secção mais extensa, considerar subdividir em Exposição / Sensibilidade / Capacidade de Resposta como subsecções próprias):</p>
+      <ul>
+        <li><strong>Definição:</strong> modelo PREFER (Bento-Gonçalves et al. 2014) — "se arder, quais as consequências?"</li>
+        <li><strong>Exposição:</strong> GHS-POP + GHS-BUILT-S, percentil 99, correlação verificada (r=0,57/ρ=0,77, sem redundância)</li>
+        <li><strong>Sensibilidade:</strong> estrutura hierárquica (Demográfica: idosos 0,65+crianças 0,35, evidência FEMA/USFA; Social: isolamento, BGRI); min-max, não percentil (justificação a partir da distribuição real); escolaridade adiada (inconsistência de resolução)</li>
+        <li><strong>Capacidade de Resposta (défice):</strong> estrutura hierárquica (Acessibilidade: rede viária OSM ponderada por classe; Cobertura Operacional: distância a 466 quartéis, Wikidata); reformulação como "défice" para manter semântica aditiva</li>
+        <li><strong>Combinação final:</strong> peso 1/3 cada componente — <em>decisão provisória, sem base empírica forte</em>, assinalar explicitamente</li>
+        <li><strong>Validação: NENHUMA feita ainda</strong> — bloqueador identificado nesta sessão (Fase 3 do roadmap proposto). Considerar proxies (não há "verdade absoluta" de vulnerabilidade) — que dados existem para validar contra? (ex. danos registados em incêndios passados, se existirem)</li>
+        <li><strong>Limitações conhecidas:</strong> isolamento não distingue idade; máximo real do índice combinado 0,716 (não 1,0 — Princípio da Separação Analítica)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 04. CAMADA M -->
+  <div class="section" id="camada-m">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">Camada M — Meteorologia Dinâmica</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">POR PREENCHER — esta camada tem o estatuto menos consolidado dos quatro. Existe operacionalmente (FWI, vento, IPMA/EFFIS) mas nunca foi formalmente "fechada" como as outras:</p>
+      <ul>
+        <li><strong>Definição:</strong> "as condições de hoje agravam ou aliviam o risco?" — única camada dinâmica (muda diariamente), as outras três são estruturais</li>
+        <li><strong>Variáveis:</strong> FWI (IPMA/EFFIS), vento (velocidade+direcção), temperatura, humidade</li>
+        <li><strong>Estado actual:</strong> hoje misturada dentro do score (<code>fwi_norm</code> 30% + <code>vento_factor</code> 20%) — <strong>ainda não separada como camada M própria, nem rasterizada numa grelha contínua</strong></li>
+        <li><strong>Pendente:</strong> decidir se M é um raster diário completo (interpolação espacial das estações IPMA) ou permanece um valor pontual por alerta — decisão com implicações directas no modelo de integração (secção 05)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 05. MODELO DE INTEGRACAO -->
+  <div class="section" id="integracao">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">Modelo de Integração — Risco = f(I, P, V, M)</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">POR DECIDIR — a decisão mais importante ainda em aberto no SAEIF 2.0. Não implementar antes de Índice P estar rasterizado e Índice V estar validado (ver secção 00, critério de "fechado").</p>
+      <p><strong>A pergunta a responder primeiro não é "que pesos", é "o que significa risco".</strong> Quatro hipóteses em consideração (10 Jul 2026, consultoria SIG externa):</p>
+      <ul>
+        <li><strong>Modelo aditivo</strong> — <code>R = w_I·I + w_P·P + w_V·V + w_M·M</code>. Simples, transparente, mas assume compensação total entre factores (ex. baixa vulnerabilidade "compensa" alta suscetibilidade de ignição — fisicamente questionável).</li>
+        <li><strong>Modelo multiplicativo</strong> — <code>R = I × P × V × M</code>. Intuitivo (risco zero se qualquer factor for zero), mas extremamente sensível a valores baixos em qualquer componente.</li>
+        <li><strong>Modelo híbrido</strong> — ex. <code>R = (I × M) × (P + V)</code>. Tenta equilibrar as duas lógicas anteriores.</li>
+        <li><strong>Modelo hierárquico/causal</strong> — Ignição → Propagação → Exposição → Impacto esperado, como cadeia causal sequencial, não soma de factores paralelos. Argumento: um incêndio real segue esta sequência causal; um modelo que a represente explicitamente pode ser mais correto fisicamente e cientificamente mais diferenciador do que um índice composto convencional.</li>
+      </ul>
+      <p><strong>Recomendação registada (10 Jul 2026):</strong> dedicar uma sessão só ao desenho conceptual deste modelo, sem escrever código — a decisão determina não só a implementação, mas se o SAEIF é "mais um índice composto" ou um modelo que representa explicitamente a cadeia causal de um incêndio, potencialmente a maior diferenciação científica do projecto.</p>
+    </div>
+  </div>
+
+  <!-- 06. GLOSSARIO DE DECISOES -->
+  <div class="section" id="glossario">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <span class="section-title">Glossário de Decisões Metodológicas</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">POR PREENCHER — tabela de referência rápida, uma linha por decisão, com link para a secção correspondente. Exemplos do que deve conter (extraído do histórico de sessões):</p>
+      <table>
+        <thead><tr><th>Decisão</th><th>Índice</th><th>Resumo da justificação</th></tr></thead>
+        <tbody>
+          <tr><td>Percentil 99 na Exposição</td><td>V</td><td>Assimetria extrema (18,84) — outliers genuínos de amostra pequena</td></tr>
+          <tr><td>Min-max na Sensibilidade</td><td>V</td><td>Assimetria moderada (0,65) após ponderação de confiança — extremo já não é ruído</td></tr>
+          <tr><td>Sem percentil na Capacidade de Resposta</td><td>V</td><td>Distância é variável física contínua, extremo é o próprio fenómeno a medir</td></tr>
+          <tr><td>Abandono da regressão de Nunes et al. 2013</td><td>I</td><td>Fórmula publicada não reproduzível a partir dos dados do próprio artigo</td></tr>
+          <tr><td>Grelha de 250m</td><td>Geral</td><td>Princípio da variável limitante (consultoria SIG)</td></tr>
+          <tr><td>Bandwidth de 3500m (KDE)</td><td>I</td><td>Validação cruzada leave-one-out, máximo interior real na curva</td></tr>
+          <tr><td>Ponderação por confiança estatística</td><td>V (Sensibilidade)</td><td>Proporções sobre denominadores pequenos são instáveis (small area estimation)</td></tr>
+          <tr><td>[continuar a preencher...]</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /container -->
+</body>
+</html>
