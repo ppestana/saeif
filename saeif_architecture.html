@@ -484,6 +484,7 @@
     <span style="color:var(--green)">Infraestrutura /api/layers — I e V publicados: 10 Jul 2026</span>
     <span style="color:var(--amber)">Índice V — Défice de Acessibilidade (OSM, pesos por fclass): 10 Jul 2026</span>
     <span style="color:var(--green)">Índice V COMPLETO — 3 componentes PREFER combinadas: 10 Jul 2026</span>
+    <span style="color:var(--green)">Catálogo STAC v1.0.0 + COG — SAEIF explorável externamente: 16 Jul 2026</span>
   </div>
 </div>
 
@@ -1023,6 +1024,18 @@ CREATE INDEX ON alertas (criado_em, categoria);
             <td><span class="badge badge-green">GET</span></td>
             <td><code>/layers/{id}.png</code></td>
             <td>Imagem PNG de uma camada (fora do namespace <code>/api</code>; usar bounds de <code>/api/layers/{id}</code> para posicionar)</td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/layers/{id}.tif</code></td>
+            <td>Cloud Optimized GeoTIFF (dados reais, não a visualização colorida) de uma camada — asset STAC, consumível por GeoLibre/QGIS/qualquer cliente COG</td>
+            <td>Pública</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">GET</span></td>
+            <td><code>/stac/*</code></td>
+            <td>Catálogo STAC estático v1.0.0 (<code>catalog.json</code>, <code>collections/saeif-indices/collection.json</code>, <code>collections/saeif-indices/items/{id}.json</code>) — gerado por <code>scripts/gerar_stac.py</code>, ver secção 15.23</td>
             <td>Pública</td>
           </tr>
         </tbody>
@@ -2619,6 +2632,32 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
       <strong>Backup de produtos geoespaciais activo e validado.</strong> 51GB livres em disco. <strong>Pendente:</strong> considerar sincronização automática entre <code>scripts/backup_saeif.sh</code> e <code>/usr/local/bin/backup_saeif.sh</code> (ex. link simbólico) para eliminar o risco de dessincronização manual; considerar backup fora do servidor (off-site) para os produtos geoespaciais, actualmente só protegidos localmente.
     </div>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.23 — Catálogo STAC e COG: SAEIF explorável externamente</h3>
+    <p>Motivação (16 Jul 2026): pergunta de Pedro Pestana sobre se o GeoLibre (plataforma SIG open-source, <code>opengeos/GeoLibre</code>) interessaria como interface do SAEIF. Investigação concluiu que não substitui a interface operacional (Leaflet + WebSocket + alertas), mas revelou uma pergunta mais interessante: expor o SAEIF de forma <em>explorável por qualquer cliente SIG externo</em> (GeoLibre, QGIS, <code>pystac</code>), não só pelo nosso frontend. Três caminhos considerados — COG isolado, WMS, STAC — escolhido <strong>STAC (SpatioTemporal Asset Catalog, v1.0.0)</strong>: um standard aberto da comunidade geoespacial, coerente com o padrão já seguido no projecto de reutilizar standards existentes (OSM, Wikidata, INE) em vez de inventar formatos próprios.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Confirmação da especificação antes de implementar</h4>
+    <p>Estrutura STAC confirmada por pesquisa directa (não assumida de memória, dado ser uma norma formal): <strong>Catalog</strong> (raiz, liga a Collections/Items), <strong>Collection</strong> (agrupa Items com metadados partilhados — licença, extensão espacial/temporal), <strong>Item</strong> (GeoJSON Feature por asset, com <code>bbox</code>, <code>geometry</code>, <code>properties.datetime</code>, <code>assets</code>). Decisão de implementação: <strong>catálogo estático</strong> — só ficheiros JSON servidos por HTTP, sem API dinâmica — a própria especificação recomenda esta via como barreira de entrada mais baixa, e é coerente com o padrão já usado em <code>/api/layers</code> (ficheiros <code>.json</code> por camada).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">COG (Cloud Optimized GeoTIFF) — o asset recomendado pelo STAC</h4>
+    <p>A norma desaconselha expor só visualizações coloridas (PNG) como assets — recomenda dados reais, idealmente em COG. <code>scripts/publicar_camada.py</code> estendido: a mesma reprojecção para EPSG:4326 já usada para o PNG passou a alimentar também um <code>gdal_translate -of COG</code> (compressão DEFLATE, blocksize 512), gerado a partir dos <em>valores reais</em> (não da visualização colorida). Confirmado como COG válido (não um GeoTIFF comum) via metadados <code>IMAGE_STRUCTURE</code> (<code>LAYOUT=COG</code>) antes de aplicar às 4 camadas reais.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Geração do catálogo — <code>scripts/gerar_stac.py</code></h4>
+    <p>Lê todos os <code>data/layers/*.json</code> já publicados (nenhuma duplicação de fonte de verdade) e constrói, em <code>data/stac/</code>: um <code>catalog.json</code> (raiz), uma <code>collection.json</code> única (<code>saeif-indices</code>, com extensão espacial/temporal calculada a partir das camadas reais, não fixada à mão), e um <code>Item</code> por camada (com dois assets: <code>data</code> = COG, <code>thumbnail</code> = PNG). Uso: <code>python3 scripts/gerar_stac.py &lt;base_url&gt;</code> — corre-se novamente sempre que uma camada nova for publicada.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Validação</h4>
+    <p>O ambiente de desenvolvimento não teve acesso de rede ao <code>schemas.stacspec.org</code> (validação oficial via <code>pystac[validation]</code> falhou por essa razão, não por erro de estrutura) — validado manualmente contra a lista de campos obrigatórios confirmada na especificação, para os três tipos de objecto (Catalog, Collection, Item), antes de aplicar aos dados reais. Confirmado em produção: <code>curl /stac/catalog.json</code>, <code>/stac/collections/saeif-indices/collection.json</code> (extensão espacial e temporal correctas, calculadas das 4 camadas reais) e <code>/layers/indice_v.tif</code> (COG real, 6,5MB, HTTP 200).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Exposição via API — edição aditiva de <code>api/main.py</code></h4>
+    <p>Mesma metodologia de sempre (âncora + backup + <code>ast.parse</code> + <code>TestClient</code> antes de aplicar em produção): novo endpoint <code>GET /layers/{id}.tif</code> (serve o COG, mesma validação de segurança do endpoint <code>.png</code> já existente) e montagem de <code>/stac</code> como directório estático (<code>StaticFiles</code>, apontando para <code>/data/stac/</code>), inserida antes do <code>mount("/", ...)</code> geral para garantir prioridade de rota. Testado com 5 chamadas reais via <code>TestClient</code> (COG, catálogo, colecção, item, e confirmação de que <code>/api/layers</code> pré-existente continua intacto) antes de aplicar.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Incidente durante o deploy — ficheiro não commitado</h4>
+    <p>O <code>git pull</code> falhou por <code>scripts/publicar_camada.py</code> já existir no servidor sem estar sob controlo de versão (versão de sessão anterior, nunca commitada). Confirmado por <code>diff</code> contra o `git show origin/main:...` que era apenas a versão antiga do script — movido para backup local e descartado sem perda de informação real.</p>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (16 Jul 2026)</strong><br>
+      <strong>SAEIF explorável externamente via STAC v1.0.0.</strong> 4 camadas publicadas com COG + catálogo completo, confirmado em produção real (<code>/stac/catalog.json</code>, <code>/stac/collections/saeif-indices/collection.json</code>, 4 Items, <code>/layers/{id}.tif</code>). <strong>Pendente:</strong> validação formal contra o JSON Schema oficial (bloqueada por falta de acesso de rede ao <code>schemas.stacspec.org</code> no ambiente de desenvolvimento — tentar a partir do servidor, que tem acesso de rede mais aberto); testar consumo real por um cliente STAC (GeoLibre, QGIS) — só testado programaticamente até agora; publicar o Índice P quando existir como raster de superfície (secção 15.11); regenerar o catálogo automaticamente sempre que uma camada for publicada (hoje é um passo manual).
+    </div>
+
   </div>
 </div><!-- /container -->
 
@@ -2688,20 +2727,20 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
       </tbody>
     </table>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 10 Jul 2026)</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 16 Jul 2026)</h3>
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>30.4</td><td>55</td><td>1672.00</td></tr>
-        <tr><td>Design</td><td>20.0</td><td>55</td><td>1100.00</td></tr>
-        <tr><td>Gestão</td><td>5.0</td><td>40</td><td>200.00</td></tr>
-        <tr><td>Programação</td><td>107.8</td><td>45</td><td>4851.00</td></tr>
-        <tr><td>Testes</td><td>21.2</td><td>35</td><td>742.00</td></tr>
-        <tr><td>Documentação</td><td>34.9</td><td>30</td><td>1047.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>219.3</td><td>—</td><td>9612.00</td></tr>
+        <tr><td>Análise</td><td>31.4</td><td>55</td><td>1727.00</td></tr>
+        <tr><td>Design</td><td>20.3</td><td>55</td><td>1116.50</td></tr>
+        <tr><td>Gestão</td><td>6.3</td><td>40</td><td>252.00</td></tr>
+        <tr><td>Programação</td><td>110.2</td><td>45</td><td>4959.00</td></tr>
+        <tr><td>Testes</td><td>23.4</td><td>35</td><td>819.00</td></tr>
+        <tr><td>Documentação</td><td>35.9</td><td>30</td><td>1077.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>227.5</td><td>—</td><td>9950.50</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~49% das horas), reflectindo a natureza do projecto até agora. Esta actualização cobre trabalho previamente não contabilizado (lacuna própria a assinalar): criação do terceiro documento-base (<code>saeif_especificacao_cientifica.html</code>), e registo em todos os documentos-base de duas fontes externas partilhadas por Pedro Pestana — o artigo académico Oliveira et al. (ligações concretas aos Índices I, P e ao modelo de integração) e o produto EUMETSAT/LSA SAF MTG Fire Radiative Power (fonte candidata futura para o Índice P, via publicação LinkedIn sobre o incêndio de Vouzela).</p>
+    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~48% das horas), reflectindo a natureza do projecto até agora. Esta actualização (16 Jul 2026, retomada após 6 dias sem sessão) cobre: manutenção de infraestrutura do servidor (actualização de kernel e stack Docker, reinício controlado, verificação pós-reinício dos 6 containers em produção — SAEIF, Ponte Digital, CAL); e a construção do catálogo STAC v1.0.0 com suporte a COG, tornando o SAEIF explorável por clientes SIG externos (GeoLibre, QGIS, <code>pystac</code>) — motivada por uma pergunta de Pedro Pestana sobre o projecto GeoLibre.</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2717,6 +2756,8 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+11,3h: subdimensão Cobertura Operacional (bombeiros) — investigação de três fontes até encontrar uma completa (OSM 21%, dados.gov.pt arquivado/indisponível, Wikidata/SPARQL 466 quartéis), distance transform validado geometricamente, parâmetro fixo de distância máxima; combinação das duas subdimensões no Défice de Capacidade de Resposta; <strong>combinação final das três componentes do Índice V (marco: Índice V completo)</strong>; publicação via <code>/api/layers</code>.</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+3,2h: auditoria de infraestrutura — limpeza de disco (820MB, .zip redundante do OSM); identificação e correcção de lacuna real nos backups (só cobriam a base de dados, nenhum produto geoespacial estava protegido); extensão do <code>backup_saeif.sh</code>, testado e validado em execução manual real.</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+6,1h (retroactivo, não contabilizado em tempo real): criação do terceiro documento-base (<code>saeif_especificacao_cientifica.html</code>) a pedido de Pedro Pestana, seguindo proposta de consultoria externa (Especificação Científica antes da integração I/P/V/M); análise e registo do artigo Oliveira et al. (ligações concretas a Índices I, P, modelo de integração); análise e registo de publicação LinkedIn sobre engenharia florestal (contexto de mercado, distinto de fundamentação académica); análise e registo do produto EUMETSAT/LSA SAF MTG-FRP (fonte candidata futura, via publicação LinkedIn sobre o incêndio de Vouzela).</td></tr>
+        <tr><td>16 Jul 2026</td><td>+1,0h: manutenção de infraestrutura do servidor — actualização de kernel (117→134) e stack Docker completa, reinício controlado após confirmação de backups recentes e políticas de reinício automático, checklist pós-reinício dos 6 containers em produção (SAEIF, Ponte Digital, CAL).</td></tr>
+        <tr><td>16 Jul 2026 (mesma sessão)</td><td>+6,2h: catálogo STAC v1.0.0 (estático) + suporte a COG — motivado por pergunta sobre o GeoLibre; especificação STAC confirmada por pesquisa antes de implementar; <code>scripts/publicar_camada.py</code> estendido para gerar COG a par do PNG; <code>scripts/gerar_stac.py</code> (novo); validação manual contra campos obrigatórios (validação oficial via schema bloqueada por falta de acesso de rede no ambiente de desenvolvimento); exposição via API (<code>/layers/{id}.tif</code>, <code>/stac/*</code>), testada com TestClient; 4 camadas republicadas com COG; catálogo confirmado em produção real; incidente de deploy (ficheiro não commitado) identificado e resolvido sem perda de informação.</td></tr>
       </tbody>
     </table>
 
