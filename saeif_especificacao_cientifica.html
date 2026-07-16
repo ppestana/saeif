@@ -485,6 +485,7 @@
   <a href="#camada-m">Camada M</a>
   <a href="#integracao">Modelo de Integração</a>
   <a href="#glossario">Glossário de Decisões</a>
+  <a href="#referencias">Referências Bibliográficas</a>
 </nav>
 
 <!-- ─── MAIN ─── -->
@@ -545,6 +546,7 @@
         <li><strong>Validação:</strong> holdout temporal (treino 2020-2023, teste 2024-2025), AUC de curva de concentração 0,86 — interpretação do número</li>
         <li><strong>Limitações:</strong> centroides como proxy de ignição (mais fraco em fogos grandes/alongados); nenhuma ponderação por <code>causa_tipo</code> no índice oficial (justificação: correlação espacial baixa entre causas, sem base quantitativa para pesos)</li>
         <li><strong>Camadas complementares:</strong> KDE por causa (analíticas, não entram no índice oficial)</li>
+        <li><strong>Suporte bibliográfico à validação:</strong> Oliveira et al. (ver §07, referência [1]) citam os limiares convencionais de qualidade de curva ROC — 0,7 aceitável, 0,8 boa, 0,9 excelente — para discriminação entre ocorrência/não-ocorrência de incêndio. O nosso AUC de 0,86 (curva de concentração, holdout temporal) situa-se na categoria "boa", com esta referência académica a sustentar a leitura, não só a nossa própria interpretação do número.</li>
       </ul>
     </div>
   </div>
@@ -565,6 +567,9 @@
         <li><strong>Estado actual:</strong> calculado por ponto (por alerta), <em>não</em> como superfície de grelha contínua — <strong>bloqueador conhecido para a integração I/P/V/M</strong></li>
         <li><strong>Próximo passo:</strong> gerar <code>indice_p.tif</code> na grelha oficial 250m, aplicando a mesma fórmula a cada célula (não só aos pontos de alerta) — permite finalmente publicar via <code>/api/layers</code> e combinar com I/V/M</li>
         <li><strong>Validação:</strong> nenhuma validação estatística formal ainda feita (diferente de I) — considerar se/como validar após rasterização</li>
+        <li><strong>Oportunidade de refinamento (bibliografia, §07 [1]):</strong> Oliveira et al. encontram, por modelos lineares generalizados ponderados, uma hierarquia empírica de propensão a arder por uso do solo — matos &gt; povoamentos mistos &gt; resinosas &gt; folhosas &gt; sem combustível/culturas permanentes (efeito negativo). Vale a pena verificar se a classificação WorldCover usada no Índice P se mapeia para esta hierarquia, em vez de assumir os pesos herdados do score original sem recalibração.</li>
+        <li><strong>Questão em aberto (bibliografia, §07 [1]):</strong> o mesmo estudo encontra que maior distância a estradas está associada a maior proporção de área ardida — a mesma variável física que usámos na Capacidade de Resposta do Índice V (Défice de Acessibilidade), mas enquadrada ali como fator de propagação/severidade, não de resposta social. Considerar se a distância a vias deveria também entrar no Índice P (propagação), não só no V (resposta) — decisão a tomar ao fechar este índice, não decidida ainda.</li>
+        <li><strong>Fonte candidata futura — intensidade real de fogo (bibliografia, §07 [4]):</strong> produto <strong>MTG Fire Radiative Power (FRP)</strong>, EUMETSAT/LSA SAF, satélite geoestacionário MTG-I1 (sensor FCI) — deteções a cada 10 min (2,5 min em modo rápido sobre a Europa), resolução 1km, dados retroativos desde 1 Jan 2025, estado de <em>demonstração</em> (validação científica em curso, disponibilidade operacional não garantida). Endpoint WMS de demonstração hospedado pelo <strong>IPMA</strong> (<code>adaguc.lsasvcs.ipma.pt</code>) — já uma fonte SAEIF existente, reduzindo a distância entre "produto interessante" e "fonte integrável". Poderia, no futuro, enriquecer o Índice P com um fator de <em>intensidade observada real</em> (FRP/FRE), não só potencial de propagação teórico — distinto do FRP pontual já usado no score (<code>frp &gt; 100 → ×1.20</code>), que vem do FIRMS (órbita polar, cadência muito mais baixa). Termos de acesso (registo LSA SAF) não confirmados nesta sessão.</li>
       </ul>
     </div>
   </div>
@@ -622,6 +627,8 @@
         <li><strong>Modelo hierárquico/causal</strong> — Ignição → Propagação → Exposição → Impacto esperado, como cadeia causal sequencial, não soma de factores paralelos. Argumento: um incêndio real segue esta sequência causal; um modelo que a represente explicitamente pode ser mais correto fisicamente e cientificamente mais diferenciador do que um índice composto convencional.</li>
       </ul>
       <p><strong>Recomendação registada (10 Jul 2026):</strong> dedicar uma sessão só ao desenho conceptual deste modelo, sem escrever código — a decisão determina não só a implementação, mas se o SAEIF é "mais um índice composto" ou um modelo que representa explicitamente a cadeia causal de um incêndio, potencialmente a maior diferenciação científica do projecto.</p>
+      <p><strong>Um possível quarto elo — "Impacto esperado" (bibliografia, §07 [1]):</strong> Oliveira et al. modelam, para além de ocorrência/propagação, a <em>mortalidade pós-fogo</em> de árvores a partir de variáveis biométricas (altura, diâmetro) e de dano do fogo (espessura de casca ardida, altura de queima), com engenharia inversa para reconstituir parcelas não inventariadas antes do incêndio. O SAEIF não tem hoje nenhuma camada equivalente a este "Impacto" — mas a cadeia causal proposta (Ignição → Propagação → Exposição → <strong>Impacto</strong>) sugere que possa ser um componente futuro, com precedente metodológico já testado em Portugal.</p>
+      <p><strong>Tensão a resolver no modelo causal (bibliografia, §07 [1]):</strong> o mesmo estudo encontra que maior densidade populacional está associada a <em>menor</em> proporção de área ardida (mais vigilância/recursos, menos continuidade de combustível) — não contradiz a Exposição do Índice V (que mede quem está exposto <em>se</em> arder, não a probabilidade de arder), mas é um lembrete de que a população pode ter um efeito protetor na propagação e um efeito agravante na vulnerabilidade ao mesmo tempo. Um modelo aditivo simples não capta esta tensão; um modelo hierárquico/causal, potencialmente sim.</p>
     </div>
   </div>
 
@@ -646,6 +653,36 @@
           <tr><td>[continuar a preencher...]</td><td></td><td></td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- 07. REFERENCIAS -->
+  <div class="section" id="referencias">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <span class="section-title">Referências Bibliográficas</span>
+    </div>
+    <div class="section-body">
+      <p class="dimtext">Literatura académica e fontes técnicas que fundamentam decisões metodológicas concretas do SAEIF — não uma bibliografia geral, só o que foi efectivamente usado para justificar uma escolha (ver ligações em §01, §02 e §05).</p>
+      <ol>
+        <li>
+          Oliveira, M. M.; Natário, I.; Marques, S.; Garcia-Gonzalo, J.; Botequim, B.; Borges, J. G.; Tomé, M.; Pereira, J. M.; Tomé, J.; Demétrio, C. G. B. —
+          <em>Aplicações Estatísticas em Análise de Catástrofes Naturais: O Caso da Ocorrência e Impacto dos Incêndios sobre a Floresta em Portugal</em>,
+          capítulo em <em>Matemática do Planeta Humano</em> (Vol. IV), sem data de publicação confirmada nesta versão do documento — a confirmar antes de citação formal.
+          <br><span class="dimtext">Partilhado por Pedro Pestana em 10 Jul 2026. Relevância: (a) limiares de qualidade de curva ROC (0,7/0,8/0,9), suporte à leitura do AUC do Índice I; (b) hierarquia empírica de inflamabilidade por uso do solo, oportunidade de refinamento do Índice P; (c) associação distância-a-estradas ↔ área ardida, questão em aberto sobre se pertence ao Índice P ou V; (d) associação densidade populacional ↔ menor área ardida, tensão a resolver no modelo causal de integração; (e) modelação de mortalidade pós-fogo, precedente para um possível componente futuro de "Impacto esperado".</span>
+        </li>
+        <li>
+          Bento-Gonçalves, A.; Vieira, A.; Úbeda, X.; Martin, D. — referenciado no modelo PREFER usado como base conceptual do Índice V (Vulnerabilidade). Citação completa a confirmar — usado até agora por referência indirecta ao longo do desenvolvimento, nunca verificado directamente na fonte original.
+        </li>
+        <li>
+          Nunes, M. C. S. et al. (2013) — equação de regressão para densidade de ocorrências por distrito, avaliada e <strong>abandonada</strong> para o Índice I por não ser reprodutível a partir dos dados do próprio artigo (ver §01 e glossário de decisões, §06). Citação completa a confirmar.
+        </li>
+        <li>
+          EUMETSAT / LSA SAF — <em>MTG Fire Radiative Power (FRP) product</em>, satélite Meteosat Third Generation (MTG-I1), sensor Flexible Combined Imager (FCI). Estado de demonstração (lançado out. 2025), resolução 1km, deteções a cada 10 min (2,5 min em modo rápido sobre a Europa), dados retroativos desde 01/01/2025. Endpoint WMS de demonstração hospedado pelo IPMA: <code>adaguc.lsasvcs.ipma.pt</code>.
+          <br><span class="dimtext">Origem: publicação de Giuseppe Cornaglia (gestor de sistemas de informação, provavelmente ANEPC — não confirmado) no LinkedIn, "Incêndio de Vouzela — leitura libertação energia (FRE) do evento" (partilhada por Pedro Pestana, 10 Jul 2026), reconstrução da evolução do incêndio de Vouzela (2-4 Jul 2026) a partir de 6001 deteções FRP ao longo de 354 passagens de satélite. Relevância: fonte candidata futura para o Índice P (intensidade real observada, não só potencial teórico) — ver §02. Termos de acesso não confirmados nesta sessão; produto em estado de demonstração, disponibilidade operacional não garantida.</span>
+        </li>
+      </ol>
+      <p class="dimtext">Nota: referências [2] e [3] foram usadas ao longo do desenvolvimento do SAEIF por citação indirecta (menção em conversas/decisões), nunca verificadas contra a fonte original com o mesmo rigor que as referências [1] e [4] receberam. Vale a pena, ao fechar definitivamente os Índices P e I, confirmar as citações completas.</p>
     </div>
   </div>
 

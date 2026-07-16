@@ -772,6 +772,10 @@
       <div class="alert alert-amber" style="margin-top: 1rem;">
         <strong>Convenção de metadados de proveniência (desde 10 Jul 2026):</strong> toda fonte de dados externa usada nas componentes do Índice V (e futuras) tem um ficheiro <code>.meta.yaml</code> junto aos dados (fonte, organização, URL de download, data de acesso, licença, CRS original, propósito, limitações conhecidas) — nunca só documentação em prosa dispersa. Esta tabela é o índice consolidado; os ficheiros <code>.meta.yaml</code> são a fonte de verdade detalhada por camada. Padrão estabelecido com a CAOP (9 Jul 2026), aplicado retroactivamente às restantes fontes do Índice V nesta actualização (10 Jul 2026) — ver <code>data/*.meta.yaml</code> e subpastas.
       </div>
+
+      <div class="alert alert-blue" style="margin-top: 1rem;">
+        <strong>Fonte candidata, não integrada (10 Jul 2026):</strong> <strong>MTG Fire Radiative Power (FRP)</strong> — EUMETSAT/LSA SAF, satélite geoestacionário Meteosat Third Generation (MTG-I1), sensor Flexible Combined Imager (FCI). Estado de demonstração (lançado out. 2025): resolução 1km (vs. 3km do produto MSG anterior), deteções a cada 10 min (2,5 min em modo rápido sobre a Europa — muito superior à cadência do FIRMS, órbita polar), dados retroativos desde 01/01/2025. Endpoint WMS de demonstração hospedado pelo <strong>IPMA</strong> (<code>adaguc.lsasvcs.ipma.pt</code>) — já uma fonte SAEIF existente. Potencial de enriquecimento futuro do Índice P com intensidade real observada (FRP/FRE), distinto do FRP pontual já usado no score (<code>frp &gt; 100 → ×1.20</code>, fonte FIRMS). <strong>Não avaliado nem integrado nesta sessão</strong> — termos de acesso (registo LSA SAF) e implicações do estado "demonstração" (validação científica em curso, disponibilidade operacional não garantida) por confirmar antes de qualquer integração. Origem: publicação LinkedIn de Giuseppe Cornaglia partilhada por Pedro Pestana, análise técnica FRP/FRE do incêndio de Vouzela (2-4 Jul 2026, 6001 deteções, 354 passagens de satélite). Ver também <code>saeif_especificacao_cientifica.html</code> §02 e §07 [4].
+      </div>
     </div>
   </div>
 
@@ -2688,16 +2692,16 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>28.7</td><td>55</td><td>1578.50</td></tr>
-        <tr><td>Design</td><td>19.0</td><td>55</td><td>1045.00</td></tr>
+        <tr><td>Análise</td><td>30.4</td><td>55</td><td>1672.00</td></tr>
+        <tr><td>Design</td><td>20.0</td><td>55</td><td>1100.00</td></tr>
         <tr><td>Gestão</td><td>5.0</td><td>40</td><td>200.00</td></tr>
         <tr><td>Programação</td><td>107.8</td><td>45</td><td>4851.00</td></tr>
         <tr><td>Testes</td><td>21.2</td><td>35</td><td>742.00</td></tr>
-        <tr><td>Documentação</td><td>31.5</td><td>30</td><td>945.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>213.2</td><td>—</td><td>9361.50</td></tr>
+        <tr><td>Documentação</td><td>34.9</td><td>30</td><td>1047.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>219.3</td><td>—</td><td>9612.00</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~51% das horas), reflectindo a natureza do projecto até agora — um sistema operacional real (PoC → produção) com desenvolvimento intensivo de funcionalidades entre 30 Mai e 16 Jun 2026, seguido da reestruturação para a arquitectura de 3 índices (Jul 2026). Marco desta sessão: <strong>o Índice V está completo</strong> — as três componentes do modelo PREFER construídas, validadas e combinadas, fechando o último dos três índices estruturais do SAEIF 2.0 (I, P e V agora todos operacionais) — seguido de uma auditoria de infraestrutura (secção 15.22) que identificou e corrigiu uma lacuna real nos backups (nenhum produto geoespacial estava protegido até hoje).</p>
+    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~49% das horas), reflectindo a natureza do projecto até agora. Esta actualização cobre trabalho previamente não contabilizado (lacuna própria a assinalar): criação do terceiro documento-base (<code>saeif_especificacao_cientifica.html</code>), e registo em todos os documentos-base de duas fontes externas partilhadas por Pedro Pestana — o artigo académico Oliveira et al. (ligações concretas aos Índices I, P e ao modelo de integração) e o produto EUMETSAT/LSA SAF MTG Fire Radiative Power (fonte candidata futura para o Índice P, via publicação LinkedIn sobre o incêndio de Vouzela).</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2712,6 +2716,7 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+8,9h: Capacidade de Resposta do Índice V — reformulação conceptual como "défice" (mantém semântica aditiva); subdimensão Défice de Acessibilidade construída (OSM/Geofabrik, pesos por classe de via, técnica de rasterização por ordenação testada deliberadamente antes de aplicar, inversão 1−acessibilidade, tratamento explícito de células sem via como défice máximo, validado por cruzamento com população).</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+11,3h: subdimensão Cobertura Operacional (bombeiros) — investigação de três fontes até encontrar uma completa (OSM 21%, dados.gov.pt arquivado/indisponível, Wikidata/SPARQL 466 quartéis), distance transform validado geometricamente, parâmetro fixo de distância máxima; combinação das duas subdimensões no Défice de Capacidade de Resposta; <strong>combinação final das três componentes do Índice V (marco: Índice V completo)</strong>; publicação via <code>/api/layers</code>.</td></tr>
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+3,2h: auditoria de infraestrutura — limpeza de disco (820MB, .zip redundante do OSM); identificação e correcção de lacuna real nos backups (só cobriam a base de dados, nenhum produto geoespacial estava protegido); extensão do <code>backup_saeif.sh</code>, testado e validado em execução manual real.</td></tr>
+        <tr><td>10 Jul 2026 (mesma sessão)</td><td>+6,1h (retroactivo, não contabilizado em tempo real): criação do terceiro documento-base (<code>saeif_especificacao_cientifica.html</code>) a pedido de Pedro Pestana, seguindo proposta de consultoria externa (Especificação Científica antes da integração I/P/V/M); análise e registo do artigo Oliveira et al. (ligações concretas a Índices I, P, modelo de integração); análise e registo de publicação LinkedIn sobre engenharia florestal (contexto de mercado, distinto de fundamentação académica); análise e registo do produto EUMETSAT/LSA SAF MTG-FRP (fonte candidata futura, via publicação LinkedIn sobre o incêndio de Vouzela).</td></tr>
       </tbody>
     </table>
 
