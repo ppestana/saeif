@@ -485,6 +485,7 @@
     <span style="color:var(--amber)">Índice V — Défice de Acessibilidade (OSM, pesos por fclass): 10 Jul 2026</span>
     <span style="color:var(--green)">Índice V COMPLETO — 3 componentes PREFER combinadas: 10 Jul 2026</span>
     <span style="color:var(--green)">Catálogo STAC v1.0.0 + COG — SAEIF explorável externamente: 16 Jul 2026</span>
+    <span style="color:var(--green)">Validação real QGIS + correcção de 2 bugs HTTP (HEAD, Range): 16 Jul 2026</span>
   </div>
 </div>
 
@@ -2655,7 +2656,40 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
 
     <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
       <strong>Estado actual (16 Jul 2026)</strong><br>
-      <strong>SAEIF explorável externamente via STAC v1.0.0.</strong> 4 camadas publicadas com COG + catálogo completo, confirmado em produção real (<code>/stac/catalog.json</code>, <code>/stac/collections/saeif-indices/collection.json</code>, 4 Items, <code>/layers/{id}.tif</code>). <strong>Pendente:</strong> validação formal contra o JSON Schema oficial (bloqueada por falta de acesso de rede ao <code>schemas.stacspec.org</code> no ambiente de desenvolvimento — tentar a partir do servidor, que tem acesso de rede mais aberto); testar consumo real por um cliente STAC (GeoLibre, QGIS) — só testado programaticamente até agora; publicar o Índice P quando existir como raster de superfície (secção 15.11); regenerar o catálogo automaticamente sempre que uma camada for publicada (hoje é um passo manual).
+      <strong>SAEIF explorável externamente via STAC v1.0.0.</strong> 4 camadas publicadas com COG + catálogo completo, confirmado em produção real (<code>/stac/catalog.json</code>, <code>/stac/collections/saeif-indices/collection.json</code>, 4 Items, <code>/layers/{id}.tif</code>). Consumo real por QGIS confirmado — ver secção 15.24. <strong>Pendente:</strong> validação formal contra o JSON Schema oficial (bloqueada por falta de acesso de rede ao <code>schemas.stacspec.org</code> no ambiente de desenvolvimento — tentar a partir do servidor, que tem acesso de rede mais aberto); testar consumo por GeoLibre especificamente (só QGIS testado até agora); publicar o Índice P quando existir como raster de superfície (secção 15.11); regenerar o catálogo automaticamente sempre que uma camada for publicada (hoje é um passo manual).
+    </div>
+
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.24 — Validação real com QGIS: dois bugs de HTTP encontrados e corrigidos</h3>
+    <p>Teste concreto proposto por Pedro Pestana (16 Jul 2026): adicionar o COG do Índice V directamente no QGIS via <code>/vsicurl/</code> (mecanismo do GDAL para ler ficheiros remotos por HTTP, sem download completo — a essência de "cloud-optimized"). Primeira tentativa falhou com <code>"Unsupported Data Source"</code> — investigação revelou <strong>dois bugs de HTTP reais e distintos</strong>, nenhum visível nos testes anteriores (que só cobriam <code>GET</code>).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Bug 1 — pedidos HEAD devolviam 404</h4>
+    <p>O GDAL faz sempre um pedido <code>HEAD</code> primeiro (para descobrir o tamanho do ficheiro) antes de pedir blocos via <code>Range</code>. Diagnóstico: <code>GET</code> devolvia <code>200</code> correctamente, mas <code>HEAD</code> ao mesmo URL devolvia <code>404</code> — com uma <code>last-modified</code> suspeita ("01 Jun", muito anterior à criação do COG), que revelou a causa: o pedido estava a cair no <strong>handler de erro 404 personalizado</strong> do <code>main.py</code> (<code>FileResponse("/app/static/404.html")</code>) em vez de chegar à rota <code>/layers/{nome}.tif</code>. <strong>Causa:</strong> comportamento implícito do FastAPI/Starlette para auto-adicionar <code>HEAD</code> a rotas <code>@app.get(...)</code> não estava a funcionar como esperado nesta aplicação.</p>
+    <p><strong>Correcção:</strong> declarar explicitamente <code>@app.api_route(..., methods=["GET", "HEAD"])</code> em vez de depender do comportamento implícito, para <code>/layers/{nome}.png</code> e <code>/layers/{nome}.tif</code>. <strong>Reproduzido antes de corrigir</strong> (confirmação do diagnóstico, não assumido): reconstrução local do <code>main.py</code> real (incluindo o handler 404 personalizado) reproduziu exactamente <code>GET=200</code>/<code>HEAD=404</code>. Testado depois da correcção: <code>HEAD=200</code>, corpo vazio, <code>Content-Length</code> correcto; ficheiro genuinamente inexistente continua a devolver <code>404</code> real.</p>
+    <p><strong>Falha própria a assinalar:</strong> o teste com <code>TestClient</code> feito ao publicar a infraestrutura STAC (secção 15.18/15.23) só cobriu <code>GET</code>, nunca <code>HEAD</code> — o que permitiu este bug passar despercebido até ao teste real com QGIS.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Bug 2 — sem suporte a Range (impedia leitura parcial do COG)</h4>
+    <p>Corrigido o bug 1, o QGIS continuava a falhar. Diagnóstico: um pedido com cabeçalho <code>Range: bytes=0-1023</code> devolvia <code>200</code> com o ficheiro completo (6,5MB), não <code>206 Partial Content</code> com só os bytes pedidos — e sem o cabeçalho <code>Accept-Ranges: bytes</code>, que o GDAL verifica antes de aceitar a fonte. Isolado como bug do <code>FileResponse</code> do FastAPI/Starlette em si (não do nginx — reproduzido também directo à app, <code>127.0.0.1:8000</code>).</p>
+    <p><strong>Causa raiz confirmada por pesquisa</strong> (não assumida): suporte a <code>Range</code> em <code>FileResponse</code> só foi introduzido no Starlette <strong>0.39.0</strong> — o servidor tinha <strong>0.38.6</strong>, mesmo abaixo do corte. Encontrada também, pela mesma pesquisa, uma vulnerabilidade de segurança real nas versões afectadas (<strong>CVE-2025-62727</strong>, negação de serviço via <code>Range</code> malformado, intervalo 0.39.0–0.49.0, corrigida em 0.49.1) — paradoxalmente, por estarmos tão desactualizados, nunca estivemos expostos a essa CVE específica.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão de actualização: mínima e segura, não a mais recente</h4>
+    <p>Duas opções avaliadas: actualização mínima (resolve o bug + evita a CVE, salto pequeno) vs. actualização completa até à versão mais recente (<code>fastapi</code> 0.138.x, <code>starlette</code> 1.x — o ecossistema entretanto migrou para uma versão major do Starlette). <strong>Escolhida a opção mínima</strong> — risco de regressão não testável exaustivamente numa sessão para um salto de quase 2 anos numa API em produção real.</p>
+    <p>Intervalo de versões testado empiricamente em ambiente isolado antes de aplicar (não fixado às cegas): <code>fastapi&gt;=0.118.0,&lt;0.130.0</code> + <code>starlette&gt;=0.49.1,&lt;0.51.0</code>, resolvido para <code>fastapi==0.129.2</code> / <code>starlette==0.50.0</code>. Confirmado com <code>TestClient</code> real (código exacto das rotas de produção) antes de tocar no servidor: <code>Accept-Ranges: bytes</code> presente, <code>HEAD=200</code>, pedido <code>Range</code> devolve correctamente <code>206</code> com <code>Content-Length</code> exacto.</p>
+    <p>Aplicado ao <code>api/requirements.txt</code>, reconstruído, reiniciado. Verificação pós-deploy: ciclo de ingest completo (FIRMS, fogos.pt, IPMA, dedup) sem erros nos logs — a funcionalidade core não regrediu. Confirmado via domínio público: <code>Accept-Ranges: bytes</code>, <code>HEAD=200</code>, <code>Range</code> devolve <code>206</code> com o tamanho exacto pedido.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Estratégia de três fases para a actualização completa (decisão registada, não implementada)</h4>
+    <p>Discussão explícita sobre como resolver a lacuna entre "correcção mínima aplicada hoje" e "versão mais recente, mais correcta a longo prazo":</p>
+    <ol>
+      <li><strong>Curto prazo (concluído, 16 Jul 2026):</strong> intervalo mínimo e seguro, como acima — resolve o problema real, evita a CVE conhecida, salto pequeno o suficiente para testar com confiança dentro de uma sessão.</li>
+      <li><strong>Médio prazo (próximo passo, ainda não feito):</strong> construir uma <strong>suite de testes automáticos</strong> (pytest + <code>TestClient</code>) cobrindo todos os endpoints reais do SAEIF (ingest, alertas, WebSocket, <code>/api/layers</code>, <code>/layers/*</code>, <code>/stac/*</code>, mapa de risco) — testes de fumo (código de estado e forma da resposta esperados), não testes exaustivos de lógica de negócio. Substitui a verificação manual, endpoint a endpoint, que tem sido feita sessão a sessão, por algo repetível e rápido — não só para esta actualização, para todas as futuras.</li>
+      <li><strong>Longo prazo (só depois da fase 2):</strong> actualização completa até à versão mais recente (<code>fastapi</code> 0.138.x, <code>starlette</code> 1.x), correndo a suite de testes antes/depois, com revisão específica do changelog de alterações incompatíveis do Starlette 1.0 (mudança de versão major) e plano de recuo claro (reverter para a imagem Docker anterior).</li>
+    </ol>
+
+    <h4 style="margin:1.2rem 0 .5rem">Resultado final — confirmado visualmente</h4>
+    <p>Camada carregada com sucesso no QGIS via <code>/vsicurl/</code>, mostrando os valores reais do Índice V (não uma visualização colorida), com o padrão espacial de Portugal reconhecível. Nota explicada a Pedro: o QGIS aplica por omissão um corte cumulativo de 2% em cada extremo à legenda automática (mostrando ~0,047–0,554 em vez do intervalo real 0,011–0,716) — os dados no ficheiro permanecem intactos, é só a visualização por omissão do QGIS a esticar o contraste de forma diferente da nossa rampa personalizada. Mesmo princípio do Princípio da Separação Analítica (secção 16), agora confirmado a aplicar-se também ao comportamento de clientes SIG externos, não só à nossa própria visualização.</p>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (16 Jul 2026)</strong><br>
+      <strong>Consumo real por QGIS confirmado e validado visualmente.</strong> Dois bugs de HTTP reais encontrados e corrigidos (suporte a <code>HEAD</code> explícito; <code>fastapi</code>/<code>starlette</code> actualizados para versões com suporte a <code>Range</code>, dentro de um intervalo testado e sem a CVE conhecida). <strong>Pendente:</strong> suite de testes automáticos (fase 2 da estratégia de actualização); actualização completa até à versão mais recente do FastAPI/Starlette (fase 3, só depois da suite de testes); testar consumo por GeoLibre especificamente.
     </div>
 
   </div>
@@ -2731,16 +2765,16 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>31.4</td><td>55</td><td>1727.00</td></tr>
-        <tr><td>Design</td><td>20.3</td><td>55</td><td>1116.50</td></tr>
-        <tr><td>Gestão</td><td>6.3</td><td>40</td><td>252.00</td></tr>
-        <tr><td>Programação</td><td>110.2</td><td>45</td><td>4959.00</td></tr>
-        <tr><td>Testes</td><td>23.4</td><td>35</td><td>819.00</td></tr>
-        <tr><td>Documentação</td><td>35.9</td><td>30</td><td>1077.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>227.5</td><td>—</td><td>9950.50</td></tr>
+        <tr><td>Análise</td><td>32.7</td><td>55</td><td>1798.50</td></tr>
+        <tr><td>Design</td><td>21.2</td><td>55</td><td>1166.00</td></tr>
+        <tr><td>Gestão</td><td>6.5</td><td>40</td><td>260.00</td></tr>
+        <tr><td>Programação</td><td>111.1</td><td>45</td><td>4999.50</td></tr>
+        <tr><td>Testes</td><td>24.7</td><td>35</td><td>864.50</td></tr>
+        <tr><td>Documentação</td><td>36.9</td><td>30</td><td>1107.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>233.1</td><td>—</td><td>10195.50</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~48% das horas), reflectindo a natureza do projecto até agora. Esta actualização (16 Jul 2026, retomada após 6 dias sem sessão) cobre: manutenção de infraestrutura do servidor (actualização de kernel e stack Docker, reinício controlado, verificação pós-reinício dos 6 containers em produção — SAEIF, Ponte Digital, CAL); e a construção do catálogo STAC v1.0.0 com suporte a COG, tornando o SAEIF explorável por clientes SIG externos (GeoLibre, QGIS, <code>pystac</code>) — motivada por uma pergunta de Pedro Pestana sobre o projecto GeoLibre.</p>
+    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~48% das horas), reflectindo a natureza do projecto até agora. Esta actualização cobre o teste real com QGIS (proposto por Pedro Pestana) que revelou dois bugs de HTTP genuínos (<code>HEAD</code>, <code>Range</code>) invisíveis aos testes anteriores — só cobriam <code>GET</code> — corrigidos com uma actualização mínima e segura de dependências (<code>fastapi</code>/<code>starlette</code>), e uma estratégia explícita de três fases registada para a futura actualização completa.</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2758,6 +2792,7 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
         <tr><td>10 Jul 2026 (mesma sessão)</td><td>+6,1h (retroactivo, não contabilizado em tempo real): criação do terceiro documento-base (<code>saeif_especificacao_cientifica.html</code>) a pedido de Pedro Pestana, seguindo proposta de consultoria externa (Especificação Científica antes da integração I/P/V/M); análise e registo do artigo Oliveira et al. (ligações concretas a Índices I, P, modelo de integração); análise e registo de publicação LinkedIn sobre engenharia florestal (contexto de mercado, distinto de fundamentação académica); análise e registo do produto EUMETSAT/LSA SAF MTG-FRP (fonte candidata futura, via publicação LinkedIn sobre o incêndio de Vouzela).</td></tr>
         <tr><td>16 Jul 2026</td><td>+1,0h: manutenção de infraestrutura do servidor — actualização de kernel (117→134) e stack Docker completa, reinício controlado após confirmação de backups recentes e políticas de reinício automático, checklist pós-reinício dos 6 containers em produção (SAEIF, Ponte Digital, CAL).</td></tr>
         <tr><td>16 Jul 2026 (mesma sessão)</td><td>+6,2h: catálogo STAC v1.0.0 (estático) + suporte a COG — motivado por pergunta sobre o GeoLibre; especificação STAC confirmada por pesquisa antes de implementar; <code>scripts/publicar_camada.py</code> estendido para gerar COG a par do PNG; <code>scripts/gerar_stac.py</code> (novo); validação manual contra campos obrigatórios (validação oficial via schema bloqueada por falta de acesso de rede no ambiente de desenvolvimento); exposição via API (<code>/layers/{id}.tif</code>, <code>/stac/*</code>), testada com TestClient; 4 camadas republicadas com COG; catálogo confirmado em produção real; incidente de deploy (ficheiro não commitado) identificado e resolvido sem perda de informação.</td></tr>
+        <tr><td>16 Jul 2026 (mesma sessão)</td><td>+5,6h: teste real com QGIS (proposto por Pedro Pestana) — dois bugs de HTTP genuínos encontrados e corrigidos (<code>HEAD</code> a devolver 404, sem suporte a <code>Range</code>); causa raiz do segundo confirmada por pesquisa (Starlette 0.38.6, suporte a <code>Range</code> só desde 0.39.0, mais uma CVE conhecida no intervalo 0.39.0-0.49.0); actualização mínima e segura de <code>fastapi</code>/<code>starlette</code>, testada em ambiente isolado antes de aplicar; estratégia de três fases registada para a futura actualização completa até à versão mais recente; validação visual final confirmada no QGIS.</td></tr>
       </tbody>
     </table>
 
