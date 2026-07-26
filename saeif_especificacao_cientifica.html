@@ -484,7 +484,7 @@
   <a href="#indice-v">Índice V</a>
   <a href="#camada-m">Camada M</a>
   <a href="#integracao">Modelo de Integração</a>
-  <a href="#glossario">Glossário de Decisões</a>
+  <a href="#glossario">Registo de Decisões</a>
   <a href="#referencias">Referências Bibliográficas</a>
 </nav>
 
@@ -583,6 +583,15 @@
 
       <p><strong>Validação:</strong> nenhuma validação estatística formal ainda feita para o Índice P completo (diferente do Índice I, com holdout temporal AUC 0,86) — próximo passo natural do roteiro (Fase 3), possivelmente contra ocorrências históricas de propagação, tal como já feito para o Índice I.</p>
 
+      <h4 style="margin:1rem 0 .5rem">Limitações (secção adicionada por recomendação de consultoria externa, 26 Jul 2026)</h4>
+      <p><strong>O Índice P encontra-se operacionalmente construído e internamente consistente (testado por regressão), mas os pesos estruturais (0,50/0,30/0,20) permanecem herdados do SAEIF 1.x e ainda não foram objecto de calibração científica independente.</strong> Isto é uma <em>decisão de engenharia</em> (preservar continuidade com o sistema em produção), não uma <em>decisão científica</em> (não resulta de nenhuma regressão, otimização, ou validação estatística contra dados reais de propagação) — distinção que vale a pena manter explícita, para que não seja lida no futuro como um facto validado.</p>
+      <ul>
+        <li><strong>O declive contribui pouco (2,5% da média observada) — por geografia real, não por erro.</strong> Confirmado com dados: Portugal tem declives predominantemente baixos (mediana normalizada 0,049, p95=0,258). O cálculo está fisicamente correcto (revisão de 26 Jul 2026, <code>gdaldem slope</code>); a baixa contribuição reflecte o território, não uma falha do método.</li>
+        <li><strong>A área ardida (P_histórico) contribui mais do que qualquer variável estrutural individual excepto o WorldCover</strong> (~29% da média observada, mais do que o NDVI a 24%) — apesar de nunca ter tido peso formal na fórmula original, nem ter sido estatisticamente analisada antes de 26 Jul 2026. Ver decomposição em P_estrutural/P_histórico, acima.</li>
+        <li><strong>A transformação linear <code>declive/45°</code> não está validada contra literatura de comportamento do fogo</strong> — questão científica registada, não urgente (ver acima), mas que impede afirmar que a forma da normalização (não só o peso) está optimizada.</li>
+        <li><strong>Sem validação estatística formal do índice completo</strong> — ao contrário do Índice I (holdout temporal, AUC 0,86), o Índice P nunca foi testado contra ocorrências reais de propagação. A concordância interna (regressão entre versões, Pearson do declive) confirma consistência metodológica, não poder preditivo.</li>
+      </ul>
+
       <h4 style="margin:1rem 0 .5rem">Revisão metodológica do declive (26 Jul 2026)</h4>
       <p>O cálculo do declive foi revisto na arquitectura SAEIF 2.0. As versões anteriores estimavam os gradientes directamente sobre um DEM em coordenadas geográficas (EPSG:4326), recorrendo a uma conversão aproximada entre graus e metros. Na nova arquitectura, o DEM é previamente reprojectado para ETRS89/PT-TM06 (EPSG:3763) e o declive é derivado com <code>gdaldem slope</code>, eliminando o viés introduzido pela variação da escala longitudinal com a latitude. A comparação entre ambos os métodos revelou elevada concordância espacial (Pearson = 0,98; Spearman = 0,98), mantendo praticamente inalterada a ordenação relativa do relevo. No entanto, verificou-se uma subestimação sistemática da inclinação média pelo método anterior (1,5° face a 2,7°), justificando a adopção do novo procedimento como representação fisicamente mais correcta do terreno. Ver <code>saeif_architecture.html</code> §15.25 para o detalhe técnico completo da comparação.</p>
       <p><strong>Questão científica em aberto (não urgente):</strong> a transformação linear <code>declive/45°</code> pressupõe que a influência do relevo na propagação cresce linearmente com o ângulo — a literatura sobre comportamento do fogo sugere que pequenas diferenças entre 5° e 15° podem ter efeito maior do que essa razão linear supõe. Confirmado empiricamente que Portugal tem declives predominantemente baixos (mediana 0,049 normalizado, p95=0,258) — o declive contribui pouco para o Índice P (2,5% da média observada) não por erro de cálculo, mas por reflexo genuíno da geografia do país. A questão da forma da transformação (linear vs. não-linear) fica registada para uma futura versão do modelo, não urgente — o cálculo físico está resolvido.</p>
@@ -630,6 +639,14 @@
         <li><strong>Estado actual:</strong> hoje misturada dentro do score (<code>fwi_norm</code> 30% + <code>vento_factor</code> 20%) — <strong>ainda não separada como camada M própria, nem rasterizada numa grelha contínua</strong></li>
         <li><strong>Pendente:</strong> decidir se M é um raster diário completo (interpolação espacial das estações IPMA) ou permanece um valor pontual por alerta — decisão com implicações directas no modelo de integração (secção 05)</li>
       </ul>
+
+      <h4 style="margin:1rem 0 .5rem">O que é "Memória"? — clarificação conceptual (26 Jul 2026, recomendação de consultoria externa)</h4>
+      <p>Ao longo do desenvolvimento do SAEIF 2.0, o termo "memória" (ou factores temporais) tem sido usado de forma implícita, sem uma definição explícita — lacuna identificada por revisão externa aos três documentos-base. Existem pelo menos <strong>duas interpretações distintas</strong>, com implicações arquitecturais diferentes:</p>
+      <ul>
+        <li><strong>Memória como incêndios recentes:</strong> a recorrência de fogo num local específico nos últimos anos altera o risco local (vegetação em regeneração, matos jovens inflamáveis). É exactamente o que o bónus de área ardida do Índice P já captura hoje (P_histórico, ver §02) — um efeito de curto/médio prazo (2-6 anos), ligado a um local concreto.</li>
+        <li><strong>Memória como persistência territorial:</strong> um conceito mais amplo e de mais longo prazo — por exemplo, se uma região tem historicamente maior densidade de ignições (já capturado pelo Índice I, KDE sobre todo o histórico 2020-2025) ou se o clima de uma região tem tendências de seca plurianuais que alteram o risco estrutural de forma mais lenta do que o FWI diário (Camada M). Não corresponde hoje a nenhuma variável explícita do SAEIF.</li>
+      </ul>
+      <p><strong>Questão em aberto, não resolvida:</strong> a "memória de incêndios recentes" pertence ao Índice P (propensão estrutural, onde está hoje) ou deveria ser tratada pela Camada M (factores temporais)? Ver discussão completa em §02 (Índice P, P_histórico) e <code>saeif_architecture.html</code> §15.26. Esta secção fica como ponto de referência conceptual para essa decisão futura — não implica alteração de código nesta sessão.</p>
     </div>
   </div>
 
@@ -659,21 +676,36 @@
   <div class="section" id="glossario">
     <div class="section-header">
       <span class="section-num">06</span>
-      <span class="section-title">Glossário de Decisões Metodológicas</span>
+      <span class="section-title">Registo Oficial de Decisões Metodológicas</span>
     </div>
     <div class="section-body">
-      <p class="dimtext">POR PREENCHER — tabela de referência rápida, uma linha por decisão, com link para a secção correspondente. Exemplos do que deve conter (extraído do histórico de sessões):</p>
+      <p>Registo consolidado de decisões metodológicas tomadas ao longo do desenvolvimento do SAEIF 2.0 — a "fonte da verdade" sobre o que foi decidido e porquê, não só o que foi implementado. Adoptado por recomendação de consultoria externa (26 Jul 2026), como evolução do antigo "Glossário de Decisões" (mesma secção, âmbito expandido).</p>
+      <p><strong>Classificação por tipo</strong> (distinção crítica, recomendada externamente): uma <strong>Decisão Científica</strong> resulta de análise estatística, validação, ou comparação quantitativa contra dados reais — tem fundamento empírico verificável. Uma <strong>Decisão de Engenharia</strong> é uma escolha pragmática de arquitectura ou implementação — pode ser sólida, mas não resulta de calibração estatística. Uma <strong>Hipótese de Trabalho</strong> é um parâmetro assumido provisoriamente, sem validação própria, explicitamente candidato a revisão futura. Esta distinção evita que um parâmetro provisório seja lido, no futuro, como facto científico estabelecido.</p>
       <table>
-        <thead><tr><th>Decisão</th><th>Índice</th><th>Resumo da justificação</th></tr></thead>
+        <thead><tr><th>Data</th><th>Decisão</th><th>Tipo</th><th>Justificação</th><th>Impacto</th></tr></thead>
         <tbody>
-          <tr><td>Percentil 99 na Exposição</td><td>V</td><td>Assimetria extrema (18,84) — outliers genuínos de amostra pequena</td></tr>
-          <tr><td>Min-max na Sensibilidade</td><td>V</td><td>Assimetria moderada (0,65) após ponderação de confiança — extremo já não é ruído</td></tr>
-          <tr><td>Sem percentil na Capacidade de Resposta</td><td>V</td><td>Distância é variável física contínua, extremo é o próprio fenómeno a medir</td></tr>
-          <tr><td>Abandono da regressão de Nunes et al. 2013</td><td>I</td><td>Fórmula publicada não reproduzível a partir dos dados do próprio artigo</td></tr>
-          <tr><td>Grelha de 250m</td><td>Geral</td><td>Princípio da variável limitante (consultoria SIG)</td></tr>
-          <tr><td>Bandwidth de 3500m (KDE)</td><td>I</td><td>Validação cruzada leave-one-out, máximo interior real na curva</td></tr>
-          <tr><td>Ponderação por confiança estatística</td><td>V (Sensibilidade)</td><td>Proporções sobre denominadores pequenos são instáveis (small area estimation)</td></tr>
-          <tr><td>[continuar a preencher...]</td><td></td><td></td></tr>
+          <tr><td>06-07 Jul 2026</td><td>KDE substitui regressão de Nunes et al. 2013</td><td>Científica</td><td>Fórmula publicada não reproduzível a partir dos dados do próprio artigo; KDE validado por LOO-CV + holdout (AUC 0,86)</td><td>Índice I</td></tr>
+          <tr><td>07 Jul 2026</td><td>Bandwidth 3500m (KDE)</td><td>Científica</td><td>Validação cruzada leave-one-out, máximo interior real na curva (não monótona)</td><td>Índice I</td></tr>
+          <tr><td>09 Jul 2026</td><td>Grelha oficial 250m, EPSG:3763</td><td>Engenharia</td><td>Princípio da variável limitante (consultoria SIG) — equilíbrio detalhe/desempenho, não calibração estatística</td><td>Todos os índices</td></tr>
+          <tr><td>09 Jul 2026</td><td>Extensão ibérica da grelha (não só Portugal)</td><td>Engenharia</td><td>Fogos não respeitam fronteiras administrativas — grelha pronta para fonte pan-europeia futura, sem alteração espacial</td><td>Todos os índices</td></tr>
+          <tr><td>08 Jul 2026</td><td>Percentil 99 na Exposição</td><td>Científica</td><td>Assimetria extrema medida (18,84) — outliers genuínos de amostra pequena</td><td>Índice V</td></tr>
+          <tr><td>09 Jul 2026</td><td>Min-max na Sensibilidade</td><td>Científica</td><td>Assimetria moderada medida (0,65) após ponderação de confiança — extremo já não é ruído</td><td>Índice V</td></tr>
+          <tr><td>09 Jul 2026</td><td>Sem percentil na Capacidade de Resposta</td><td>Científica</td><td>Distância é variável física contínua; o extremo é o próprio fenómeno a medir, não ruído a cortar</td><td>Índice V</td></tr>
+          <tr><td>09 Jul 2026</td><td>Ponderação por confiança estatística (N0)</td><td>Científica</td><td>Proporções sobre denominadores pequenos são instáveis (small area estimation) — mitigado com N0 calibrado por tipo de dado</td><td>Índice V (Sensibilidade)</td></tr>
+          <tr><td>09 Jul 2026</td><td>Pesos 0,65/0,35 idosos/crianças (Vulnerabilidade Demográfica)</td><td><strong>Hipótese de Trabalho</strong></td><td>Baseado em literatura de risco relativo (FEMA/USFA) — não é derivação matemática exacta, assinalado explicitamente como tal</td><td>Índice V (Sensibilidade)</td></tr>
+          <tr><td>10 Jul 2026</td><td>Peso 1/3 para cada componente do Índice V (Exposição/Sensibilidade/Resposta)</td><td><strong>Hipótese de Trabalho</strong></td><td>Decisão provisória, sem base empírica forte — assinalada explicitamente, validação formal ainda pendente</td><td>Índice V</td></tr>
+          <tr><td>09 Jul 2026</td><td>Escolaridade adiada como variável da Sensibilidade</td><td>Científica</td><td>Só disponível ao nível de freguesia — inconsistência de resolução estatística face às restantes variáveis (BGRI)</td><td>Índice V</td></tr>
+          <tr><td>10 Jul 2026</td><td>Índice I oficial não ponderado por <code>causa_tipo</code></td><td>Científica</td><td>Correlação espacial baixa entre causas (Negligente/Intencional/Desconhecida, ρ Spearman 0,06-0,28) — sem base quantitativa para pesos diferenciados; camadas por causa geradas à parte, como produtos analíticos</td><td>Índice I</td></tr>
+          <tr><td>16 Jul 2026</td><td>STAC v1.0.0 em vez de WMS ou COG isolado</td><td>Engenharia</td><td>Standard aberto da comunidade geoespacial, coerente com o padrão já seguido no projecto (reutilizar standards existentes — OSM, Wikidata, INE)</td><td>Publicação externa</td></tr>
+          <tr><td>16 Jul 2026</td><td>Catálogo STAC estático (não API dinâmica)</td><td>Engenharia</td><td>Barreira de entrada mais baixa, recomendado pela própria especificação STAC; coerente com o padrão já usado em <code>/api/layers</code></td><td>Publicação externa</td></tr>
+          <tr><td>16 Jul 2026</td><td>Actualização mínima e segura de <code>fastapi</code>/<code>starlette</code> (não a versão mais recente)</td><td>Engenharia</td><td>Gestão de risco explícita — salto de quase 2 anos não testável exaustivamente numa sessão; estratégia de 3 fases registada para actualização completa futura</td><td>Infraestrutura</td></tr>
+          <tr><td>17 Jul 2026 (redescoberto)</td><td>Pesos 0,50/0,30/0,20 do Índice P (WorldCover/NDVI/Declive)</td><td><strong>Hipótese de Trabalho</strong></td><td>Herdados do <code>score.py</code> original (SAEIF 1.x), nunca recalibrados de raiz — preservados por continuidade operacional, não por validação própria</td><td>Índice P</td></tr>
+          <tr><td>26 Jul 2026</td><td>Declive calculado com <code>gdaldem slope</code> sobre DEM em EPSG:3763 (metros reais), não <code>np.gradient</code> em graus</td><td>Científica</td><td>Comparação quantitativa directa (Pearson 0,98; Spearman 0,98) revelou viés sistemático real: método antigo subestimava a inclinação média em ~80% (1,5° vs. 2,7°) — causa confirmada por física da projecção (<code>cos(latitude)</code>)</td><td>Índice P</td></tr>
+          <tr><td>26 Jul 2026</td><td>Princípio da Consistência Projectiva (todo o processamento geométrico em EPSG:3763)</td><td>Engenharia</td><td>Motivado directamente pela descoberta científica do viés do declive — elimina a categoria inteira de erro, não só o caso específico</td><td>Todos os índices (regra geral)</td></tr>
+          <tr><td>26 Jul 2026</td><td>WorldCover reamostrado com <code>average</code> (não <code>nearest</code>/<code>bilinear</code>)</td><td>Científica</td><td>Valores de <code>fire_risk.tif</code> confirmados como ordinais (6 níveis de risco, não categorias sem ordem) — <code>average</code> representa correctamente a proporção de área de cada nível dentro da célula agregada</td><td>Índice P</td></tr>
+          <tr><td>26 Jul 2026</td><td>Bónus de área ardida via rasterização por ordenação ascendente (não consulta pontual)</td><td>Engenharia</td><td>Replica exactamente a semântica da consulta SQL original (<code>ORDER BY ano DESC LIMIT 1</code>) sem exigir milhões de consultas pontuais — mesma técnica já validada na Acessibilidade do Índice V</td><td>Índice P</td></tr>
+          <tr><td>26 Jul 2026</td><td>Decomposição do Índice P em P_estrutural + P_histórico</td><td>Engenharia</td><td>Motivada por descoberta científica (bónus histórico contribui ~29% do índice, mais que o NDVI) — decomposição preserva o resultado numérico (testado por regressão, diferença máxima 0,00000005), só torna explícita a distinção conceptual</td><td>Índice P</td></tr>
+          <tr><td>—</td><td>[continuar a preencher a cada nova decisão]</td><td></td><td></td><td></td></tr>
         </tbody>
       </table>
     </div>
