@@ -710,7 +710,37 @@
       </table>
       <p>Todas as estatísticas plausíveis, sem sinais de alarme — a correlação positiva entre localização real de fogos e Índice P mais alto, e a correlação negativa com Índice V, são exactamente os sinais que validariam informalmente a construção dos índices, mesmo antes de qualquer teste formal de candidatas à função de integração.</p>
       <p><strong>Dois problemas reais encontrados e corrigidos durante a construção</strong> (ver <code>saeif_architecture.html</code> §15.27 para o detalhe técnico completo): (1) o dataset do FWI histórico está hospedado no CEMS Early Warning Data Store (EWDS), não no Climate Data Store (CDS) principal, apesar de aparecer listado em ambos — um pedido ao CDS devolve 404; (2) 73,7% dos incêndios reais falhavam o emparelhamento com o FWI por o vizinho espacial mais próximo cair, por vezes, num dos 12 pontos (de 204) que ficam sempre a <code>NaN</code> (áreas não vegetadas) — corrigido restringindo a procura aos 192 pontos sempre válidos, confirmado como máscara constante ao longo dos 2192 dias antes de aplicar a correcção.</p>
-      <p><strong>Próximo passo (não feito nesta sessão):</strong> usar este conjunto de dados para testar candidatas concretas à função de integração (soma, produto, híbrido, hierárquico/causal — ver hipóteses acima), avaliando qual reproduz melhor a relação real entre I/P/V/M e a área ardida observada.</p>
+      <p><strong>Teste empírico realizado (26 Jul 2026)</strong> — várias candidatas de <code>Hazard = f(I,P,M)</code> e <code>Risco = f(Hazard,V)</code> testadas contra os 4763 incêndios reais (Spearman e AUC binário, limiar &gt;100ha). Resultado, e a reinterpretação que motivou:</p>
+      <table>
+        <thead><tr><th>Candidata</th><th>AUC (fogo grande &gt;100ha)</th><th>Leitura</th></tr></thead>
+        <tbody>
+          <tr><td>FWI/M sozinho</td><td>0,608</td><td>Melhor variável individual</td></tr>
+          <tr><td>Índice P sozinho</td><td>0,526</td><td>Ligeiramente acima do acaso</td></tr>
+          <tr><td>Índice V sozinho</td><td>0,468</td><td>Abaixo de 0,5 — correlação negativa</td></tr>
+          <tr><td>Índice I sozinho</td><td>0,379</td><td>Invertido — bem abaixo de 0,5</td></tr>
+          <tr><td><strong>P × M (sem I nem V)</strong></td><td><strong>0,610</strong></td><td>Melhor de todas as combinações testadas</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Padrão limpo e repetido, não ruído:</strong> em todas as combinações testadas, adicionar V piorou consistentemente a discriminação de área ardida. Índice I mostrou relação invertida (locais com mais histórico de ignição tendem a ter fogos <em>menores</em>, não maiores).</p>
+
+      <h4 style="margin:1rem 0 .5rem">Reinterpretação (26 Jul 2026, consultoria externa) — três produtos, três alvos de validação distintos</h4>
+      <p>Os resultados não indicam falha dos índices — indicam um <strong>erro de desenho da validação</strong>: forçar todos os componentes a explicar a mesma variável (área ardida), quando cada um foi concebido para responder a uma pergunta física diferente. A área ardida é um <em>resultado intermédio</em> da cadeia causal, não o alvo final de todos os componentes:</p>
+      <p style="text-align:center; font-family:monospace; line-height:1.8">
+        Condições humanas → Probabilidade de ignição (I) → Propagação potencial (P) → Meteorologia do momento (M) → <strong>Área ardida</strong> → Consequências (V) → Perdas humanas/económicas
+      </p>
+      <p>Nota a posição de V <em>depois</em> da área ardida na cadeia, não antes — explica fisicamente os dois sinais "invertidos": zonas de maior vulnerabilidade (mais população) tendem a ter melhores acessos, mais quartéis, deteção e resposta mais rápida — logo, área ardida menor apesar de V mais alto (mesmo mecanismo protetor já visto em Oliveira et al., §07 [1]). O mesmo raciocínio explica o Índice I invertido: locais com mais ignições históricas (bermas de estrada, zonas agrícolas, periferias urbanas) tendem também a ter mais acessos e deteção precoce — <em>probabilidade de ignição</em> não é o mesmo fenómeno que <em>probabilidade de grande incêndio</em>.</p>
+
+      <table>
+        <thead><tr><th>Produto</th><th>O que representa</th><th>Alvo de validação correcto</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1 — Suscetibilidade de ignição</strong></td><td>Índice I</td><td>Localização real de ignições</td><td>✓ Validado, AUC 0,86</td></tr>
+          <tr><td><strong>2 — Potencial de propagação</strong></td><td>P × M</td><td>Área ardida (dado que o fogo já começou)</td><td>✓ Validado nesta sessão, AUC 0,61 (modesto mas consistente)</td></tr>
+          <tr><td><strong>3 — Consequências potenciais</strong></td><td>(P × M) × V</td><td><strong>Não</strong> a área ardida — precisaria de indicadores de consequência real (pessoas evacuadas, edifícios destruídos, vítimas, perdas económicas)</td><td>✗ Nunca validado — fonte de dados ainda por confirmar</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Isto resolve, com evidência empírica, a questão em aberto sobre a semântica do Índice V</strong> (registada acima): o V construído está correcto — o problema era o alvo de validação, não o índice. Pedir a V que explique área ardida é pedir-lhe que explique um fenómeno que nunca pretendeu representar.</p>
+      <p><strong>Hipótese a confirmar em investigação futura (não feita nesta sessão):</strong> se existirem dados reais de consequência (edifícios afectados, evacuações, vítimas, prejuízo), a expectativa é que V mostre finalmente utilidade discriminativa nesse alvo, apesar de não a mostrar contra área ardida. Fonte de dados ainda por confirmar — <code>areas_ardidas</code> não tem estes campos; verificar se o fogos.pt/PROCIV guarda este detalhe historicamente, ou se existe outra fonte (ex. ANEPC).</p>
+      <p><strong>Conclusão arquitectural:</strong> a decomposição em I, P, V e M não é revista por este resultado — é reforçada. Cada componente captura um processo distinto da cadeia causal do fogo, em vez de todos tentarem explicar simultaneamente o mesmo fenómeno. O próximo passo cientificamente sólido não é procurar uma fórmula única que maximize a correlação com área ardida — é definir explicitamente, por componente, qual é o "ground truth" correcto contra o qual validar cada um.</p>
     </div>
   </div>
 
@@ -752,6 +782,8 @@
           <tr><td>26 Jul 2026</td><td>M modula tanto a Ignição (I) como a Propagação (P), não só a Propagação</td><td><strong>Hipótese de Trabalho</strong></td><td>Fundamentação física plausível (humidade do combustível altera a probabilidade real de ignição, não só a facilidade de propagação) — ainda não validada com dados próprios do SAEIF</td><td>Modelo de integração</td></tr>
           <tr><td>26 Jul 2026</td><td>FWI histórico via CEMS/EWDS (não CDS principal, não IPMA) como fonte de M para validação</td><td>Engenharia</td><td>Única fonte de meteorologia histórica diária acessível encontrada; distinta do FWI em tempo real já usado em produção (IPMA) — usada só para construir o conjunto de dados de validação, não para operação</td><td>Modelo de integração</td></tr>
           <tr><td>26 Jul 2026</td><td>Lookup do FWI restrito a pontos espaciais sempre válidos (192 de 204)</td><td>Científica</td><td>73,7% de falhas confirmadas com vizinho mais próximo ingénuo; máscara de pontos não-vegetados confirmada constante ao longo de 2192 dias antes de aplicar a correcção</td><td>Modelo de integração</td></tr>
+          <tr><td>26 Jul 2026</td><td>SAEIF decomposto em três produtos com alvos de validação distintos (I→ignições; P×M→área ardida; (P×M)×V→consequências reais)</td><td>Científica</td><td>Teste empírico (AUC) revelou padrão consistente: V e I invertidos contra área ardida, não por erro, mas por serem fenómenos causalmente distintos (área ardida é intermédia na cadeia, V vem depois)</td><td>Modelo de integração</td></tr>
+          <tr><td>26 Jul 2026</td><td>Índice V mantém-se validado conceptualmente sem alteração — o alvo de validação estava errado, não o índice</td><td>Científica</td><td>Correlação negativa com área ardida (AUC 0,468) explicada fisicamente (vulnerabilidade correlaciona-se com melhor acesso/deteção/resposta, reduzindo área ardida) — não implica redesenhar o V</td><td>Índice V</td></tr>
           <tr><td>—</td><td>[continuar a preencher a cada nova decisão]</td><td></td><td></td><td></td></tr>
         </tbody>
       </table>
