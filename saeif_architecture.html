@@ -2766,6 +2766,64 @@ cp data/declive_comparacao/declive_novo.tif data/declive_indice_p_250m.tif</code
       <strong>NDVI e declive a 250m construídos e validados.</strong> Rasters: <code>data/ndvi_indice_p_250m.tif</code>, <code>data/declive_indice_p_250m.tif</code>. Princípio da Consistência Projectiva formalizado. <strong>Pendente:</strong> WorldCover a 250m (fonte já a ~10m, precisa só de reamostragem, não de novo pedido); bónus de área ardida como raster (hoje só consulta pontual PostGIS — precisa de reformulação como superfície); combinação final em <code>indice_p.tif</code>; validação estatística do Índice P completo.
     </div>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.26 — Índice P completo: WorldCover, bónus de área ardida, e decomposição hierárquica</h3>
+    <p>Conclusão da Fase 2 do roteiro (26 Jul 2026): WorldCover a 250m, bónus de área ardida como raster, combinação final, e uma decisão arquitectural (decomposição em subdimensões) motivada pela análise dos próprios resultados.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">WorldCover a 250m — reamostragem, não novo pedido</h4>
+    <p>Investigação directa (não assumida): <code>data/fire_risk.tif</code> não é WorldCover em bruto — é já uma tabela de risco aplicada (6 valores ordinais discretos: 0, 0,05, 0,15, 0,30, 0,85, 1,0; EPSG:4326, ~10m). Sendo valores ordinais (risco crescente), a agregação por <code>gdalwarp -r average</code> é fisicamente correcta (representa a proporção de área de alto/baixo risco dentro de cada célula de 250m) — não <code>nearest</code> (que se usaria para categorias sem ordem) nem <code>bilinear</code> (pensado para pequenos ajustes, não agregações de ~25×). Resultado: <code>data/worldcover_indice_p_250m.tif</code>, 1213×2359px confirmado, média 0,472.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Bónus de área ardida como raster — rasterização por ordenação, reutilizando a técnica da Acessibilidade</h4>
+    <p>Consulta original (<code>score.py::get_area_ardida_factor</code>) é uma consulta PostGIS pontual em tempo real: <code>ST_DWithin</code> 5km, escolhe o <strong>ano mais recente</strong> entre os fogos próximos (não o polígono mais próximo), escalões por antiguidade (≤2 anos: +0,25; 2-4: +0,15; &gt;4: +0,05, sem tecto). <code>scripts/gerar_bonus_area_ardida.py</code> replica exactamente esta semântica: polígonos de <code>areas_ardidas</code> reprojectados para EPSG:3763 e bufferizados em metros reais (5000m), ordenados por ano ascendente, rasterizados numa única passagem — cada célula fica com o ano do fogo mais recente entre os buffers que a cobrem (última geometria desenhada "vence" em sobreposições), replicando <code>ORDER BY ano DESC LIMIT 1</code> sem precisar de milhões de consultas SQL pontuais.</p>
+    <p><strong>Erro real encontrado e corrigido:</strong> primeira tentativa aplicou <code>ST_Buffer(geom, 5000)</code> directamente sobre a geometria original em EPSG:4326 (graus) — um buffer de "5000 graus", não 5000 metros, gerando coordenadas fora do intervalo válido (erro real: <code>"tmerc: Invalid latitude"</code> ao tentar reprojectar). Corrigido: <code>ST_Transform(geom, 3763)</code> antes do <code>ST_Buffer</code>, nunca depois.</p>
+    <p><strong>Validado antes de aplicar aos dados reais:</strong> teste sintético com dois buffers circulares sobrepostos de anos diferentes (2020, 2024) confirmou que a célula na zona de sobreposição fica exactamente com o ano mais recente (2024), e que o cálculo do bónus a partir do raster de anos produz os valores esperados (fogo há 6 anos → 0,05; há 2 anos → 0,25; sem fogo → 0,0).</p>
+    <p>Resultado real: 83,28% de Portugal Continental com algum bónus activo; 1.003.708 células (≈62.700 km²) com bónus máximo (+0,25) — visualmente confirmado como padrão de círculos sobrepostos no Alentejo (assinatura esperada de buffers de 5km à volta de cada polígono de incêndio).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Combinação final e descoberta: o bónus histórico pesa quase tanto como o NDVI</h4>
+    <p>Confirmação directa do código (<code>get_structural_risk</code>) antes de combinar: a fórmula usa <code>ndvi_factor</code> (normalizado por <code>get_ndvi_factor</code>), não o NDVI em bruto — normalização replicada explicitamente ao combinar, não na fonte (Princípio da Separação Analítica). Declive usado directamente (<code>get_slope_factor</code> não aplica transformação adicional ao <code>slope_norm.tif</code> já normalizado).</p>
+    <p>Primeira geração do <code>indice_p.tif</code> completo revelou, por inspecção visual (PNG de pré-visualização) e depois por análise quantitativa pedida antes de aceitar o resultado, um facto não previsto: a média observada (0,616) excede em ~0,17 a soma esperada das três variáveis estruturais (~0,45, calculado manualmente a partir das médias × pesos antes de correr qualquer código). Tabela de contribuições reais:</p>
+    <table>
+      <thead><tr><th>Componente</th><th>Média</th><th>Contribuição média</th><th>% células &gt;0</th><th>Peso</th></tr></thead>
+      <tbody>
+        <tr><td>WorldCover</td><td>0,5649</td><td>0,2824 (44%)</td><td>99,52%</td><td>0,50</td></tr>
+        <tr><td>NDVI (factor)</td><td>0,5071</td><td>0,1521 (24%)</td><td>86,35%</td><td>0,30</td></tr>
+        <tr><td>Declive (novo)</td><td>0,0793</td><td>0,0159 (2,5%)</td><td>99,88%</td><td>0,20</td></tr>
+        <tr><td>Área ardida (bónus)</td><td>0,1843</td><td>0,1843 (29%)</td><td>83,28%</td><td>1,00 (sem peso formal)</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Leitura:</strong> o bónus de área ardida — nunca antes analisado estatisticamente, sem peso formal na fórmula — contribui quase tanto quanto o NDVI (29% vs. 24%) e mais de 11× o declive, apesar das várias sessões dedicadas a validar cuidadosamente a resolução e o método de cálculo do declive (secção 15.25).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão arquitectural: decomposição em P_estrutural + P_histórico</h4>
+    <p>Consultoria externa identificou uma questão conceptual, não um erro: WorldCover, NDVI e declive respondem à pergunta "qual é a propensão física do território?" — propriedades relativamente estáveis. A área ardida responde a "o que aconteceu neste território nos últimos anos?" — um evento histórico, de natureza distinta. Misturá-los aditivamente sem distinção explícita esconde qual componente explica um valor alto do Índice P numa dada célula.</p>
+    <p><strong>Decisão:</strong> decompor formalmente — <code>P_estrutural = 0,5·WorldCover + 0,3·NDVI_factor + 0,2·Declive</code> (<code>scripts/gerar_indice_p_estrutural.py</code>, novo) + <code>P_histórico</code> (o bónus de área ardida já construído) → <code>P = min(1,0, P_estrutural + P_histórico)</code> (<code>scripts/gerar_indice_p_final.py</code>, novo, substitui a combinação directa de quatro variáveis). Mesmo padrão de decomposição hierárquica já usado no Índice V (Exposição/Sensibilidade/Resposta) e na Sensibilidade (Demográfica/Social) — terceira aplicação consecutiva do mesmo princípio arquitectural ao longo do projecto.</p>
+    <p><strong>Preservação do resultado numérico, testada por regressão:</strong> por desenho, esta decomposição não deveria alterar o Índice P final — é a mesma soma, só organizada de forma explícita. Testado primeiro com dados sintéticos, depois com os rasters reais: <code>scripts/gerar_indice_p_final.py</code> inclui um modo de comparação directa contra o raster anterior. Resultado real: diferença máxima de 0,00000005 em 1.425.631 células comparadas — dentro da precisão do <code>float32</code>, confirmando que a decomposição é numericamente idêntica à fórmula monolítica anterior.</p>
+    <p><strong>Questão em aberto, registada mas não resolvida:</strong> a área ardida deveria pertencer ao Índice P, ou à futura Camada M (factores temporais, dado que a recorrência de incêndios é também um fenómeno temporal)? Sem resposta definitiva nesta sessão — fica como pergunta legítima para o desenho do modelo de integração (ver <code>saeif_especificacao_cientifica.html</code> §05).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Scripts finais</h4>
+    <table>
+      <thead><tr><th>Ficheiro</th><th>Função</th></tr></thead>
+      <tbody>
+        <tr><td><code>scripts/gerar_indice_p_estrutural.py</code></td><td>Combina WorldCover+NDVI+Declive (sem bónus histórico).</td></tr>
+        <tr><td><code>scripts/gerar_indice_p_final.py</code></td><td>Soma P_estrutural + P_histórico, com teste de regressão opcional contra um raster anterior.</td></tr>
+        <tr><td><code>scripts/gerar_bonus_area_ardida.py</code></td><td>Bónus de área ardida como raster, via rasterização por ordenação.</td></tr>
+      </tbody>
+    </table>
+    <pre><code>gdalwarp -t_srs EPSG:3763 -te -122000 -306500 181250 283250 -tr 250 250 -r average \
+  -dstnodata -9999 -overwrite data/fire_risk.tif data/worldcover_indice_p_250m.tif
+
+python3 scripts/gerar_bonus_area_ardida.py data/bonus_area_ardida_250m.tif
+
+python3 scripts/gerar_indice_p_estrutural.py data/mascara_portugal_continental.tif \
+  data/worldcover_indice_p_250m.tif data/ndvi_indice_p_250m.tif \
+  data/declive_indice_p_250m.tif data/indice_p_estrutural.tif
+
+python3 scripts/gerar_indice_p_final.py data/mascara_portugal_continental.tif \
+  data/indice_p_estrutural.tif data/bonus_area_ardida_250m.tif data/indice_p.tif</code></pre>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (26 Jul 2026)</strong><br>
+      <strong>Índice P completo — os três índices estruturais do SAEIF (I, P, V) estão agora todos construídos como superfícies raster na grelha oficial de 250m.</strong> Arquitectura decomposta (P_estrutural + P_histórico), testada por regressão. <strong>Pendente:</strong> validação estatística formal do Índice P (equivalente ao holdout do Índice I); decisão sobre se a área ardida pertence ao Índice P ou à Camada M; publicação via <code>/api/layers</code>/STAC; desenho do modelo de integração <code>Risco = f(I,P,V,M)</code> (Fase 4 do roteiro).
+    </div>
+
   </div>
 </div><!-- /container -->
 
@@ -2839,16 +2897,16 @@ cp data/declive_comparacao/declive_novo.tif data/declive_indice_p_250m.tif</code
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>34.8</td><td>55</td><td>1914.00</td></tr>
-        <tr><td>Design</td><td>21.2</td><td>55</td><td>1166.00</td></tr>
+        <tr><td>Análise</td><td>36.9</td><td>55</td><td>2029.50</td></tr>
+        <tr><td>Design</td><td>21.5</td><td>55</td><td>1182.50</td></tr>
         <tr><td>Gestão</td><td>6.7</td><td>40</td><td>268.00</td></tr>
-        <tr><td>Programação</td><td>114.2</td><td>45</td><td>5139.00</td></tr>
-        <tr><td>Testes</td><td>26.7</td><td>35</td><td>934.50</td></tr>
-        <tr><td>Documentação</td><td>38.4</td><td>30</td><td>1152.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>242.0</td><td>—</td><td>10573.50</td></tr>
+        <tr><td>Programação</td><td>116.8</td><td>45</td><td>5256.00</td></tr>
+        <tr><td>Testes</td><td>28.5</td><td>35</td><td>997.50</td></tr>
+        <tr><td>Documentação</td><td>39.7</td><td>30</td><td>1191.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>250.1</td><td>—</td><td>10924.50</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~47% das horas), reflectindo a natureza do projecto até agora. Esta actualização (26 Jul 2026, Fase 2 do roteiro — transformar o Índice P numa superfície raster) cobre: descoberta de quatro fontes com resoluções incompatíveis; correcção de um erro de CRS não suportado pela API Sentinel Hub; descoberta de distorção real entre projecções (EPSG:3763 vs. EPSG:3035); comparação quantitativa rigorosa entre dois métodos de cálculo do declive, revelando um viés sistemático real (~80% de subestimação da inclinação média pelo método antigo) e motivando um novo princípio geral de arquitectura (Consistência Projectiva).</p>
+    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~47% das horas), reflectindo a natureza do projecto até agora. Esta actualização (26 Jul 2026, continuação) conclui a Fase 2 do roteiro — <strong>Índice P completo</strong>: WorldCover a 250m, bónus de área ardida como raster (com um erro real de ordem de operações corrigido — buffer antes de reprojectar gerava coordenadas inválidas), e uma decisão arquitectural motivada pelos próprios resultados — decomposição em P_estrutural + P_histórico, depois de uma análise quantitativa revelar que o bónus de área ardida (sem peso formal) contribui quase tanto quanto o NDVI e 11× mais que o declive tão cuidadosamente validado nas sessões anteriores.</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2868,6 +2926,7 @@ cp data/declive_comparacao/declive_novo.tif data/declive_indice_p_250m.tif</code
         <tr><td>16 Jul 2026 (mesma sessão)</td><td>+6,2h: catálogo STAC v1.0.0 (estático) + suporte a COG — motivado por pergunta sobre o GeoLibre; especificação STAC confirmada por pesquisa antes de implementar; <code>scripts/publicar_camada.py</code> estendido para gerar COG a par do PNG; <code>scripts/gerar_stac.py</code> (novo); validação manual contra campos obrigatórios (validação oficial via schema bloqueada por falta de acesso de rede no ambiente de desenvolvimento); exposição via API (<code>/layers/{id}.tif</code>, <code>/stac/*</code>), testada com TestClient; 4 camadas republicadas com COG; catálogo confirmado em produção real; incidente de deploy (ficheiro não commitado) identificado e resolvido sem perda de informação.</td></tr>
         <tr><td>16 Jul 2026 (mesma sessão)</td><td>+5,6h: teste real com QGIS (proposto por Pedro Pestana) — dois bugs de HTTP genuínos encontrados e corrigidos (<code>HEAD</code> a devolver 404, sem suporte a <code>Range</code>); causa raiz do segundo confirmada por pesquisa (Starlette 0.38.6, suporte a <code>Range</code> só desde 0.39.0, mais uma CVE conhecida no intervalo 0.39.0-0.49.0); actualização mínima e segura de <code>fastapi</code>/<code>starlette</code>, testada em ambiente isolado antes de aplicar; estratégia de três fases registada para a futura actualização completa até à versão mais recente; validação visual final confirmada no QGIS.</td></tr>
         <tr><td>26 Jul 2026</td><td>+8,9h: Fase 2 do roteiro — Índice P como raster. Levantamento das quatro fontes (resoluções incompatíveis); NDVI a 250m (correcção de erro de CRS não suportado, descoberta de distorção real EPSG:3763/EPSG:3035); comparação quantitativa dos dois métodos de declive (Pearson 0,98, viés sistemático de ~80% confirmado); Princípio da Consistência Projectiva formalizado; dois incidentes técnicos corrigidos (ABI numpy/gdal_array, conflito de versão scipy/numpy).</td></tr>
+        <tr><td>26 Jul 2026 (mesma sessão)</td><td>+8,1h: conclusão da Fase 2 — WorldCover a 250m (reamostragem <code>average</code>, decisão fundamentada na natureza ordinal dos valores); bónus de área ardida como raster (rasterização por ordenação, erro real de ordem buffer/reprojecção corrigido); primeira geração do <code>indice_p.tif</code> completo; análise quantitativa de contribuições reais revelou o bónus histórico a pesar quase tanto quanto o NDVI (29% vs. 24%), muito mais que o declive (2,5%); decomposição arquitectural em P_estrutural + P_histórico (terceira aplicação do mesmo padrão hierárquico do Índice V), testada por regressão contra o resultado anterior (diferença máxima 0,00000005 — numericamente idêntico). <strong>Marco: os três índices estruturais do SAEIF (I, P, V) estão agora todos completos como rasters na grelha oficial.</strong></td></tr>
       </tbody>
     </table>
 
