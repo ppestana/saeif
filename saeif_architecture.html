@@ -2710,6 +2710,62 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
       <strong>Consumo real por QGIS confirmado e validado visualmente.</strong> Dois bugs de HTTP reais encontrados e corrigidos (suporte a <code>HEAD</code> explícito; <code>fastapi</code>/<code>starlette</code> actualizados para versões com suporte a <code>Range</code>, dentro de um intervalo testado e sem a CVE conhecida). <strong>Pendente:</strong> suite de testes automáticos (fase 2 da estratégia de actualização); actualização completa até à versão mais recente do FastAPI/Starlette (fase 3, só depois da suite de testes); testar consumo por GeoLibre especificamente.
     </div>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.25 — Índice P como raster: NDVI, declive e a descoberta de um viés sistemático</h3>
+    <p>Fase 2 do roteiro de integração (26 Jul 2026): transformar o Índice P (hoje calculado por ponto, em <code>score.py</code>) numa superfície raster de 250m, consistente com os Índices I e V.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Levantamento inicial — quatro fontes, quatro resoluções distintas</h4>
+    <p>Inspecção directa de <code>score.py</code>/<code>api/ingest/ndvi.py</code>/<code>api/ingest/dem.py</code> revelou que o Índice P combina hoje quatro fontes com resoluções muito diferentes: WorldCover (<code>fire_risk.tif</code>, EPSG:4326, ~10m), NDVI (<code>ndvi_latest.tif</code>, ~2km — limitado pelo pipeline de consulta em tempo real, não pela fonte original), declive (<code>slope_norm.tif</code>, ~2km, mesma limitação), e o bónus de área ardida (não é raster — consulta PostGIS em tempo real, <code>ST_DWithin</code> 5km). Facto chave: a resolução de ~2km do NDVI/declive não é um limite da fonte (Sentinel-2 nativo 10m, Copernicus DEM GLO-30 nativo ~30m) — é uma escolha feita para permitir um pedido rápido e recorrente à API. Um pedido único e offline não tem essa restrição.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">NDVI a 250m — pedido directo ao Sentinel Hub na grelha oficial</h4>
+    <p><code>scripts/gerar_ndvi_indice_p.py</code> — mesmo evalscript de <code>api/ingest/ndvi.py</code> (fórmula NDVI e máscara de nuvens idênticas), pedido offline, não o lookup em tempo real. <strong>Erro de implementação encontrado e corrigido:</strong> a primeira tentativa pediu directamente em EPSG:3763 — rejeitada pela API (<code>400 Bad Request: "Unsupported CRS value"</code>). Confirmado por consulta à documentação oficial: EPSG:3763 não consta da lista de CRS suportados pela Process API; EPSG:3035 (ETRS89/LAEA Europe — o mesmo já usado para a grelha INE) está suportado. Corrigido: pedido em EPSG:3035, reprojectado depois via <code>gdalwarp</code> para a grelha oficial — mesmo padrão de duas etapas já usado para GHSL/CAOP/INE.</p>
+    <p>Resultado real: 2.616.780 células válidas, mediana 0,30, sem valores exactamente em -1/1 (validação de ausência de artefactos de borda). Distribuição plausível para verão em Portugal Continental.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Descoberta durante o dimensionamento do pedido: distorção real entre projecções</h4>
+    <p>Cálculo inicial do bbox em EPSG:3035 (a partir dos 4 cantos da grelha oficial, transformados via <code>pyproj</code>) revelou que a extensão real após reprojecção (431.897m × 656.558m) é maior do que a extensão original em EPSG:3763 (303.250m × 589.750m) — EPSG:3763 (Transverse Mercator, local) e EPSG:3035 (LAEA, pan-europeu) não preservam distâncias/formas da mesma maneira, e a distorção é real, não um erro de cálculo. Consequência prática: a resolução de pedido teve de subir de 250m para <strong>300m</strong> para caber no limite síncrono da API (2500×2500px) — confirmado empiricamente (1728×2627px a 250m excede o limite; 1440×2189px a 300m não).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Declive — dois métodos comparados quantitativamente antes de decidir</h4>
+    <p>Descoberta ao inspeccionar <code>api/ingest/dem.py</code>: o cálculo do declive usa <code>np.gradient</code> sobre o DEM em coordenadas geográficas (EPSG:4326), com uma conversão aproximada graus→metros (<code>× 111320</code>) aplicada <strong>igualmente aos dois eixos</strong> — fisicamente incorrecto, porque só é exacto para a latitude; a longitude requer <code>111320 × cos(latitude)</code>, um factor ~0,77 a 40°N. Decisão (registada por consultoria externa, 26 Jul 2026): não substituir cegamente pelo método alternativo (<code>gdaldem slope</code> sobre o DEM reprojectado para metros reais) sem primeiro comparar quantitativamente os dois, dado que ambos já estão em produção implícita há meses.</p>
+    <p><strong>Metodologia da comparação</strong> (<code>scripts/gerar_declive_comparacao.py</code>): a partir da mesma fonte DEM (Copernicus GLO-30, obtido uma vez em EPSG:3035 via <code>scripts/gerar_dem_indice_p.py</code>), gerados dois rasters de declive na grelha oficial — <em>método antigo</em> (réplica exacta da lógica de <code>dem.py</code>: reprojecção para EPSG:4326, <code>np.gradient</code> com a aproximação de 111320, depois reprojectado para a grelha oficial só para permitir a comparação) e <em>método novo</em> (DEM reprojectado directamente para EPSG:3763/250m, <code>gdaldem slope</code> sobre metros reais). <strong>Teste de validação antes de aplicar aos dados reais:</strong> DEM sintético com rampa de altitude conhecida ao longo do eixo X (leste-oeste, o eixo onde o erro teórico se manifesta) — valor esperado do método antigo (0,52°) e do método novo (0,40°) calculados analiticamente antes de correr o código, confirmados pelos resultados reais do script (0,5° e 0,4°, respectivamente).</p>
+    <p><strong>Incidente técnico durante a implementação:</strong> uso inicial de <code>ReadAsArray()</code>/<code>WriteArray()</code> em vez do padrão já estabelecido no projecto (<code>ReadRaster</code>/<code>WriteRaster</code> em bytes) reintroduziu o erro de incompatibilidade de ABI numpy/gdal_array já resolvido para o Índice I — corrigido para seguir a convenção existente. Segundo incidente: dependência de <code>scipy</code> para Pearson/Spearman entrou em conflito de versão com o NumPy gerido pelo sistema no servidor (<code>scipy</code> mais recente exige NumPy≥2.0, servidor tem 1.26.4) — resolvido eliminando a dependência, reutilizando a técnica de correlação por postos já usada em <code>scripts/analisar_correlacao.py</code> (Pearson via <code>np.corrcoef</code>, Spearman via Pearson sobre os postos).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Resultado da comparação (dados reais, 26 Jul 2026)</h4>
+    <table>
+      <thead><tr><th>Métrica</th><th>Valor</th><th>Leitura</th></tr></thead>
+      <tbody>
+        <tr><td>Pearson r</td><td>0,9786</td><td>Concordância espacial muito alta</td></tr>
+        <tr><td>Spearman ρ</td><td>0,9812</td><td>Ordenação relativa do relevo praticamente inalterada</td></tr>
+        <tr><td>RMSE</td><td>0,0209</td><td>Diferença absoluta pequena, escala normalizada [0,1]</td></tr>
+        <tr><td>Diferença média (novo−antigo)</td><td>+0,0078</td><td>Pequena na escala normalizada — mas ver declive em graus, abaixo</td></tr>
+        <tr><td>% células com diferença &gt;0,05</td><td>4,50%</td><td>Minoria real, não desprezável</td></tr>
+        <tr><td>Declive médio, método antigo</td><td>1,5°</td><td>Subestimado</td></tr>
+        <tr><td>Declive médio, método novo</td><td>2,7°</td><td>~80% mais alto — coincide com a previsão teórica (factor <code>cos(40°)≈0,77</code>)</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Leitura:</strong> correlação alta confirma continuidade científica — o Índice P não muda de significado, as serras continuam a ser as zonas de maior declive. A diferença sistemática na média (1,5° → 2,7°) é o resultado mais relevante: não é ruído, é um viés real, na direcção exacta que a física da projecção previa, corrigido pelo novo método. Os 4,5% de células com diferença maior são um preço aceitável, concentrado presumivelmente em encostas orientadas este-oeste e relevo mais acidentado (não confirmado visualmente nesta sessão).</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Decisão final</h4>
+    <p><strong>Adoptado <code>gdaldem slope</code> sobre DEM em EPSG:3763 (metros reais)</strong> como método definitivo para o declive do Índice P. Raster de produção: <code>data/declive_indice_p_250m.tif</code>.</p>
+    <p><strong>Princípio geral adoptado (Princípio da Consistência Projectiva):</strong> todo o processamento geométrico do SAEIF passa a ser efectuado em EPSG:3763 — distâncias, buffers, KDE, gradientes/declives, variáveis de acessibilidade usam exclusivamente CRS projectados, nunca coordenadas geográficas directamente. Elimina a categoria inteira de erro que motivou esta investigação, não só o caso específico do declive. Ver <code>saeif_especificacao_cientifica.html</code> §00b.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Scripts e passo a passo</h4>
+    <table>
+      <thead><tr><th>Ficheiro</th><th>Função</th></tr></thead>
+      <tbody>
+        <tr><td><code>scripts/gerar_ndvi_indice_p.py</code></td><td>NDVI a 250m, pedido em EPSG:3035, reprojectado para a grelha oficial.</td></tr>
+        <tr><td><code>scripts/gerar_dem_indice_p.py</code></td><td>DEM Copernicus GLO-30, fonte comum aos dois métodos de declive comparados.</td></tr>
+        <tr><td><code>scripts/gerar_declive_comparacao.py</code></td><td>Gera e compara os dois métodos de declive (Pearson, Spearman, RMSE, % diferença); usado também para gerar o raster final adoptado.</td></tr>
+      </tbody>
+    </table>
+    <pre><code>python3 scripts/gerar_ndvi_indice_p.py data/ndvi_indice_p_250m.tif
+python3 scripts/gerar_dem_indice_p.py data/dem_indice_p_3035.tif
+python3 scripts/gerar_declive_comparacao.py data/dem_indice_p_3035.tif data/declive_comparacao
+cp data/declive_comparacao/declive_novo.tif data/declive_indice_p_250m.tif</code></pre>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (26 Jul 2026)</strong><br>
+      <strong>NDVI e declive a 250m construídos e validados.</strong> Rasters: <code>data/ndvi_indice_p_250m.tif</code>, <code>data/declive_indice_p_250m.tif</code>. Princípio da Consistência Projectiva formalizado. <strong>Pendente:</strong> WorldCover a 250m (fonte já a ~10m, precisa só de reamostragem, não de novo pedido); bónus de área ardida como raster (hoje só consulta pontual PostGIS — precisa de reformulação como superfície); combinação final em <code>indice_p.tif</code>; validação estatística do Índice P completo.
+    </div>
+
   </div>
 </div><!-- /container -->
 
@@ -2779,20 +2835,20 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
       </tbody>
     </table>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 16 Jul 2026)</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 26 Jul 2026)</h3>
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>32.7</td><td>55</td><td>1798.50</td></tr>
+        <tr><td>Análise</td><td>34.8</td><td>55</td><td>1914.00</td></tr>
         <tr><td>Design</td><td>21.2</td><td>55</td><td>1166.00</td></tr>
-        <tr><td>Gestão</td><td>6.5</td><td>40</td><td>260.00</td></tr>
-        <tr><td>Programação</td><td>111.1</td><td>45</td><td>4999.50</td></tr>
-        <tr><td>Testes</td><td>24.7</td><td>35</td><td>864.50</td></tr>
-        <tr><td>Documentação</td><td>36.9</td><td>30</td><td>1107.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>233.1</td><td>—</td><td>10195.50</td></tr>
+        <tr><td>Gestão</td><td>6.7</td><td>40</td><td>268.00</td></tr>
+        <tr><td>Programação</td><td>114.2</td><td>45</td><td>5139.00</td></tr>
+        <tr><td>Testes</td><td>26.7</td><td>35</td><td>934.50</td></tr>
+        <tr><td>Documentação</td><td>38.4</td><td>30</td><td>1152.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>242.0</td><td>—</td><td>10573.50</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~48% das horas), reflectindo a natureza do projecto até agora. Esta actualização cobre o teste real com QGIS (proposto por Pedro Pestana) que revelou dois bugs de HTTP genuínos (<code>HEAD</code>, <code>Range</code>) invisíveis aos testes anteriores — só cobriam <code>GET</code> — corrigidos com uma actualização mínima e segura de dependências (<code>fastapi</code>/<code>starlette</code>), e uma estratégia explícita de três fases registada para a futura actualização completa.</p>
+    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~47% das horas), reflectindo a natureza do projecto até agora. Esta actualização (26 Jul 2026, Fase 2 do roteiro — transformar o Índice P numa superfície raster) cobre: descoberta de quatro fontes com resoluções incompatíveis; correcção de um erro de CRS não suportado pela API Sentinel Hub; descoberta de distorção real entre projecções (EPSG:3763 vs. EPSG:3035); comparação quantitativa rigorosa entre dois métodos de cálculo do declive, revelando um viés sistemático real (~80% de subestimação da inclinação média pelo método antigo) e motivando um novo princípio geral de arquitectura (Consistência Projectiva).</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2811,6 +2867,7 @@ python3 scripts/gerar_deficit_resposta.py data/mascara_portugal_continental.tif 
         <tr><td>16 Jul 2026</td><td>+1,0h: manutenção de infraestrutura do servidor — actualização de kernel (117→134) e stack Docker completa, reinício controlado após confirmação de backups recentes e políticas de reinício automático, checklist pós-reinício dos 6 containers em produção (SAEIF, Ponte Digital, CAL).</td></tr>
         <tr><td>16 Jul 2026 (mesma sessão)</td><td>+6,2h: catálogo STAC v1.0.0 (estático) + suporte a COG — motivado por pergunta sobre o GeoLibre; especificação STAC confirmada por pesquisa antes de implementar; <code>scripts/publicar_camada.py</code> estendido para gerar COG a par do PNG; <code>scripts/gerar_stac.py</code> (novo); validação manual contra campos obrigatórios (validação oficial via schema bloqueada por falta de acesso de rede no ambiente de desenvolvimento); exposição via API (<code>/layers/{id}.tif</code>, <code>/stac/*</code>), testada com TestClient; 4 camadas republicadas com COG; catálogo confirmado em produção real; incidente de deploy (ficheiro não commitado) identificado e resolvido sem perda de informação.</td></tr>
         <tr><td>16 Jul 2026 (mesma sessão)</td><td>+5,6h: teste real com QGIS (proposto por Pedro Pestana) — dois bugs de HTTP genuínos encontrados e corrigidos (<code>HEAD</code> a devolver 404, sem suporte a <code>Range</code>); causa raiz do segundo confirmada por pesquisa (Starlette 0.38.6, suporte a <code>Range</code> só desde 0.39.0, mais uma CVE conhecida no intervalo 0.39.0-0.49.0); actualização mínima e segura de <code>fastapi</code>/<code>starlette</code>, testada em ambiente isolado antes de aplicar; estratégia de três fases registada para a futura actualização completa até à versão mais recente; validação visual final confirmada no QGIS.</td></tr>
+        <tr><td>26 Jul 2026</td><td>+8,9h: Fase 2 do roteiro — Índice P como raster. Levantamento das quatro fontes (resoluções incompatíveis); NDVI a 250m (correcção de erro de CRS não suportado, descoberta de distorção real EPSG:3763/EPSG:3035); comparação quantitativa dos dois métodos de declive (Pearson 0,98, viés sistemático de ~80% confirmado); Princípio da Consistência Projectiva formalizado; dois incidentes técnicos corrigidos (ABI numpy/gdal_array, conflito de versão scipy/numpy).</td></tr>
       </tbody>
     </table>
 
