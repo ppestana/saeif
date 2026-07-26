@@ -478,7 +478,7 @@
 <!-- ─── NAV ─── -->
 <nav>
   <a href="#proposito">Propósito</a>
-  <a href="#principios">Princípios Gerais</a>
+  <a href="#principios">Princípios Fundamentais</a>
   <a href="#indice-i">Índice I</a>
   <a href="#indice-p">Índice P</a>
   <a href="#indice-v">Índice V</a>
@@ -515,18 +515,32 @@
   <div class="section" id="principios">
     <div class="section-header">
       <span class="section-num">00b</span>
-      <span class="section-title">Princípios Gerais (transversais a todos os índices)</span>
+      <span class="section-title">Princípios Fundamentais</span>
     </div>
     <div class="section-body">
-      <p class="dimtext">POR PREENCHER — compilar a partir de <code>saeif_architecture.html</code>:</p>
+      <p>Capítulo adicionado por recomendação de consultoria externa (26 Jul 2026): reunir num só lugar os princípios que explicam praticamente todas as decisões metodológicas do SAEIF 2.0 — mais importantes, no seu conjunto, do que qualquer algoritmo específico. Organizados em dois níveis: princípios de investigação (porquê se decide desta forma) e princípios de arquitectura (como isso se traduz em regras técnicas concretas).</p>
+
+      <h4 style="margin:1rem 0 .5rem">Princípios de investigação</h4>
       <ul>
-        <li>Princípio da Separação Analítica (§16 da arquitectura) — dados nunca reescalados para visualização</li>
-        <li>Princípio de consistência de resolução dentro de cada componente (§15.16 — motivou o adiamento da escolaridade)</li>
-        <li>Grelha oficial do SAEIF: 250m, EPSG:3763, extensão ibérica (<code>config/grid_spec.py</code>) — porquê 250m ("princípio da variável limitante"), porquê extensão ibérica (fogos não respeitam fronteiras)</li>
-        <li>Convenção de normalização: método escolhido por variável a partir da distribuição real observada, nunca por analogia entre variáveis (percentil quando há outliers de amostra pequena a proteger; min-max/linear quando o extremo é o próprio fenómeno a medir)</li>
-        <li>Convenção de pesos: peso igual como posição por omissão na ausência de evidência forte para desequilíbrio; pesos informados por evidência (ex. risco relativo de mortalidade) documentados como tal, nunca apresentados como derivação matemática exacta</li>
-        <li>Convenção de metadados de proveniência (<code>.meta.yaml</code>) para toda fonte de dados externa</li>
-        <li><strong>Princípio da Consistência Projectiva (desde 26 Jul 2026):</strong> todo o processamento geométrico é efectuado em EPSG:3763 (CRS projectado, metros reais) — nunca em coordenadas geográficas (graus). Todas as distâncias, buffers, KDE, gradientes/declives e variáveis de acessibilidade usam exclusivamente CRS projectados. Motivado pela descoberta de um viés sistemático real no cálculo antigo do declive (aproximação graus→metros sem correcção de latitude, subestimando a inclinação em ~80%) — ver <code>saeif_architecture.html</code> §15.25.</li>
+        <li><strong>Usar sempre dados observados quando existirem, nunca proxies quando há alternativa directa.</strong> Ex.: abandono da regressão de Nunes et al. (fórmula não reproduzível) a favor de KDE sobre ignições reais; distância real a quartéis de bombeiros (Wikidata) em vez de assumir cobertura uniforme.</li>
+        <li><strong>Evitar extrapolações entre escalas estatísticas incompatíveis.</strong> Ex.: escolaridade adiada por só existir ao nível de freguesia, incompatível com a resolução BGRI das restantes variáveis da Sensibilidade — mesmo quando isso significa deixar uma variável de fora, não inventar resolução onde ela não existe.</li>
+        <li><strong>Separar conceptualmente ignição, propagação e vulnerabilidade — e, dentro de cada uma, separar ainda mais quando os dados o justificarem.</strong> Índice I ≠ Índice P ≠ Índice V; dentro do V, Exposição ≠ Sensibilidade ≠ Resposta; dentro do P, estrutural ≠ histórico. Este princípio repetiu-se três vezes de forma independente ao longo do projecto (V, Sensibilidade, P) — não é coincidência, é o mesmo padrão a emergir sempre que uma variável de natureza distinta é descoberta escondida dentro de uma soma.</li>
+        <li><strong>Manter cada índice validável isoladamente.</strong> O Índice I tem holdout temporal próprio (AUC 0,86); o Índice V e o Índice P ainda não têm equivalente — lacuna registada explicitamente, não escondida, precisamente para que a futura integração <code>Risco=f(I,P,V,M)</code> não dependa de componentes nunca testados contra a realidade.</li>
+        <li><strong>Distinguir variáveis estruturais (relativamente permanentes) de variáveis meteorológicas/temporais (que mudam diariamente).</strong> Motivou a decomposição do Índice P (estrutural vs. histórico) e a pergunta ainda em aberto sobre se a "memória" de incêndios recentes pertence ao Índice P ou à futura Camada M (ver §04).</li>
+        <li><strong>Preferir parâmetros físicos a ajustes empíricos sem fundamento.</strong> Ex.: declive recalculado com <code>gdaldem slope</code> em metros reais, não por ajuste post-hoc a uma distorção conhecida; bandwidth do KDE escolhido por validação cruzada, não por valor redondo conveniente.</li>
+        <li><strong>Documentar todas as decisões metodológicas, incluindo as dúvidas e os caminhos abandonados.</strong> Ver §06, Registo Oficial de Decisões Metodológicas — inclui não só o que foi decidido, mas porque alternativas foram rejeitadas (regressão de Nunes, extrapolação distrito→concelho, np.gradient em graus).</li>
+        <li><strong>Distinguir explicitamente decisão científica, decisão de engenharia, e hipótese de trabalho.</strong> Um parâmetro herdado por continuidade operacional (ex. pesos do Índice P) nunca deve ser lido como um facto validado — ver classificação no Registo de Decisões, §06.</li>
+      </ul>
+
+      <h4 style="margin:1rem 0 .5rem">Princípios de arquitectura (operacionalização técnica dos anteriores)</h4>
+      <ul>
+        <li><strong>Princípio da Separação Analítica</strong> (<code>saeif_architecture.html</code> §16) — dados nunca reescalados para visualização; a rampa de cor adapta-se ao intervalo real observado, os valores no ficheiro permanecem intactos.</li>
+        <li><strong>Princípio de consistência de resolução dentro de cada componente</strong> (<code>saeif_architecture.html</code> §15.16) — variáveis combinadas na mesma soma devem ter resolução estatística equivalente; motivou o adiamento da escolaridade.</li>
+        <li><strong>Grelha oficial única do SAEIF:</strong> 250m, EPSG:3763, extensão ibérica (<code>config/grid_spec.py</code>) — referida sempre como "a grelha oficial", com os parâmetros exactos definidos num único ficheiro de configuração, não repetidos como valores soltos ao longo dos documentos.</li>
+        <li><strong>Convenção de normalização:</strong> método escolhido por variável a partir da distribuição real observada, nunca por analogia entre variáveis (percentil quando há outliers de amostra pequena a proteger; min-max/linear quando o extremo é o próprio fenómeno físico a medir).</li>
+        <li><strong>Convenção de pesos:</strong> peso igual como posição por omissão na ausência de evidência forte para desequilíbrio; pesos informados por evidência (ex. risco relativo de mortalidade) documentados como tal, nunca apresentados como derivação matemática exacta.</li>
+        <li><strong>Convenção de metadados de proveniência</strong> (<code>.meta.yaml</code>) para toda fonte de dados externa — fonte, licença, CRS original, data de acesso, propósito, limitações conhecidas.</li>
+        <li><strong>Princípio da Consistência Projectiva</strong> (desde 26 Jul 2026) — todo o processamento geométrico em EPSG:3763 (CRS projectado, metros reais), nunca em coordenadas geográficas (graus). Motivado pela descoberta de um viés sistemático real no cálculo antigo do declive (subestimação de ~80% da inclinação). Ver <code>saeif_architecture.html</code> §15.25.</li>
       </ul>
     </div>
   </div>
