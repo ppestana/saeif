@@ -24,7 +24,8 @@ from datetime import datetime, timedelta, timezone
 
 RAIO_M = 5000  # mesmo raio ja usado no bonus de area ardida
 JANELA_DIAS = 2
-DATA_MIN_PROCIV = "2025-08-12"
+DATA_MIN_PROCIV_STR = "2025-08-12"  # para comparar com as strings ISO do CSV
+DATA_MIN_PROCIV = datetime(2025, 8, 12, tzinfo=timezone.utc)  # asyncpg exige datetime real, nao string
 
 NATUREZAS_FLORESTAIS = ["%mato%", "%florest%", "%rural%", "%povoamento%"]
 
@@ -77,7 +78,7 @@ def main():
     caminho_entrada, caminho_saida = sys.argv[1:3]
 
     print("A consultar ocorrencias PROCIV (natureza florestal, >= "
-          f"{DATA_MIN_PROCIV}) ...")
+          f"{DATA_MIN_PROCIV_STR}) ...")
     ocorrencias = obter_ocorrencias_prociv()
     print(f"{len(ocorrencias)} ocorrencias PROCIV candidatas.")
 
@@ -85,7 +86,7 @@ def main():
         incendios = list(csv.DictReader(f))
 
     incendios_na_janela = [
-        i for i in incendios if i["data_inicio"] >= DATA_MIN_PROCIV
+        i for i in incendios if i["data_inicio"] >= DATA_MIN_PROCIV_STR
     ]
     print(f"{len(incendios_na_janela)} incendios do conjunto de validacao dentro da janela PROCIV.")
 
