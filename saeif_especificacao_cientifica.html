@@ -740,6 +740,20 @@
       </table>
       <p><strong>Isto resolve, com evidência empírica, a questão em aberto sobre a semântica do Índice V</strong> (registada acima): o V construído está correcto — o problema era o alvo de validação, não o índice. Pedir a V que explique área ardida é pedir-lhe que explique um fenómeno que nunca pretendeu representar.</p>
       <p><strong>Hipótese a confirmar em investigação futura (não feita nesta sessão):</strong> se existirem dados reais de consequência (edifícios afectados, evacuações, vítimas, prejuízo), a expectativa é que V mostre finalmente utilidade discriminativa nesse alvo, apesar de não a mostrar contra área ardida. Fonte de dados ainda por confirmar — <code>areas_ardidas</code> não tem estes campos; verificar se o fogos.pt/PROCIV guarda este detalhe historicamente, ou se existe outra fonte (ex. ANEPC).</p>
+
+      <h4 style="margin:1rem 0 .5rem">Replicação independente do padrão (26 Jul 2026, mesma sessão)</h4>
+      <p>Investigada uma fonte alternativa de proxy de consequência — <code>ocorrencias_prociv</code>, campos <code>man</code>/<code>terrain</code>/<code>aerial</code> (recursos operacionais alocados a cada ocorrência real). Descoberto um hiato temporal genuíno: sem sobreposição entre <code>areas_ardidas</code>/ICNF (sem registos após Mai 2026, atraso de publicação) e a cobertura densa do PROCIV (só a partir de Jun 2026). Investigação pivotou para um <strong>conjunto de dados prospectivo</strong>: a própria ocorrência PROCIV serve de evento <em>e</em> de resultado (jun-jul 2026), usando <code>man</code> (efetivos alocados) como proxy de gravidade operacional.</p>
+      <p><strong>Resultado: 2250 ocorrências reais, 0 falhas de emparelhamento com I/P/V/FWI.</strong> O padrão de AUC replica-se, de forma muito próxima, num conjunto de dados completamente independente (período diferente, variável de resultado diferente, fonte diferente):</p>
+      <table>
+        <thead><tr><th></th><th>Área ardida (2020-2025, ICNF)</th><th>Efetivos alocados (jun-jul 2026, PROCIV)</th></tr></thead>
+        <tbody>
+          <tr><td>Melhor variável individual</td><td>FWI/M (0,608)</td><td>FWI/M (0,563)</td></tr>
+          <tr><td>Melhor candidata combinada</td><td>P×M, sem I (0,610)</td><td>P×M, sem I (0,561)</td></tr>
+          <tr><td>Índice V</td><td>Piora sempre a combinação</td><td>Piora sempre a combinação</td></tr>
+          <tr><td>Índice I</td><td>Invertido (0,379)</td><td>Fraco/invertido (0,416)</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Leitura:</strong> um padrão que se repetisse por acaso num único conjunto de dados seria uma coincidência plausível; repetir-se com a mesma forma numa fonte, período, e variável de resultado completamente distintos é evidência real de um fenómeno genuíno, não um artefacto de uma fonte específica. Reforça, com confiança adicional, a conclusão dos três produtos (acima): <code>P×M</code> capta algo real sobre a gravidade de um incêndio já iniciado; <code>V</code> continua a não ser explicado por nenhum destes alvos — precisa do seu próprio "ground truth" (consequências para pessoas/bens), que continua por encontrar. Note-se que <code>man</code> (esforço de resposta) é já um proxy mais próximo de "consequência operacional" do que a área ardida, mas ainda não é "consequência para a população" propriamente dita — a pergunta original sobre V permanece parcialmente em aberto.</p>
       <p><strong>Conclusão arquitectural:</strong> a decomposição em I, P, V e M não é revista por este resultado — é reforçada. Cada componente captura um processo distinto da cadeia causal do fogo, em vez de todos tentarem explicar simultaneamente o mesmo fenómeno. O próximo passo cientificamente sólido não é procurar uma fórmula única que maximize a correlação com área ardida — é definir explicitamente, por componente, qual é o "ground truth" correcto contra o qual validar cada um.</p>
     </div>
   </div>
@@ -784,6 +798,7 @@
           <tr><td>26 Jul 2026</td><td>Lookup do FWI restrito a pontos espaciais sempre válidos (192 de 204)</td><td>Científica</td><td>73,7% de falhas confirmadas com vizinho mais próximo ingénuo; máscara de pontos não-vegetados confirmada constante ao longo de 2192 dias antes de aplicar a correcção</td><td>Modelo de integração</td></tr>
           <tr><td>26 Jul 2026</td><td>SAEIF decomposto em três produtos com alvos de validação distintos (I→ignições; P×M→área ardida; (P×M)×V→consequências reais)</td><td>Científica</td><td>Teste empírico (AUC) revelou padrão consistente: V e I invertidos contra área ardida, não por erro, mas por serem fenómenos causalmente distintos (área ardida é intermédia na cadeia, V vem depois)</td><td>Modelo de integração</td></tr>
           <tr><td>26 Jul 2026</td><td>Índice V mantém-se validado conceptualmente sem alteração — o alvo de validação estava errado, não o índice</td><td>Científica</td><td>Correlação negativa com área ardida (AUC 0,468) explicada fisicamente (vulnerabilidade correlaciona-se com melhor acesso/deteção/resposta, reduzindo área ardida) — não implica redesenhar o V</td><td>Índice V</td></tr>
+          <tr><td>26 Jul 2026</td><td>Padrão dos três produtos confirmado por replicação independente (PROCIV, jun-jul 2026, man como proxy)</td><td>Científica</td><td>2250 ocorrências, 0 falhas de emparelhamento — resultados de AUC próximos dos obtidos com área ardida (2020-2025, ICNF), fonte e período completamente distintos</td><td>Modelo de integração</td></tr>
           <tr><td>—</td><td>[continuar a preencher a cada nova decisão]</td><td></td><td></td><td></td></tr>
         </tbody>
       </table>
