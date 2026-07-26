@@ -142,19 +142,31 @@ def gerar_declive_novo(dem_3035_path, output_path, tmp_dir):
     print(f"  [novo] Guardado em {output_path}")
 
 
-def comparar(path_antigo, path_novo):
-    from scipy import stats
+def pearson(x, y):
+    return float(np.corrcoef(x, y)[0, 1])
 
+
+def spearman(x, y):
+    """Correlacao de Spearman = Pearson sobre os postos (ranks) -- mesma
+    tecnica ja usada em scripts/analisar_correlacao.py, evita depender do
+    scipy (conflito de versao numpy/scipy confirmado no servidor: scipy
+    1.18 exige numpy>=2.0, servidor tem 1.26.4 gerido pelo sistema)."""
+    rank_x = np.argsort(np.argsort(x))
+    rank_y = np.argsort(np.argsort(y))
+    return pearson(rank_x.astype(np.float64), rank_y.astype(np.float64))
+
+
+def comparar(path_antigo, path_novo):
     a, nodata_a, _, _, _, _ = ler_raster_bytes(path_antigo)
     n, nodata_n, _, _, _, _ = ler_raster_bytes(path_novo)
 
     validos = (a != nodata_a) & (n != nodata_n) & ~np.isnan(a) & ~np.isnan(n)
-    a_v = a[validos]
-    n_v = n[validos]
+    a_v = a[validos].astype(np.float64)
+    n_v = n[validos].astype(np.float64)
     print(f"\nCelulas validas em ambos: {len(a_v)}")
 
-    pearson_r, _ = stats.pearsonr(a_v, n_v)
-    spearman_r, _ = stats.spearmanr(a_v, n_v)
+    pearson_r = pearson(a_v, n_v)
+    spearman_r = spearman(a_v, n_v)
     rmse = np.sqrt(np.mean((a_v - n_v) ** 2))
     diff_media = np.mean(n_v - a_v)
     pct_dif_grande = 100 * np.sum(np.abs(n_v - a_v) > 0.05) / len(a_v)
