@@ -63,11 +63,13 @@ def calcular_auc(scores, classe_binaria):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Uso: python3 testar_candidatas_integracao.py <dataset_validacao.csv>")
+    if len(sys.argv) not in (2, 3, 4):
+        print("Uso: python3 testar_candidatas_integracao.py <dataset.csv> [coluna_resultado=area_ha] [limiar_binario=100.0]")
         sys.exit(1)
 
     caminho = sys.argv[1]
+    coluna_resultado = sys.argv[2] if len(sys.argv) >= 3 else "area_ha"
+    limiar_binario = float(sys.argv[3]) if len(sys.argv) == 4 else 100.0
 
     with open(caminho) as f:
         linhas = list(csv.DictReader(f))
@@ -76,9 +78,9 @@ def main():
     P = np.array([float(l["indice_p"]) for l in linhas])
     V = np.array([float(l["indice_v"]) for l in linhas])
     FWI = np.array([float(l["fwi"]) for l in linhas])
-    area_ha = np.array([float(l["area_ha"]) for l in linhas])
+    area_ha = np.array([float(l[coluna_resultado]) for l in linhas])
 
-    print(f"n = {len(linhas)} incendios reais")
+    print(f"n = {len(linhas)} incendios reais (variavel de resultado: '{coluna_resultado}')")
     print()
 
     # I nao esta na escala 0-1 (KDE bruto, max~0.06) -- normalizar tambem,
@@ -125,38 +127,52 @@ def main():
     print("com a GRAVIDADE (area ardida), nao com a probabilidade de ignicao em si.")
 
     # --- Analise binaria por limiar (recomendacao de consultoria externa, 26 Jul 2026) ---
-    LIMIAR_HA = 100.0
-    grande = area_ha > LIMIAR_HA
+    # Excluir sentinelas negativos (ex. -1 usado por vezes como "desconhecido") ANTES de tudo
+    validos_binario = area_ha >= 0
+    n_excluidos = int(np.sum(~validos_binario))
+    if n_excluidos > 0:
+        print(f"AVISO: {n_excluidos} valores negativos de '{coluna_resultado}' "
+              f"excluidos da analise binaria (provavel sentinela de 'desconhecido').")
+
+    area_ha_bin = area_ha[validos_binario]
+    I_norm_bin = I_norm[validos_binario]
+    P_bin = P[validos_binario]
+    V_bin = V[validos_binario]
+    M_norm_bin = M_norm[validos_binario]
+    resultados_hazard_bin = {nome: (h[validos_binario], rho) for nome, (h, rho) in resultados_hazard.items()}
+
+    LIMIAR_HA = limiar_binario
+    grande = area_ha_bin > LIMIAR_HA
     n_grandes = int(np.sum(grande))
     n_pequenos = len(grande) - n_grandes
 
     print()
-    print(f"=== ANALISE BINARIA: fogo grande (area_ha > {LIMIAR_HA}) vs. pequeno ===")
-    print(f"Fogos grandes: {n_grandes} ({100*n_grandes/len(grande):.1f}%) | "
-          f"Fogos pequenos: {n_pequenos} ({100*n_pequenos/len(grande):.1f}%)")
+    print(f"=== ANALISE BINARIA: '{coluna_resultado}' > {LIMIAR_HA} vs. resto ===")
+    print(f"Casos 'grandes': {n_grandes} ({100*n_grandes/len(grande):.1f}%) | "
+          f"Casos 'pequenos': {n_pequenos} ({100*n_pequenos/len(grande):.1f}%)")
     print()
-    print("AUC de cada candidata a discriminar fogo grande vs. pequeno "
-          "(0.5=sem poder discriminativo, 1.0=perfeito, mesma metrica do holdout do Indice I):")
+    print("AUC de cada candidata a discriminar (0.5=sem poder discriminativo, 1.0=perfeito, "
+          "mesma metrica do holdout do Indice I):")
     print()
 
     print("--- Variaveis individuais ---")
-    for nome, arr in [("Indice I (normalizado)", I_norm), ("Indice P", P),
-                      ("Indice V", V), ("FWI/M (normalizado)", M_norm)]:
+    for nome, arr in [("Indice I (normalizado)", I_norm_bin), ("Indice P", P_bin),
+                      ("Indice V", V_bin), ("FWI/M (normalizado)", M_norm_bin)]:
         auc = calcular_auc(arr, grande)
         print(f"  {nome:<24} AUC={auc:.4f}")
 
     print()
     print("--- Candidatas a Hazard ---")
-    for nome, (h, _) in resultados_hazard.items():
+    for nome, (h, _) in resultados_hazard_bin.items():
         auc = calcular_auc(h, grande)
         print(f"  {nome:<36} AUC={auc:.4f}")
 
     print()
     print(f"{'Hazard usado':<36} {'R=H*V':>10} {'R=H+V':>10} {'R=(H+V)/2':>10} {'R=H (sem V)':>12}")
-    for nome_h, (h, _) in resultados_hazard.items():
-        auc_produto = calcular_auc(h * V, grande)
-        auc_soma = calcular_auc(h + V, grande)
-        auc_media = calcular_auc((h + V) / 2, grande)
+    for nome_h, (h, _) in resultados_hazard_bin.items():
+        auc_produto = calcular_auc(h * V_bin, grande)
+        auc_soma = calcular_auc(h + V_bin, grande)
+        auc_media = calcular_auc((h + V_bin) / 2, grande)
         auc_sem_v = calcular_auc(h, grande)
         print(f"{nome_h:<36} {auc_produto:>10.4f} {auc_soma:>10.4f} {auc_media:>10.4f} {auc_sem_v:>12.4f}")
 
