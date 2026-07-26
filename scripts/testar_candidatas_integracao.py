@@ -47,6 +47,21 @@ def normalizar_minmax(x):
     return (x - x.min()) / (x.max() - x.min())
 
 
+def calcular_auc(scores, classe_binaria):
+    """AUC via estatistica de Mann-Whitney (soma de postos), sem depender
+    de sklearn -- mesma metrica ja usada na validacao holdout do Indice I
+    (AUC 0.86). classe_binaria: array booleano (True = classe positiva,
+    ex. 'fogo grande')."""
+    n_pos = int(np.sum(classe_binaria))
+    n_neg = len(classe_binaria) - n_pos
+    if n_pos == 0 or n_neg == 0:
+        return None
+    postos = np.argsort(np.argsort(scores)) + 1  # postos de 1 a N
+    soma_postos_positivos = np.sum(postos[classe_binaria])
+    auc = (soma_postos_positivos - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+    return float(auc)
+
+
 def main():
     if len(sys.argv) != 2:
         print("Uso: python3 testar_candidatas_integracao.py <dataset_validacao.csv>")
@@ -108,6 +123,42 @@ def main():
     print("Nota: rho mais proximo de +1 = melhor concordancia com a area ardida real.")
     print("Ressalva: todas as linhas ja sao incendios ocorridos -- isto testa a relacao")
     print("com a GRAVIDADE (area ardida), nao com a probabilidade de ignicao em si.")
+
+    # --- Analise binaria por limiar (recomendacao de consultoria externa, 26 Jul 2026) ---
+    LIMIAR_HA = 100.0
+    grande = area_ha > LIMIAR_HA
+    n_grandes = int(np.sum(grande))
+    n_pequenos = len(grande) - n_grandes
+
+    print()
+    print(f"=== ANALISE BINARIA: fogo grande (area_ha > {LIMIAR_HA}) vs. pequeno ===")
+    print(f"Fogos grandes: {n_grandes} ({100*n_grandes/len(grande):.1f}%) | "
+          f"Fogos pequenos: {n_pequenos} ({100*n_pequenos/len(grande):.1f}%)")
+    print()
+    print("AUC de cada candidata a discriminar fogo grande vs. pequeno "
+          "(0.5=sem poder discriminativo, 1.0=perfeito, mesma metrica do holdout do Indice I):")
+    print()
+
+    print("--- Variaveis individuais ---")
+    for nome, arr in [("Indice I (normalizado)", I_norm), ("Indice P", P),
+                      ("Indice V", V), ("FWI/M (normalizado)", M_norm)]:
+        auc = calcular_auc(arr, grande)
+        print(f"  {nome:<24} AUC={auc:.4f}")
+
+    print()
+    print("--- Candidatas a Hazard ---")
+    for nome, (h, _) in resultados_hazard.items():
+        auc = calcular_auc(h, grande)
+        print(f"  {nome:<36} AUC={auc:.4f}")
+
+    print()
+    print(f"{'Hazard usado':<36} {'R=H*V':>10} {'R=H+V':>10} {'R=(H+V)/2':>10} {'R=H (sem V)':>12}")
+    for nome_h, (h, _) in resultados_hazard.items():
+        auc_produto = calcular_auc(h * V, grande)
+        auc_soma = calcular_auc(h + V, grande)
+        auc_media = calcular_auc((h + V) / 2, grande)
+        auc_sem_v = calcular_auc(h, grande)
+        print(f"{nome_h:<36} {auc_produto:>10.4f} {auc_soma:>10.4f} {auc_media:>10.4f} {auc_sem_v:>12.4f}")
 
 
 if __name__ == "__main__":
