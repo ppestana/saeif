@@ -1,0 +1,78 @@
+# Metadados de proveniencia - FWI Historico (CEMS Fire Danger Historical)
+#
+# Usado no conjunto de dados de validacao do modelo de integracao
+# Risco = f(I, P, V, M). Ver saeif_especificacao_cientifica.html Sec05.
+
+layer: fwi_historico_2020_2025
+description: >
+  Fire Weather Index (FWI) diario, reconstrucao historica 2020-2025,
+  a partir da reanalise ERA5. Fonte da variavel M (meteorologia
+  historica) no conjunto de dados de validacao -- emparelhado com
+  incendios reais de areas_ardidas por proximidade espacial e data exacta.
+
+source:
+  name: "Fire danger indices historical data from the Copernicus Emergency Management Service"
+  dataset_id: cems-fire-historical-v1
+  organization: ECMWF (em nome do Copernicus Emergency Management Service / JRC)
+  portal: >
+    CEMS Early Warning Data Store (EWDS) -- NAO o Climate Data Store (CDS)
+    principal, apesar de aparecer listado tambem la. Um pedido ao endpoint
+    do CDS devolve 404 "process not found" (confirmado por erro real,
+    26 Jul 2026). URL correcto: https://ewds.climate.copernicus.eu/api
+  dataset_url: https://ewds.climate.copernicus.eu/datasets/cems-fire-historical-v1
+  doi: 10.24381/cds.0e89c522
+  downloaded_at: "2026-07-26"
+  authentication: >
+    Conta ECMWF (accounts.ecmwf.int) -- sistema de identidade DIFERENTE
+    do Copernicus Data Space Ecosystem (CDSE) ja usado para NDVI/DEM do
+    Indice P. A mesma chave de API funciona nos portais CDS e EWDS,
+    apenas o URL base muda.
+
+request_params:
+  product_type: reanalysis
+  variable: fire_weather_index
+  dataset_type: consolidated_dataset
+  system_version: "4.1"
+  years: "2020-2025"
+  area_bbox: [42.5, -9.6, 36.75, -6]  # North, West, South, East
+  grid: original_grid (nao interpolado)
+  format: GRIB
+
+crs_original: EPSG:4326 (graus, grelha irregular -- nao regular lat/lon)
+resolution_original: >
+  ~0.25 graus (~25-28km) -- resolucao nativa da reanalise ERA5-based,
+  MUITO mais grosseira que a grelha oficial do SAEIF (250m). Grelha
+  irregular: 204 pontos cobrindo a extensao pedida, nao uma matriz
+  regular -- lookup por vizinho mais proximo, nao indexacao directa.
+temporal_resolution: diaria (2192 dias, 2020-01-01 a 2025-12-31, sem lacunas)
+
+license: CC-BY (Copernicus)
+license_url: https://ewds.climate.copernicus.eu (ver "CC-BY licence" na pagina do dataset)
+
+purpose:
+  - Variavel M (meteorologia historica) no conjunto de dados de validacao
+    do modelo de integracao Risco=f(I,P,V,M)
+  - Emparelhado com 4766 incendios reais de areas_ardidas (causa != Natural/
+    Reacendimento, com data_inicio conhecida) por proximidade espacial
+    (vizinho mais proximo) e data exacta (sem interpolacao temporal)
+
+known_issues:
+  - >
+    12 dos 204 pontos da grelha ficam SEMPRE a NaN (nao vegetados --
+    agua/urbano, conforme a propria descricao do produto: "FWI em areas
+    vegetadas"). Mascara CONSTANTE ao longo dos 2192 dias (confirmado
+    antes de aplicar correcao). Um lookup ingenuo por vizinho mais
+    proximo (sem filtrar por validade) causava falha em 73,7% dos
+    incendios reais -- corrigido restringindo a procura aos 192 pontos
+    sempre validos.
+  - >
+    Resolucao nativa (~25-28km) muito mais grosseira que a grelha
+    oficial do SAEIF (250m) -- aceitavel para o proposito de validacao
+    do modelo de integracao (testar candidatas a formula, nao para uso
+    operacional em tempo real), mas nao deve ser confundido com o FWI
+    pontual ja usado no score.py (fonte IPMA, tempo real).
+
+notes: >
+  Distinto do FWI em tempo real ja usado no SAEIF (score.py, via IPMA) --
+  este e um produto de REANALISE HISTORICA, usado apenas para construir
+  o conjunto de dados de validacao, nao para operacao em producao.
