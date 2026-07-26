@@ -105,13 +105,17 @@ def main():
 
     print("A extrair areas_ardidas, reprojectar para EPSG:3763 (metros reais), "
           f"aplicar buffer de {BUFFER_M}m, ordenar por ano ascendente ...")
+    # IMPORTANTE: reprojectar (ST_Transform) ANTES de aplicar o buffer, nunca depois --
+    # geom original esta em EPSG:4326 (graus); um ST_Buffer directamente sobre graus
+    # criaria um buffer de "5000 graus", nao 5000 metros (confirmado por erro real:
+    # "tmerc: Invalid latitude" ao tentar reprojectar coordenadas absurdas resultantes).
     sql = (
-        f"SELECT ano, ST_Buffer(geom, {BUFFER_M}) AS geom "
+        f"SELECT ano, ST_Buffer(ST_Transform(geom, 3763), {BUFFER_M}) AS geom "
         f"FROM areas_ardidas WHERE ano IS NOT NULL ORDER BY ano ASC"
     )
     cmd_reproj = [
         "ogr2ogr", "-f", "GPKG",
-        "-t_srs", gs.GRID_CRS,
+        "-a_srs", gs.GRID_CRS,  # so atribui metadados -- a geometria ja vem transformada pelo SQL
         "-sql", sql,
         "-nln", "buffers_ano",
         "-overwrite",
