@@ -112,22 +112,34 @@ def transformar_4326_para_3763(lon, lat):
 
 
 def carregar_fwi():
-    """Carrega o FWI historico e devolve (lats, lons, times, valores) para lookup."""
+    """Carrega o FWI historico e devolve (lats, lons, times, valores, mascara_valida)
+    para lookup. Descoberta empirica (26 Jul 2026): o FWI so e calculado em areas
+    vegetadas -- 12 dos 204 pontos da grelha ficam sempre a NaN (agua/urbano),
+    mascara CONSTANTE ao longo dos 2192 dias (confirmado antes de aplicar a
+    correcao). Por isso o vizinho mais proximo deve ser procurado so entre os
+    pontos sempre validos, nao literalmente o mais proximo (que pode ser um dos
+    12 sempre-NaN, fazendo falhar 73,7% dos incendios reais -- confirmado)."""
     import xarray as xr
     ds = xr.open_dataset(FWI_GRIB_PATH, engine="cfgrib")
     lats = ds["latitude"].values
     lons = ds["longitude"].values
     times = ds["time"].values
     valores = ds["fwinx"].values  # shape (time, values)
-    return lats, lons, times, valores
+
+    nan_por_ponto = np.isnan(valores).sum(axis=0)
+    mascara_valida = nan_por_ponto == 0
+    n_validos = int(np.sum(mascara_valida))
+    print(f"  Pontos da grelha FWI sempre validos: {n_validos} de {len(mascara_valida)}")
+
+    return lats, lons, times, valores, mascara_valida
 
 
-def lookup_fwi(lats, lons, times, valores, lon, lat, data):
-    """Vizinho mais proximo espacial (dos 204 pontos da grelha irregular do
-    ECMWF), na data exacta (sem interpolacao temporal -- FWI ja e diario)."""
-    import numpy as np
+def lookup_fwi(lats, lons, times, valores, mascara_valida, lon, lat, data):
+    """Vizinho mais proximo espacial, restrito aos pontos sempre validos
+    (ver carregar_fwi), na data exacta (sem interpolacao temporal -- FWI ja e diario)."""
     dist2 = (lats - lat) ** 2 + (lons - lon) ** 2
-    idx_espacial = int(np.argmin(dist2))
+    dist2_validos = np.where(mascara_valida, dist2, np.inf)
+    idx_espacial = int(np.argmin(dist2_validos))
 
     data_np = np.datetime64(data.date().isoformat())
     idx_temporal = np.where(times == data_np)[0]
@@ -159,7 +171,7 @@ def main():
     v_arr, v_nodata, v_inv_gt, _ = ler_raster_indexavel(INDICE_V_PATH)
 
     print(f"A carregar FWI historico de {FWI_GRIB_PATH} ...")
-    fwi_lats, fwi_lons, fwi_times, fwi_valores = carregar_fwi()
+    fwi_lats, fwi_lons, fwi_times, fwi_valores, fwi_mascara_valida = carregar_fwi()
 
     print("A emparelhar cada incendio com I, P, V, FWI ...")
     linhas = []
@@ -173,7 +185,8 @@ def main():
         p_val = lookup_raster(p_arr, p_nodata, p_inv_gt, x3763, y3763)
         v_val = lookup_raster(v_arr, v_nodata, v_inv_gt, x3763, y3763)
 
-        fwi_val = lookup_fwi(fwi_lats, fwi_lons, fwi_times, fwi_valores, lon, lat, inc["data_inicio"])
+        fwi_val = lookup_fwi(fwi_lats, fwi_lons, fwi_times, fwi_valores, fwi_mascara_valida,
+                              lon, lat, inc["data_inicio"])
 
         if fwi_val is None:
             sem_fwi += 1
