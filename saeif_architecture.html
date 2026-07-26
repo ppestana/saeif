@@ -770,6 +770,13 @@
             <td>Estático (download pontual)</td>
             <td><span class="badge badge-amber">Índice V — Resposta</span></td>
           </tr>
+          <tr>
+            <td><strong>ECMWF/CEMS</strong><br><span class="dimtext">EWDS — FWI histórico</span></td>
+            <td>Fire Weather Index histórico diário (2020-2025), fonte de M no conjunto de dados de validação do modelo de integração. Ver <code>data/fwi_historico.meta.yaml</code></td>
+            <td>GRIB local (<code>data/fwi_historico_2020_2025.grib</code>), via <code>cdsapi</code> (EWDS, não CDS principal)</td>
+            <td>Estático (download pontual)</td>
+            <td><span class="badge badge-amber">Modelo de integração</span></td>
+          </tr>
         </tbody>
       </table>
 
@@ -2830,6 +2837,39 @@ python3 scripts/gerar_indice_p_final.py data/mascara_portugal_continental.tif \
       <strong>Índice P completo — os três índices estruturais do SAEIF (I, P, V) estão agora todos construídos como superfícies raster na grelha oficial.</strong> Arquitectura decomposta (P_estrutural + P_histórico), testada por regressão. <strong>Pendente:</strong> validação estatística formal do Índice P (equivalente ao holdout do Índice I); decisão sobre se a área ardida pertence ao Índice P ou à Camada M; publicação via <code>/api/layers</code>/STAC; desenho do modelo de integração <code>Risco = f(I,P,V,M)</code> (Fase 4 do roteiro).
     </div>
 
+    <h3 style="color:var(--fire);margin:2rem 0 1rem">15.27 — Conjunto de dados de validação do modelo de integração</h3>
+    <p>Sequência à conclusão conceptual do modelo de integração (26 Jul 2026, ver <code>saeif_especificacao_cientifica.html</code> §05): a fórmula exacta de <code>Risco = f(I,P,V,M)</code> ficou deliberadamente por decidir, pendente de um conjunto de dados de validação contra o qual testar candidatas. Esta secção documenta a construção desse conjunto.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Fonte de M — descoberta e dois erros reais de portal</h4>
+    <p>Investigação de fontes de meteorologia histórica (necessária para M — o SAEIF só tinha, até aqui, lookup de FWI em tempo real via IPMA, sem arquivo histórico fácil). Identificado o dataset <strong>"Fire danger indices historical data from the Copernicus Emergency Management Service"</strong> (<code>cems-fire-historical-v1</code>) — reconstrução histórica diária a partir da reanálise ERA5, resolução nativa ~0,25°.</p>
+    <p><strong>Primeiro erro real:</strong> o sistema de autenticação é distinto do CDSE já usado para NDVI/DEM — requer conta ECMWF própria (confirmado: "your existing CDS credentials will not work"). Resolvido — Pedro já tinha conta ECMWF criada anteriormente (reconhecida via passkey do macOS), sem necessidade de registo novo.</p>
+    <p><strong>Segundo erro real:</strong> o dataset está hospedado no <strong>CEMS Early Warning Data Store (EWDS)</strong>, não no Climate Data Store (CDS) principal — apesar de aparecer listado como resultado de pesquisa em ambos os portais. Um pedido ao endpoint do CDS (<code>cds.climate.copernicus.eu/api</code>) devolveu <code>404 "process not found"</code>. Corrigido: <code>scripts/obter_fwi_historico.py</code> usa explicitamente o URL do EWDS (<code>ewds.climate.copernicus.eu/api</code>), reaproveitando a mesma chave de API do <code>~/.cdsapirc</code> (a mesma conta ECMWF serve os dois portais, só o URL muda). O código exacto do pedido foi confirmado directamente na interface web do EWDS antes de escrever o script, não assumido.</p>
+    <p>Pedido: FWI, "reanalysis" (não "ensemble members"), "consolidated dataset", system version 4.1, anos 2020-2025, todos os meses/dias, bbox ibérico (com pequena margem), grelha original (sem interpolação). Resultado: 1,4MB, 2192 dias (2020-01-01 a 2025-12-31, sem lacunas), grelha irregular de 204 pontos.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Terceiro erro real — máscara de pontos não-vegetados no lookup espacial</h4>
+    <p>Primeira execução do emparelhamento revelou uma taxa de falha de <strong>73,7%</strong> ao procurar o FWI para cada incêndio real — inicialmente suspeito de erro de datas, refutado por teste isolado (0 falhas de correspondência de data). Diagnóstico correcto: o FWI só é calculado em <em>"áreas vegetadas"</em> (conforme a própria descrição do produto) — 12 dos 204 pontos da grelha ficam sempre a <code>NaN</code> (água/urbano). Confirmado que esta máscara é <strong>constante ao longo dos 2192 dias</strong> (0 pontos parcialmente válidos) antes de aplicar a correcção — o vizinho espacial mais próximo, por vezes, caía num desses 12 pontos sempre inválidos.</p>
+    <p><strong>Correcção:</strong> restringir a procura do vizinho mais próximo aos 192 pontos sempre válidos (<code>dist2_validos = np.where(mascara_valida, dist2, np.inf)</code>), não literalmente ao ponto geograficamente mais próximo. Testado com dados sintéticos antes de aplicar (ponto mais próximo deliberadamente inválido, confirma que a procura salta para o próximo válido) — resultado real após correcção: <strong>0 incêndios sem FWI correspondente</strong>, contra 3512 antes.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Construção do conjunto de dados final</h4>
+    <p><code>scripts/construir_dataset_validacao.py</code>: para cada incêndio real em <code>areas_ardidas</code> (mesmo filtro do Índice I — causa ≠ Natural/Reacendimento, com <code>data_inicio</code> conhecida), extrai o centróide, transforma para EPSG:3763 (Princípio da Consistência Projectiva), e faz lookup nos rasters de produção (I, P, V) e no FWI histórico (vizinho válido mais próximo + data exacta). Resultado: <strong>4763 incêndios</strong> (de 4766 elegíveis — só 3 fora da máscara/grelha), gravados em <code>data/dataset_validacao.csv</code> com <code>area_ha</code> como variável de resultado.</p>
+    <p>Estatísticas completas e leitura da plausibilidade dos números em <code>saeif_especificacao_cientifica.html</code> §05 — sem sinais de alarme; correlações informais (P mais alto, V mais baixo nos locais reais de incêndio face à média nacional) já sugerem sinal real nos índices, antes mesmo de testar formalmente candidatas à integração.</p>
+
+    <h4 style="margin:1.2rem 0 .5rem">Scripts</h4>
+    <table>
+      <thead><tr><th>Ficheiro</th><th>Função</th></tr></thead>
+      <tbody>
+        <tr><td><code>scripts/obter_fwi_historico.py</code></td><td>Obtém o FWI histórico (2020-2025) via EWDS.</td></tr>
+        <tr><td><code>scripts/construir_dataset_validacao.py</code></td><td>Emparelha incêndios reais com I, P, V, FWI; gera o CSV final.</td></tr>
+      </tbody>
+    </table>
+    <pre><code>python3 scripts/obter_fwi_historico.py data/fwi_historico_2020_2025.grib
+python3 scripts/construir_dataset_validacao.py data/dataset_validacao.csv</code></pre>
+
+    <div class="callout" style="margin-top:.8rem;background:rgba(26,66,40,0.2);border-color:#4ade80">
+      <strong>Estado actual (26 Jul 2026)</strong><br>
+      <strong>Conjunto de dados de validação construído — 4763 incêndios reais com I, P, V, FWI emparelhados.</strong> Bloqueador da fórmula de integração resolvido (existe agora um conjunto contra o qual testar candidatas). <strong>Pendente:</strong> testar formalmente candidatas à função de integração (soma, produto, híbrido, hierárquico/causal) contra este conjunto; validação estatística do Índice P e V (equivalente ao holdout do Índice I).
+    </div>
+
   </div>
 </div><!-- /container -->
 
@@ -2903,16 +2943,16 @@ python3 scripts/gerar_indice_p_final.py data/mascara_portugal_continental.tif \
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
-        <tr><td>Análise</td><td>36.9</td><td>55</td><td>2029.50</td></tr>
+        <tr><td>Análise</td><td>37.7</td><td>55</td><td>2073.50</td></tr>
         <tr><td>Design</td><td>21.5</td><td>55</td><td>1182.50</td></tr>
-        <tr><td>Gestão</td><td>6.7</td><td>40</td><td>268.00</td></tr>
-        <tr><td>Programação</td><td>116.8</td><td>45</td><td>5256.00</td></tr>
-        <tr><td>Testes</td><td>28.5</td><td>35</td><td>997.50</td></tr>
-        <tr><td>Documentação</td><td>39.7</td><td>30</td><td>1191.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>250.1</td><td>—</td><td>10924.50</td></tr>
+        <tr><td>Gestão</td><td>7.4</td><td>40</td><td>296.00</td></tr>
+        <tr><td>Programação</td><td>119.2</td><td>45</td><td>5364.00</td></tr>
+        <tr><td>Testes</td><td>29.8</td><td>35</td><td>1043.00</td></tr>
+        <tr><td>Documentação</td><td>40.7</td><td>30</td><td>1221.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>256.3</td><td>—</td><td>11180.00</td></tr>
       </tbody>
     </table>
-    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~47% das horas), reflectindo a natureza do projecto até agora. Esta actualização (26 Jul 2026, continuação) conclui a Fase 2 do roteiro — <strong>Índice P completo</strong>: WorldCover a 250m, bónus de área ardida como raster (com um erro real de ordem de operações corrigido — buffer antes de reprojectar gerava coordenadas inválidas), e uma decisão arquitectural motivada pelos próprios resultados — decomposição em P_estrutural + P_histórico, depois de uma análise quantitativa revelar que o bónus de área ardida (sem peso formal) contribui quase tanto quanto o NDVI e 11× mais que o declive tão cuidadosamente validado nas sessões anteriores.</p>
+    <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~47% das horas), reflectindo a natureza do projecto até agora. Esta actualização (26 Jul 2026, continuação) cobre a construção do conjunto de dados de validação do modelo de integração — descoberta de uma nova fonte externa (FWI histórico, CEMS/EWDS, com sistema de autenticação distinto de tudo o que já usávamos), três erros reais encontrados e corrigidos (portal EWDS vs. CDS principal; variáveis de ambiente na ligação à base de dados; máscara de pontos não-vegetados no FWI, responsável por 73,7% de falhas), resultando em 4763 incêndios reais emparelhados com I, P, V e M — desbloqueando finalmente o teste empírico de candidatas à fórmula de integração.</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -2933,6 +2973,7 @@ python3 scripts/gerar_indice_p_final.py data/mascara_portugal_continental.tif \
         <tr><td>16 Jul 2026 (mesma sessão)</td><td>+5,6h: teste real com QGIS (proposto por Pedro Pestana) — dois bugs de HTTP genuínos encontrados e corrigidos (<code>HEAD</code> a devolver 404, sem suporte a <code>Range</code>); causa raiz do segundo confirmada por pesquisa (Starlette 0.38.6, suporte a <code>Range</code> só desde 0.39.0, mais uma CVE conhecida no intervalo 0.39.0-0.49.0); actualização mínima e segura de <code>fastapi</code>/<code>starlette</code>, testada em ambiente isolado antes de aplicar; estratégia de três fases registada para a futura actualização completa até à versão mais recente; validação visual final confirmada no QGIS.</td></tr>
         <tr><td>26 Jul 2026</td><td>+8,9h: Fase 2 do roteiro — Índice P como raster. Levantamento das quatro fontes (resoluções incompatíveis); NDVI a 250m (correcção de erro de CRS não suportado, descoberta de distorção real EPSG:3763/EPSG:3035); comparação quantitativa dos dois métodos de declive (Pearson 0,98, viés sistemático de ~80% confirmado); Princípio da Consistência Projectiva formalizado; dois incidentes técnicos corrigidos (ABI numpy/gdal_array, conflito de versão scipy/numpy).</td></tr>
         <tr><td>26 Jul 2026 (mesma sessão)</td><td>+8,1h: conclusão da Fase 2 — WorldCover a 250m (reamostragem <code>average</code>, decisão fundamentada na natureza ordinal dos valores); bónus de área ardida como raster (rasterização por ordenação, erro real de ordem buffer/reprojecção corrigido); primeira geração do <code>indice_p.tif</code> completo; análise quantitativa de contribuições reais revelou o bónus histórico a pesar quase tanto quanto o NDVI (29% vs. 24%), muito mais que o declive (2,5%); decomposição arquitectural em P_estrutural + P_histórico (terceira aplicação do mesmo padrão hierárquico do Índice V), testada por regressão contra o resultado anterior (diferença máxima 0,00000005 — numericamente idêntico). <strong>Marco: os três índices estruturais do SAEIF (I, P, V) estão agora todos completos como rasters na grelha oficial.</strong></td></tr>
+        <tr><td>26 Jul 2026 (mesma sessão)</td><td>+6,2h: construção do conjunto de dados de validação do modelo de integração — descoberta e correcção de dois erros reais de portal (EWDS vs. CDS principal para o FWI histórico); correcção de uma falha de autenticação à base de dados (variáveis de ambiente); diagnóstico e correcção de uma taxa de falha de 73,7% no emparelhamento do FWI (máscara de pontos não-vegetados, confirmada constante antes de corrigir). <strong>Resultado: 4763 incêndios reais emparelhados com I, P, V e M — bloqueador da fórmula de integração resolvido.</strong></td></tr>
       </tbody>
     </table>
 
