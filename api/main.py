@@ -747,9 +747,44 @@ async def get_effis_risk(day: int = 0):
 
     return {"type": "FeatureCollection", "features": results}
 
+@app.get("/api/layers")
+async def get_layers_catalog():
+    """
+    Catalogo de camadas publicadas do SAEIF: devolve os metadados de
+    todas as camadas disponiveis em /data/layers/ (um .json por camada,
+    gerado por scripts/publicar_camada.py).
+
+    Infraestrutura generica de publicacao -- nao um endpoint por indice.
+    Qualquer raster (Indice I, P, V, KDE por causa, NDVI, declive, ...)
+    publica-se da mesma forma, e fica automaticamente disponivel aqui.
+    """
+    layers_dir = "/data/layers"
+    catalogo = []
+    if os.path.isdir(layers_dir):
+        for ficheiro in sorted(os.listdir(layers_dir)):
+            if ficheiro.endswith(".json"):
+                caminho = os.path.join(layers_dir, ficheiro)
+                try:
+                    with open(caminho, encoding="utf-8") as f:
+                        catalogo.append(json.load(f))
+                except Exception as e:
+                    log.warning(f"Erro a ler metadados de camada {ficheiro}: {e}")
+    return catalogo
+
 @app.get("/api/layers/{nome}")
+async def get_layer_metadata(nome: str):
+    """Metadados de uma camada especifica: bounds, min/max, resolucao, fonte, data de criacao, etc."""
+    if not nome.replace("_", "").replace("-", "").isalnum() or len(nome) > 60:
+        raise HTTPException(status_code=400, detail="Nome invalido")
+    caminho = f"/data/layers/{nome}.json"
+    if not os.path.exists(caminho):
+        raise HTTPException(status_code=404, detail="Camada nao encontrada")
+    with open(caminho, encoding="utf-8") as f:
+        return json.load(f)
+
+@app.api_route("/layers/{nome}.png", methods=["GET", "HEAD"])
 async def get_layer_png(nome: str):
-    """Serve camadas raster (PNG) de /data/layers/. Ex.: declive piloto."""
+    """Serve a imagem PNG de uma camada publicada (ver /api/layers para o catalogo e bounds)."""
     from fastapi.responses import FileResponse
     # Seguranca: so nomes simples, so .png, sem travessia de diretorio
     if not nome.replace("_", "").replace("-", "").isalnum() or len(nome) > 60:
@@ -758,6 +793,19 @@ async def get_layer_png(nome: str):
     if not os.path.exists(caminho):
         raise HTTPException(status_code=404, detail="Camada nao encontrada")
     return FileResponse(caminho, media_type="image/png")
+
+@app.api_route("/layers/{nome}.tif", methods=["GET", "HEAD"])
+async def get_layer_cog(nome: str):
+    """Serve o COG (Cloud Optimized GeoTIFF) de uma camada publicada -- os
+    dados reais (nao a visualizacao colorida), para consumo por GeoLibre,
+    QGIS, ou qualquer cliente STAC (ver /stac/catalog.json)."""
+    from fastapi.responses import FileResponse
+    if not nome.replace("_", "").replace("-", "").isalnum() or len(nome) > 60:
+        raise HTTPException(status_code=400, detail="Nome invalido")
+    caminho = f"/data/layers/{nome}.tif"
+    if not os.path.exists(caminho):
+        raise HTTPException(status_code=404, detail="Camada nao encontrada")
+    return FileResponse(caminho, media_type="image/tiff")
 
 @app.get("/api/risk/map")
 async def get_risk_map():
@@ -804,5 +852,9 @@ async def websocket_endpoint(ws: WebSocket):
             await ws.receive_text()
     except WebSocketDisconnect:
         ws_manager.disconnect(ws)
+
+# Catalogo STAC estatico (catalog.json, collections/.../collection.json, collections/.../items/{id}.json) -- gerado por scripts/gerar_stac.py
+os.makedirs("/data/stac", exist_ok=True)
+app.mount("/stac", StaticFiles(directory="/data/stac"), name="stac")
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

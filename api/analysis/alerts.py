@@ -1,7 +1,7 @@
 import logging
 import asyncpg
 from ingest.ipma import get_nearest_meteo
-from analysis.score import calcular_score, get_structural_risk, get_area_ardida_factor, get_vegetacao_tipo
+from analysis.score import calcular_score, get_structural_risk, get_area_ardida_factor, get_vegetacao_tipo, get_indice_p
 from ingest.effis import get_effis_values
 from utils import reverse_geocode
 
@@ -41,7 +41,8 @@ async def gerar_alertas(conn, pares, meteo_data):
         area_factor = await get_area_ardida_factor(conn, lat, lon)
         vegetacao_tipo = get_vegetacao_tipo(lat, lon)
         score, categoria = calcular_score(par, meteo, area_ardida_factor=area_factor)
-        risco_estrutural = get_structural_risk(lat, lon)
+        risco_estrutural = get_structural_risk(lat, lon)  # combustivel puro, sem bonus (ver migration 003)
+        indice_p = get_indice_p(lat, lon, area_factor)     # Indice P completo (= o que entrou no score)
         effis = get_effis_values(lat, lon)
 
         # Geocodificacao inversa sempre via Nominatim
@@ -55,11 +56,11 @@ async def gerar_alertas(conn, pares, meteo_data):
                 INSERT INTO alertas (
                     geom, hotspot_id, prociv_id, score, categoria, source_tag,
                     temp, humidade, vento_vel, vento_dir, fwi, risco_estrutural, vegetacao_tipo,
-                    localidade_estimada, effis_fwi, effis_ranking, effis_anomaly
+                    localidade_estimada, effis_fwi, effis_ranking, effis_anomaly, indice_p
                 )
                 VALUES (
                     ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+                    $3, $4, $5, $6, 'SYS', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
                 )
                 RETURNING id
             """, lon, lat, hotspot_id, par.get("prociv_id"),
@@ -67,7 +68,7 @@ async def gerar_alertas(conn, pares, meteo_data):
                 meteo.get("temp"), meteo.get("humidade"),
                 meteo.get("vento_vel"), meteo.get("vento_dir"),
 meteo.get("fwi"), risco_estrutural, vegetacao_tipo, localidade_estimada,
-                (effis or {}).get("fwi"), (effis or {}).get("ranking"), (effis or {}).get("anomaly"))
+                (effis or {}).get("fwi"), (effis or {}).get("ranking"), (effis or {}).get("anomaly"), indice_p)
             alertas_gerados.append({
                 "id": alerta_id, "lat": lat, "lon": lon,
                 "score": score, "categoria": categoria, "source_tag": "SYS",
@@ -77,6 +78,7 @@ meteo.get("fwi"), risco_estrutural, vegetacao_tipo, localidade_estimada,
                 "meteo": {"temp": meteo.get("temp"), "humidade": meteo.get("humidade"),
                           "vento_vel": meteo.get("vento_vel"), "fwi": meteo.get("fwi")},
                 "risco_estrutural": risco_estrutural,
+                "indice_p": indice_p,
             })
             log.info(f"Alerta {alerta_id}: score={score} cat={categoria} lat={lat:.3f} lon={lon:.3f}")
             await _marcar_processed(hotspot_id)

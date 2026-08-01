@@ -143,10 +143,22 @@ async def get_area_ardida_factor(conn, lat, lon):
         return 0.0
 
 
+def get_indice_p(lat, lon, area_ardida_factor=0.0):
+    """
+    Indice P (Potencial de Propagacao) explicito: combustivel/vegetacao
+    (WorldCover+NDVI+declive, via get_structural_risk) + bonus de area
+    ardida, capado a 1.0. E o valor completo usado no score (calcular_score),
+    agora tambem disponivel como funcao standalone para uso fora do score
+    (ex. gravacao explicita na tabela alertas, camada de visualizacao).
+    Ver saeif_visao_2.0.html Sec06 e saeif_architecture.html Sec07.
+    """
+    return min(1.0, get_structural_risk(lat, lon) + area_ardida_factor)
+
+
 def calcular_score(par, meteo, area_ardida_factor=0.0):
     lat = par.get("lat", 0)
     lon = par.get("lon", 0)
-    risco_estrutural = min(1.0, get_structural_risk(lat, lon) + area_ardida_factor)
+    risco_estrutural = get_indice_p(lat, lon, area_ardida_factor)
     fwi = meteo.get("fwi") or 0
     fwi_norm = min(1.0, fwi / 80.0)
     vento_vel = meteo.get("vento_vel") or 0
