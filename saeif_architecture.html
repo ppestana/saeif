@@ -3008,21 +3008,21 @@ python3 scripts/construir_dataset_validacao.py data/dataset_validacao.csv</code>
       </tbody>
     </table>
 
-    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 28 Jul 2026)</h3>
+    <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.3 — Custos acumulados (30 Mai 2026 — 01 Ago 2026)</h3>
     <table>
       <thead><tr><th>Fase</th><th>Horas (est.)</th><th>Taxa (€/h)</th><th>Valor (€)</th></tr></thead>
       <tbody>
         <tr><td>Análise</td><td>44.3</td><td>55</td><td>2436.50</td></tr>
         <tr><td>Design</td><td>22.0</td><td>55</td><td>1210.00</td></tr>
-        <tr><td>Gestão</td><td>9.3</td><td>40</td><td>372.00</td></tr>
-        <tr><td>Programação</td><td>125.8</td><td>45</td><td>5661.00</td></tr>
-        <tr><td>Testes</td><td>33.5</td><td>35</td><td>1172.50</td></tr>
-        <tr><td>Documentação</td><td>43.1</td><td>30</td><td>1293.00</td></tr>
-        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>278.0</td><td>—</td><td>12145.00</td></tr>
+        <tr><td>Gestão</td><td>9.9</td><td>40</td><td>396.00</td></tr>
+        <tr><td>Programação</td><td>127.8</td><td>45</td><td>5751.00</td></tr>
+        <tr><td>Testes</td><td>34.7</td><td>35</td><td>1214.50</td></tr>
+        <tr><td>Documentação</td><td>45.1</td><td>30</td><td>1353.00</td></tr>
+        <tr style="font-weight:bold;border-top:2px solid var(--fire)"><td>TOTAL</td><td>283.8</td><td>—</td><td>12361.00</td></tr>
       </tbody>
     </table>
     <p>Nota: a fase <strong>Programação</strong> continua a dominar o total (~46% das horas), reflectindo a natureza do projecto até agora. Esta actualização (26 Jul 2026, continuação) cobre a investigação de um proxy de consequência real via <code>ocorrencias_prociv</code> — dois becos sem saída genuínos encontrados (hiato temporal na cobertura PROCIV; falta de sobreposição com <code>areas_ardidas</code>), resolvidos com um pivô para um conjunto de dados prospectivo (jun-jul 2026, 2250 ocorrências reais), que replicou de forma independente o padrão de AUC já visto com área ardida — confirmação empírica robusta da descoberta dos três produtos, não coincidência de uma única fonte.</p>
-    <p>Esta actualização (28 Jul 2026) cobre o trabalho realizado nesta conversa (27-28 Jul 2026): registo da pista CEIF/NADAIR; análise de pertinência do relatório Greenpeace/ADAI-Coimbra para os três documentos-base (FirEUrisk, classes do FWI, entrada bibliográfica, panorama nacional); registo do forge3d como candidato preferencial de visualização 3D; pista de perfil geográfico forense (motivada pelo caso real de Mamodeiro); análise de pertinência do relatório CTI 2017 para os três documentos-base (dataset forense de vítimas, evidência de falha de resposta, fundamentação histórica); correcção de uma referência cruzada errada e criação da entrada bibliográfica em falta; auditoria e correcção completa da numeração da lista §07 (3 referências adicionais corrigidas, incluindo um erro pré-existente de 26 Jul 2026 na referência ao ECMWF/Copernicus).</p>
+    <p>Esta actualização (01 Ago 2026) cobre o trabalho realizado nesta conversa: (a) registo de Lourenço &amp; Bernardino (2013) — par de variáveis nucleares de ignição/propagação na Camada M, reforço da evidência qualitativa de défice de resposta no Índice V, nova entrada bibliográfica §07 [11]; (b) registo do Fire Event Tracker (FET/EUBURN, publicação de Ronan Paugam) — actualização da entrada §07 [4] e nova pista de contacto ANEPC em §15.29; (c) auditoria de um conjunto de trabalho retroactivo, feito numa sessão anterior directamente no servidor sem nunca ter sido commitado — confirmado como legítimo e já validado em produção há duas semanas (Índice P explícito, catálogo de camadas + STAC/COG, actualização FastAPI/Starlette), trazido para o Git a partir do servidor; descoberta e recuperação de uma dependência real em falta (<code>rampas/</code>, ficheiros de cor para os três índices, usada por <code>scripts/publicar_camada.py</code>); limpeza de resíduos genuínos (backups, scripts de edição efémeros, ambiente virtual). Estimativa de horas por bloco: (a) ~1,8h, (b) ~1,6h, (c) ~2,4h — estimativa do Claude, não contabilização real, a pedido de Pedro Pestana.</p>
 
     <h3 style="color:var(--fire);margin:1.5rem 0 1rem">17.4 — Histórico de actualizações desta secção</h3>
     <table>
@@ -3052,6 +3052,9 @@ python3 scripts/construir_dataset_validacao.py data/dataset_validacao.csv</code>
         <tr><td>28 Jul 2026</td><td>+2,5h: análise de pertinência do relatório da Comissão Técnica Independente (CTI, 2017) para os três documentos-base — dataset forense de 20 locais/64 vítimas mortais (candidato a caso de estudo para (P×M)×V), evidência documentada de falha de resposta (Défice de Capacidade de Resposta do Índice V), e recomendação institucional de 2017 como fundamentação histórica da missão do SAEIF.</td></tr>
         <tr><td>28 Jul 2026 (mesma sessão)</td><td>+1,0h: correcção de uma referência cruzada errada ao relatório CTI 2017 (apontava por engano para a entrada bibliográfica [1] em vez da própria), com criação da entrada em falta.</td></tr>
         <tr><td>28 Jul 2026 (mesma sessão)</td><td>+1,4h: auditoria completa da numeração da lista §07 — três referências adicionais corrigidas (incluindo um erro pré-existente de 26 Jul 2026 na referência ao ECMWF/Copernicus), reflectindo a ordem real das 9 entradas da lista.</td></tr>
+        <tr><td>01 Ago 2026</td><td>~1,8h: registo de Lourenço &amp; Bernardino (2013) — par de variáveis nucleares de ignição (temperatura máxima, humidade relativa mínima) e propagação (vento de quadrante Este) na Camada M; reforço da nota do CTI 2017 no Índice V com o caso nacional de 2003; nova entrada bibliográfica §07 [11] em <code>saeif_especificacao_cientifica.html</code>; um erro genuíno no script de edição detectado e corrigido antes da entrega (âncora a apagar conteúdo em vez de o preservar).</td></tr>
+        <tr><td>01 Ago 2026 (mesma sessão)</td><td>~1,6h: registo do Fire Event Tracker (FET/EUBURN, publicação de Ronan Paugam no LinkedIn) — actualização da entrada §07 [4] (uso operacional real do produto EUMETSAT LSA SAF/MTG, já a apoiar a ANEPC desde 2025) e nova pista de contacto em §15.29, distinta do CEIF/NADAIR; um erro mais sério detectado e corrigido (bloco CEIF/NADAIR inteiro apagado por engano pelo script, antes de qualquer escrita real).</td></tr>
+        <tr><td>01 Ago 2026 (mesma sessão)</td><td>~2,4h: auditoria de trabalho não sincronizado encontrado no servidor durante um <code>git pull</code> de rotina — investigação de 4 ficheiros modificados (requisitos FastAPI/Starlette, extracção de <code>get_indice_p()</code>, gravação de <code>indice_p</code> na tabela <code>alertas</code>, catálogo de camadas + STAC/COG), confirmação de que a migration 003 associada já estava aplicada na base de dados e de que o serviço corre em produção sem erros há duas semanas; trabalho trazido para o Git directamente a partir do servidor (commit <code>7fdea66</code>); descoberta de <code>rampas/</code> (ficheiros de cor para os três índices) como dependência real e activa de <code>scripts/publicar_camada.py</code>, em falta desde a sua criação — recuperada (commit <code>b4a58ff</code>); limpeza de resíduos genuínos (backups <code>.bak_*</code>, scripts de edição efémeros, ambiente virtual <code>venv_kde/</code>); um ficheiro rastreado quase apagado por engano (<code>editar_main_stac.py</code>) — reposto sem perdas após verificação.</td></tr>
       </tbody>
     </table>
 
